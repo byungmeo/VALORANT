@@ -15,6 +15,7 @@ AI 엔지니어 3명과 언리얼 엔진 개발자 4명이 협업하여 개발�
 ### **무기 반동 궤적 생성 (Weapon Recoil Generation)**  
    - 강화학습 기반 모델로 실제 무기별(권총, 기관총, 산탄총) 반동 패턴 자동 생성  
    - NumPy·PyTorch를 활용해 좌표 시퀀스를 합성하고, Matplotlib으로 시각화
+   - <a href="https://github.com/Hyeongseob91/mcp-server.git">MCP Server Repository on Smithery.ai</a>
 
 ### **실시간 캐릭터 포즈 분석 (Pose Detection & Correction)**  
    - YOLO-Pose / OpenPose / HRNet 모델을 이용한 프레임 단위 관절 키포인트 추출  
