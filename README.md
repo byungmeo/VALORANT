@@ -6,7 +6,7 @@
 
 ### 프로젝트 기간
 - 2025.04 ~
-- <a href="https://www.notion.so/PotenUP-Project-5_Valorithm-1cf33c1194e8809a9512c785febf41f8?pvs=4">협업 노트 : Notion</a>
+- <a href="https://www.notion.so/PotenUP-Project-5_Valorithm-1cf33c1194e8809a9512c785febf41f8?pvs=4">협업 기록 : Notion</a>
 
 ## 1. 프로젝트 개요
 AI 엔지니어 3명과 언리얼 엔진 개발자 4명이 협업하여 개발하는 온라인 슈팅(FPS) 게임 프로젝트입니다.
