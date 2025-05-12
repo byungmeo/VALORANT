@@ -13,7 +13,7 @@ AI 엔지니어 3명과 언리얼 엔진 개발자 4명이 협업하여 개발�
 우리는 해당 프로젝트를 통해 게임 개발 프로세스를 개선하고 자원을 효율적으로 사용하며, 게임 내 AI 기능으로 사용자들이 비슷한 게임과는 다른 경험을 할 수 있도록 집중하고 있습니다.
 - **언리얼 엔진**: 고품질 렌더링과 물리 기반 시뮬레이션을 통해 사실감 있는 FPS 환경을 구현  
 - **AI 모듈**: 게임 플레이 전반에 걸쳐 다양한 AI 기술을 적용하여 개발 생산성과 사용자 경험을 극대화
-- <a href="https://www.canva.com/design/DAGkCPbAfNc/c40uV0PrsDDlicrbpeQi0A/view?utm_content=DAGkCPbAfNc&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h9cf42344a4">프로젝트 기획안 발표 자료</a>
+- <a href="https://www.canva.com/design/DAGm7lXRUmA/GemuGoGtVQkm5Z4Y-uXMsw/view?utm_content=DAGm7lXRUmA&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hccf433619d">프로젝트 발표 자료</a>
 
 ## 2. 주요 AI 기능
 ### **무기 반동 궤적 생성 (Weapon Recoil Generation)**  
