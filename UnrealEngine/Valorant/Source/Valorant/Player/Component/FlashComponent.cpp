@@ -61,15 +61,34 @@ float UFlashComponent::CalculateViewAngleMultiplier(FVector FlashLocation)
     float DotProduct = FVector::DotProduct(CameraForward, ToFlash);
     float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(DotProduct));
     
-    // 시야 각도 임계값 체크
+    // 각도별 배율 적용
+    float Multiplier = 0.0f;
+    
+    // 뒤돌고 있으면 효과 없음
     if (AngleDegrees > ViewAngleThreshold)
     {
-        return 0.0f; // 뒤돌고 있으면 효과 없음
+        Multiplier = 0.0f;
+    }
+    else if (AngleDegrees <= FrontViewAngle)
+    {
+        // 기본값: 1.0 (100%)
+        Multiplier = FrontViewMultiplier;
+    }
+    else if (AngleDegrees <= SideViewAngle)
+    {
+        // 기본값: 0.7 (70%)
+        Multiplier = SideViewMultiplier;
+    }
+    else
+    {
+        // 기본값: 0.4 (40%)
+        Multiplier = PeripheralViewMultiplier;
     }
     
-    // 각도에 따른 강도 감소 (정면일수록 강함)
-    float AngleRatio = 1.0f - (AngleDegrees / ViewAngleThreshold);
-    return FMath::Clamp(AngleRatio, 0.0f, 1.0f);
+    // 디버깅 로그
+    UE_LOG(LogTemp, Verbose, TEXT("시야각: %.1f도, 배율: %.2f"), AngleDegrees, Multiplier);
+    
+    return FMath::Clamp(Multiplier, 0.0f, 1.0f);
 }
 
 void UFlashComponent::FlashEffect(float InBlindDuration, float InRecoveryDuration, float InViewAngleMultiplier)
