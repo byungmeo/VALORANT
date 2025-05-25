@@ -7,6 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "ValorantGameType.generated.h"
 
+class ACharSelectCharacterActor;
 class UNiagaraSystem;
 class UBaseWeaponAnim;
 class ABaseWeapon;
@@ -288,6 +289,14 @@ struct FAgentData : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	FString Description;
+
+	// 캐릭터 선택 연출
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	TSubclassOf<ACharSelectCharacterActor> CharSelectCharacterActorClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UAnimMontage* CharSelectCharacterMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UAnimMontage* CharSelectCameraMontage;
 };
 
 USTRUCT(BlueprintType)
