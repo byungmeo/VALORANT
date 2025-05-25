@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "CharSelectCamera.generated.h"
 
+class USpringArmComponent;
 class ACharSelectCharacterActor;
 class UCameraComponent;
 
@@ -22,6 +23,8 @@ public:
 	TObjectPtr<ACharSelectCharacterActor> CharacterActor = nullptr;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TObjectPtr<USkeletalMeshComponent> CameraMesh = nullptr;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TObjectPtr<USpringArmComponent> CameraBoom = nullptr;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TObjectPtr<UCameraComponent> Camera = nullptr;
 

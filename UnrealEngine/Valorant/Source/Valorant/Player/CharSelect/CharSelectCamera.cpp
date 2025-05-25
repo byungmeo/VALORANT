@@ -6,6 +6,7 @@
 #include "CharSelectCharacterActor.h"
 #include "Valorant.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 
@@ -29,9 +30,9 @@ ACharSelectCamera::ACharSelectCamera()
 	{
 		CameraMesh->SetAnimInstanceClass(CameraAnimClass.Class);
 	}
-
+	
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
-	Camera->SetupAttachment(CameraMesh, TEXT("Camera"));
+	Camera->SetupAttachment(CameraMesh, TEXT("CameraSocket"));
 	Camera->SetRelativeRotation(FRotator(0, 180, 0));
 	Camera->SetFieldOfView(45.f);
 }
