@@ -27,7 +27,7 @@ public:
 	TObjectPtr<USpringArmComponent> CameraBoom = nullptr;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TObjectPtr<UCameraComponent> Camera = nullptr;
-
+	
 	UFUNCTION(BlueprintCallable)
 	void OnSelectedAgent(const int SelectedAgentID);
 

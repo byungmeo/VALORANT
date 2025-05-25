@@ -248,14 +248,14 @@ void AMatchGameMode::HandleMatchHasStarted()
 		}
 	}
 
-	for (const auto& PlayerInfo : MatchPlayers)
-	{
-		if (AgentSelectStartPoint)
-		{
-			const FViewTargetTransitionParams Params;
-			PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
-		}
-	}
+	// for (const auto& PlayerInfo : MatchPlayers)
+	// {
+	// 	if (AgentSelectStartPoint)
+	// 	{
+	// 		const FViewTargetTransitionParams Params;
+	// 		PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
+	// 	}
+	// }
 
 	StartSelectAgent();
 }

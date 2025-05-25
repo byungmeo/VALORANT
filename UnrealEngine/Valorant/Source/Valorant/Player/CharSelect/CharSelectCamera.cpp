@@ -60,6 +60,12 @@ void ACharSelectCamera::OnSelectedAgent(const int SelectedAgentID)
 		return;
 	}
 
+	if (CharacterActor)
+	{
+		CharacterActor->Destroy();
+		CharacterActor = nullptr;
+	}
+	
 	FActorSpawnParameters SpawnParameters;
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	CharacterActor = GetWorld()->SpawnActor<ACharSelectCharacterActor>(CharacterActorClass, SpawnParameters);
