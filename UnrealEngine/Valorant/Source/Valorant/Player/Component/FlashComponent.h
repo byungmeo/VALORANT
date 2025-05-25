@@ -90,6 +90,29 @@ private:
     float ViewAngleMultiplier = 1.0f;
 
     // 시야 각도 체크 설정 (FlashProjectile과 동일하게 설정)
+    // 90도 이내에 있어야 효과 적용
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
-    float ViewAngleThreshold = 90.0f;  // 90도 이내에 있어야 효과 적용
+    float ViewAngleThreshold = 90.0f;
+
+    // 시야각도별 효과 배율 설정
+    // Front : 100%
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+    float FrontViewMultiplier = 1.0f;
+
+    // Front Side : 70%
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+    float SideViewMultiplier = 0.7f;
+
+    // Side : 40%
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+    float PeripheralViewMultiplier = 0.4f;
+
+    // 각도 구간 설정
+    // 정면 각도 범위
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "90.0"))
+    float FrontViewAngle = 30.0f;
+
+    // 측면 각도 범위
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true", ClampMin = "30.0", ClampMax = "90.0"))
+    float SideViewAngle = 60.0f;
 };
