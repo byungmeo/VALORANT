@@ -8,11 +8,10 @@ UJett_C_Cloudburst::UJett_C_Cloudburst(): UBaseGameplayAbility()
 	SetAssetTags(Tags);
 	
 	m_AbilityID = 4001;
+	ActivationType = EAbilityActivationType::Instant;
 }
 
-void UJett_C_Cloudburst::HandleExecutingState()
+void UJett_C_Cloudburst::ExecuteAbility()
 {
-	SpawnProjectile(CachedActorInfo);
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-	Super::HandleExecutingState();
+	SpawnProjectile();
 }

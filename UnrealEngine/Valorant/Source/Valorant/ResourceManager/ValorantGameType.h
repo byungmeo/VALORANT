@@ -292,11 +292,11 @@ struct FAgentData : public FTableRowBase
 
 	// 캐릭터 선택 연출
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	TSubclassOf<ACharSelectCharacterActor> CharSelectCharacterActorClass;
+	TSubclassOf<ACharSelectCharacterActor> CharSelectCharacterActorClass = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	UAnimMontage* CharSelectCharacterMontage;
+	UAnimMontage* CharSelectCharacterMontage = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-	UAnimMontage* CharSelectCameraMontage;
+	UAnimMontage* CharSelectCameraMontage = nullptr;
 };
 
 USTRUCT(BlueprintType)

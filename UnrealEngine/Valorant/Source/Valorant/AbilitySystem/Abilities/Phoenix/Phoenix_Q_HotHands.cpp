@@ -12,37 +12,13 @@ UPhoenix_Q_HotHands::UPhoenix_Q_HotHands() : UBaseGameplayAbility()
 	SetAssetTags(Tags);
 
 	m_AbilityID = 2002;
-	InputType = EAbilityInputType::MultiPhase;
-
-	// === 후속 입력 설정 (CDO에서 안전한 방식) ===
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
+	ActivationType = EAbilityActivationType::WithPrepare;
+	FollowUpInputType = EFollowUpInputType::LeftOrRight;
 }
 
-void UPhoenix_Q_HotHands::HandleLeftClick(FGameplayEventData EventData)
+bool UPhoenix_Q_HotHands::OnLeftClickInput()
 {
-	Super::HandleLeftClick(EventData);
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 좌클릭 처리 (직선 던지기)"));
-	TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-
-	// 직선 던지기 실행
-	ExecuteStraightThrow();
-}
-
-void UPhoenix_Q_HotHands::HandleRightClick(FGameplayEventData EventData)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 우클릭 처리 (포물선 던지기)"));
-	TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-
-	ExecuteCurvedThrow();
-}
-
-void UPhoenix_Q_HotHands::ExecuteStraightThrow()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 직선 던지기 실행"));
-
+	bool bShouldExecute = true;
 	// 직선 투사체 생성
 	if (SpawnProjectileByType(EPhoenixQThrowType::Straight))
 	{
@@ -51,14 +27,16 @@ void UPhoenix_Q_HotHands::ExecuteStraightThrow()
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Phoenix Q - 직선 투사체 생성 실패"));
+		bShouldExecute = false;
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 	}
+	
+	return bShouldExecute;
 }
 
-void UPhoenix_Q_HotHands::ExecuteCurvedThrow()
+bool UPhoenix_Q_HotHands::OnRightClickInput()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 포물선 던지기 실행"));
-
+	bool bShouldExecute = true;
 	// 포물선 투사체 생성
 	if (SpawnProjectileByType(EPhoenixQThrowType::Curved))
 	{
@@ -67,8 +45,10 @@ void UPhoenix_Q_HotHands::ExecuteCurvedThrow()
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Phoenix Q - 포물선 투사체 생성 실패"));
+		bShouldExecute = false;
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 	}
+	return bShouldExecute;
 }
 
 bool UPhoenix_Q_HotHands::SpawnProjectileByType(EPhoenixQThrowType ThrowType)
@@ -99,21 +79,10 @@ bool UPhoenix_Q_HotHands::SpawnProjectileByType(EPhoenixQThrowType ThrowType)
 	TSubclassOf<ABaseProjectile> OriginalProjectileClass = ProjectileClass;
 	ProjectileClass = ProjectileToSpawn;
 
-	bool bResult = SpawnProjectile(CachedActorInfo);
+	bool bResult = SpawnProjectile();
 
 	// 원래 클래스로 복원
 	ProjectileClass = OriginalProjectileClass;
 
 	return bResult;
-}
-
-void UPhoenix_Q_HotHands::CleanupAbility()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 어빌리티 정리"));
-
-	// 던지기 타입 초기화
-	CurrentThrowType = EPhoenixQThrowType::None;
-
-	// 부모 클래스의 정리 작업 수행
-	Super::CleanupAbility();
 }

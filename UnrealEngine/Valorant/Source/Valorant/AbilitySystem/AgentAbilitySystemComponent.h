@@ -52,9 +52,6 @@ public:
     bool IsAbilityExecuting() const;
     
     UFUNCTION(BlueprintCallable, Category = "Ability|State")
-    bool IsAbilityReady() const;
-    
-    UFUNCTION(BlueprintCallable, Category = "Ability|State")
     bool IsWaitingForFollowUp() const;
     
     UFUNCTION(BlueprintCallable, Category = "Ability|State")
@@ -142,7 +139,4 @@ protected:
     
     UFUNCTION(NetMulticast, Reliable)
     void MulticastRPC_NotifyAbilityStateChanged(FGameplayTag StateTag, bool bApply);
-    
-    UFUNCTION(NetMulticast, Reliable)
-    void MulticastRPC_NotifyAnimationCompleted();
 };

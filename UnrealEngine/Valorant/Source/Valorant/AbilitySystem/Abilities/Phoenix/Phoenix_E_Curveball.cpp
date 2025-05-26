@@ -10,36 +10,33 @@ UPhoenix_E_Curveball::UPhoenix_E_Curveball(): UBaseGameplayAbility()
 	SetAssetTags(Tags);
 
 	m_AbilityID = 2003;
-	InputType = EAbilityInputType::MultiPhase;
+	ActivationType = EAbilityActivationType::WithPrepare;
+	FollowUpInputType = EFollowUpInputType::LeftOrRight;
 
-	// === 후속 입력 설정 (CDO에서 안전한 방식) ===
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
+	// 태그 설정
+	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Phoenix.Curveball")));
+	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
 }
 
-void UPhoenix_E_Curveball::HandleLeftClick(FGameplayEventData EventData)
+bool UPhoenix_E_Curveball::OnLeftClickInput()
 {
-	Super::HandleLeftClick(EventData);
-
+	bool bShouldExecute = true;
+	
 	// 섬광탄 발사
 	SpawnFlashProjectile(false);
 
-    
-	// 어빌리티 완료
-	TransitionToState(FValorantGameplayTags::Get().State_Ability_Ended);
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+	return bShouldExecute;
 }
 
-void UPhoenix_E_Curveball::HandleRightClick(FGameplayEventData EventData)
+bool UPhoenix_E_Curveball::OnRightClickInput()
 {
-	Super::HandleRightClick(EventData);
+	bool bShouldExecute = true;
+
 	// 섬광탄 발사
 	SpawnFlashProjectile(true);
 
-    
-	// 어빌리티 완료
-	TransitionToState(FValorantGameplayTags::Get().State_Ability_Ended);
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+
+	return bShouldExecute;
 }
 
 bool UPhoenix_E_Curveball::SpawnFlashProjectile(bool IsUnder)
@@ -51,7 +48,7 @@ bool UPhoenix_E_Curveball::SpawnFlashProjectile(bool IsUnder)
 	ProjectileClass = FlashProjectileClass;
     
 	// 기본 SpawnProjectile 사용
-	bool result = SpawnProjectile(CachedActorInfo);
+	bool result = SpawnProjectile();
 	if (auto flashBang = Cast<AFlashbang>(SpawnedProjectile))
 	{
 		flashBang->ActiveProjectileMovement(IsUnder);

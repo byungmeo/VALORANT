@@ -27,18 +27,10 @@ protected:
     UAnimMontage* ExecutingUnderThrow3pMontage = nullptr;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
     UAnimMontage* ExecutingUnderThrow1pMontage = nullptr;
- 
-    virtual void HandleLeftClick(FGameplayEventData EventData) override;
-    virtual void HandleRightClick(FGameplayEventData EventData) override;
-    
-    // === 내부 처리 함수들 ===
-    // 던지기 타입별 처리
-    void ExecuteStraightThrow();
-    void ExecuteCurvedThrow();
+
+    virtual bool OnLeftClickInput() override;
+    virtual bool OnRightClickInput() override;
     
     // 투사체 생성 (타입별)
     bool SpawnProjectileByType(EPhoenixQThrowType ThrowType);
-    
-    // === 정리 함수 ===
-    virtual void CleanupAbility() override;
 };
