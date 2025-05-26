@@ -4,7 +4,6 @@
 #include "BaseWeapon.h"
 
 #include "BaseWeaponAnim.h"
-#include "EnhancedInputSubsystems.h"
 #include "ThirdPersonInteractor.h"
 #include "Valorant.h"
 #include "Components/WidgetComponent.h"
@@ -17,7 +16,6 @@
 #include "Net/UnrealNetwork.h"
 #include "UI/DetectWidget.h"
 #include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
 //#include "NiagaraCommon.h"
 
 ABaseWeapon::ABaseWeapon()
@@ -354,7 +352,6 @@ void ABaseWeapon::ServerRPC_StartReload_Implementation()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Reload Start"), __FUNCTION__);
 		bIsFiring = false;
 		bIsReloading = true;
-		MulticastRPC_PlayReloadSound();
 		MulticastRPC_PlayReloadAnimation();
 		GetWorld()->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false,
 		                                       WeaponData->ReloadTime);
@@ -398,17 +395,6 @@ void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
 		}
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, bIsFP: %hs, bIsCU: %hs, Dir: %d"), __FUNCTION__, bIsFP ? "True" : "False", bIsCU ? "True" : "False", Dir);
 		PlayFireSound(WeaponData->FireSound, true, true, 0, WeaponData->MuzzleSocketName);
-	}
-}
-
-void ABaseWeapon::MulticastRPC_PlayReloadSound_Implementation()
-{
-	if (WeaponData && WeaponData->ReloadSound && Mesh)
-	{
-		UGameplayStatics::SpawnSoundAttached(
-			WeaponData->ReloadSound,
-			Mesh
-		);
 	}
 }
 
