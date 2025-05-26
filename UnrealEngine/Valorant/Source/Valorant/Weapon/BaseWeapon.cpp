@@ -398,17 +398,6 @@ void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
 	}
 }
 
-void ABaseWeapon::MulticastRPC_PlayEquipSound_Implementation()
-{
-	if (WeaponData && WeaponData->EquipSound && Mesh)
-	{
-		UGameplayStatics::SpawnSoundAttached(
-			WeaponData->EquipSound,
-			Mesh
-		);
-	}
-}
-
 void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 {
 	if (AM_Fire == nullptr)

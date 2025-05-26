@@ -123,8 +123,6 @@ protected:
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastRPC_PlayFireSound();
-	UFUNCTION(NetMulticast, Unreliable)
-	void MulticastRPC_PlayEquipSound();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
