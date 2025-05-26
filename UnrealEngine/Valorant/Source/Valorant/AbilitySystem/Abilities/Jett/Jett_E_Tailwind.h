@@ -12,4 +12,7 @@ public:
 	UJett_E_Tailwind();
 
 	virtual void ExecuteAbility() override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement", meta=(AllowPrivateAccess=true))
+	float DashStrength = 4000.f;
 }; 
