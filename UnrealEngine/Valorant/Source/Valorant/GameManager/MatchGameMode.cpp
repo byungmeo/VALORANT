@@ -602,7 +602,6 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	{
 		Agent->SetActorTransform(spawnTransform);
 		Agent->SetCanMove(true);
-		Agent->SetIsDead(false);
 		return;
 	}
 
