@@ -531,6 +531,8 @@ public:
 	
 	FOnSpikeDeactive OnSpikeDeactive;
 	FOnSpikeDefuseFinish OnSpikeDefuseFinish;
+
+	FTimerHandle DeadTimerHandle;
 	
 	void OnEquip();
 	void OnFire();

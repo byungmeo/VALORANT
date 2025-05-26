@@ -1058,8 +1058,7 @@ void ABaseAgent::Die()
 		}
 	}
 	
-	FTimerHandle deadTimerHandle;
-	GetWorldTimerManager().SetTimer(deadTimerHandle, FTimerDelegate::CreateLambda([this]()
+	GetWorldTimerManager().SetTimer(DeadTimerHandle, FTimerDelegate::CreateLambda([this]()
 	{
 		OnDieCameraFinished();
 	}), DieCameraTimeRange, false);

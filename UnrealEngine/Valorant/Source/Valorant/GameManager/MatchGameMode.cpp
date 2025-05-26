@@ -569,30 +569,56 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	ABaseAgent* Agent = nullptr;
+	// ABaseAgent* Agent = nullptr;
 	
-	if (ps->IsSpectator() || ps->GetPawn() == nullptr)
+	// if (ps->IsSpectator() || ps->GetPawn() == nullptr)
+	// {
+	// 	FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
+	// 	Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+	//
+	// 	ps->SetIsSpectator(false);
+	// 	ps->SetIsOnlyASpectator(false);
+	//
+	// 	APawn* oldPawn = pc->GetPawn();
+	//
+	// 	pc->Possess(Agent);
+	//
+	// 	if (oldPawn)
+	// 	{
+	// 		oldPawn->Destroy();
+	// 	}
+	// }
+	// else
+	// {
+	// 	Agent = Cast<ABaseAgent>(ps->GetPawn());
+	// 	Agent->SetActorTransform(spawnTransform);
+	// 	Agent->SetCanMove(true);
+	// 	Agent->SetIsDead(false);
+	// }
+
+	ABaseAgent* Agent = Cast<ABaseAgent>(ps->GetPawn());
+	
+	if (Agent != nullptr && !Agent->IsDead())
 	{
-		FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
-		Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
-
-		ps->SetIsSpectator(false);
-		ps->SetIsOnlyASpectator(false);
-
-		APawn* oldPawn = pc->GetPawn();
-
-		pc->Possess(Agent);
-
-		if (oldPawn)
-		{
-			oldPawn->Destroy();
-		}
-	}
-	else
-	{
-		Agent = Cast<ABaseAgent>(ps->GetPawn());
 		Agent->SetActorTransform(spawnTransform);
 		Agent->SetCanMove(true);
+		Agent->SetIsDead(false);
+		return;
+	}
+
+	FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
+	Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
+
+	ps->SetIsSpectator(false);
+	ps->SetIsOnlyASpectator(false);
+
+	APawn* oldPawn = pc->GetPawn();
+
+	pc->Possess(Agent);
+
+	if (oldPawn)
+	{
+		oldPawn->Destroy();
 	}
 }
 
