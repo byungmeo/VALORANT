@@ -347,12 +347,12 @@ public:
 	EInteractorType GetPrevEquipmentType() const;
 
 	// 1인칭 애니메이션 몽타주 재생
-	UFUNCTION(BlueprintCallable, Category = "Animation")
-	void PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+	UFUNCTION(Unreliable, Client, BlueprintCallable, Category = "Animation")
+	void Client_PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
 
 	// 3인칭 애니메이션 몽타주 재생
-	UFUNCTION(BlueprintCallable, Category = "Animation")
-	void PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
+	UFUNCTION(Unreliable, NetMulticast, BlueprintCallable, Category = "Animation")
+	void NetMulti_PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate = 1.0f, FName StartSectionName = NAME_None);
 
 	// 1인칭 애니메이션 몽타주 정지
 	UFUNCTION(BlueprintCallable, Category = "Animation")
