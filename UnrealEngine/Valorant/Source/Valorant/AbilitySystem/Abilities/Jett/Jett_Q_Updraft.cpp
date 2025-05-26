@@ -11,22 +11,18 @@ UJett_Q_Updraft::UJett_Q_Updraft(): UBaseGameplayAbility()
 	SetAssetTags(Tags);
 
 	m_AbilityID = 4002;
-	InputType = EAbilityInputType::Instant;
+	ActivationType = EAbilityActivationType::Instant;
 }
 
-void UJett_Q_Updraft::HandleExecutingState()
+void UJett_Q_Updraft::ExecuteAbility()
 {
-	Super::HandleExecutingState();
-
 	ACharacter* Character = Cast<ACharacter>(CachedActorInfo.AvatarActor.Get());
 	if (Character)
 	{
-		CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-
 		UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement();
 		if (MoveComp)
 		{
-			const float UpdraftStrength = 4000.0f;
+			const float UpdraftStrength = 5000.0f;
 			FVector LaunchVelocity = FVector(0, 0, UpdraftStrength);
 			MoveComp->Velocity.Z = 0;
 			Character->LaunchCharacter(LaunchVelocity, true, true);
@@ -34,8 +30,8 @@ void UJett_Q_Updraft::HandleExecutingState()
 			// 중력/브레이킹 일시적으로 증가
 			float OriginalGravity = MoveComp->GravityScale;
 			float OriginalBraking = MoveComp->BrakingDecelerationFalling;
-			MoveComp->GravityScale = 12.f;
-			MoveComp->BrakingDecelerationFalling = 8000.0f;
+			MoveComp->GravityScale = 6.f;
+			MoveComp->BrakingDecelerationFalling = 6000.0f;
 
 			// 0.3초 후 원래 값 복구
 			FTimerHandle TimerHandle;

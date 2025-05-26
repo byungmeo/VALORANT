@@ -10,5 +10,5 @@ class VALORANT_API UJett_C_Cloudburst : public UBaseGameplayAbility
 
     UJett_C_Cloudburst();
 
-    virtual void HandleExecutingState() override;
+    virtual void ExecuteAbility() override;
 }; 

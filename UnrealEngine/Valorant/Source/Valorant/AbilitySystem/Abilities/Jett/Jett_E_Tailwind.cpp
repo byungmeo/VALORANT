@@ -12,18 +12,15 @@ UJett_E_Tailwind::UJett_E_Tailwind(): UBaseGameplayAbility()
 	SetAssetTags(Tags);
 
 	m_AbilityID = 4003;
-	InputType = EAbilityInputType::Instant;
+	ActivationType = EAbilityActivationType::Instant;
 
 	// ToDo : 추후 구현
-	//ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.Repeat")));
+	// ActivationType = EAbilityActivationType::WithPrepare;
+	// FollowUpInputType = EFollowUpInputType::RepeatKey;
 }
 
-void UJett_E_Tailwind::HandleExecutingState()
+void UJett_E_Tailwind::ExecuteAbility()
 {
-	Super::HandleExecutingState();
-
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-
 	ACharacter* Character = Cast<ACharacter>(CachedActorInfo.AvatarActor.Get());
 	if (Character)
 	{

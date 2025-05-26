@@ -8,42 +8,34 @@ USage_C_BarrierOrb::USage_C_BarrierOrb()
 	FGameplayTagContainer Tags;
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")));
 	SetAssetTags(Tags);
-
-	// === 후속 입력 설정 (CDO에서 안전한 방식) ===
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
 	
 	m_AbilityID = 1001;
-	InputType = EAbilityInputType::MultiPhase;
+	ActivationType = EAbilityActivationType::WithPrepare;
+	FollowUpInputType = EFollowUpInputType::LeftOrRight;
 	BarrierRotation = FRotator::ZeroRotator;
 }
 
-void USage_C_BarrierOrb::HandleLeftClick(FGameplayEventData EventData)
+bool USage_C_BarrierOrb::OnLeftClickInput()
 {
-	Super::HandleLeftClick(EventData);
-
 	// 장벽 생성 위치 계산 (플레이어 앞쪽)
 	AActor* Owner = CachedActorInfo.AvatarActor.Get();
-	if (!Owner || !BarrierClass) return;
+	if (!Owner || !BarrierClass) return true;
 	FVector SpawnLoc = Owner->GetActorLocation() + Owner->GetActorForwardVector() * BarrierSpawnDistance;
 	SpawnLoc.Z += BarrierSpawnHeight;
 	FRotator SpawnRot = BarrierRotation;
 	// 실제 장벽 스폰
 	GetWorld()->SpawnActor<AActor>(BarrierClass, SpawnLoc, SpawnRot);
-	TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+	return true;
 }
 
-void USage_C_BarrierOrb::HandleRightClick(FGameplayEventData EventData)
+bool USage_C_BarrierOrb::OnRightClickInput()
 {
-	Super::HandleRightClick(EventData);
-
 	// 장벽 회전값 변경
 	BarrierRotation.Yaw += BarrierYawStep;
 	
 	// 디버그 박스 미리보기
 	AActor* Owner = CachedActorInfo.AvatarActor.Get();
-	if (!Owner) return;
+	if (!Owner) return false;
 
 	FVector SpawnLoc = Owner->GetActorLocation() + Owner->GetActorForwardVector() * BarrierSpawnDistance;
 	SpawnLoc.Z += BarrierSpawnHeight;
@@ -63,4 +55,5 @@ void USage_C_BarrierOrb::HandleRightClick(FGameplayEventData EventData)
 		0,          // DepthPriority
 		2.0f        // Thickness
 	);
+	return false;
 }
