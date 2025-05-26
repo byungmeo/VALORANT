@@ -1,4 +1,6 @@
 #include "Phoenix_E_Curveball.h"
+
+#include "Phoenix_E_P_Curveball.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "AgentAbility/FlashProjectile.h"
 #include "AgentAbility/KayO/Flashbang.h"
@@ -39,7 +41,7 @@ bool UPhoenix_E_Curveball::OnRightClickInput()
 	return bShouldExecute;
 }
 
-bool UPhoenix_E_Curveball::SpawnFlashProjectile(bool IsUnder)
+bool UPhoenix_E_Curveball::SpawnFlashProjectile(bool IsRight)
 {
 	if (!FlashProjectileClass)
 		return false;
@@ -49,9 +51,9 @@ bool UPhoenix_E_Curveball::SpawnFlashProjectile(bool IsUnder)
     
 	// 기본 SpawnProjectile 사용
 	bool result = SpawnProjectile();
-	if (auto flashBang = Cast<AFlashbang>(SpawnedProjectile))
+	if (auto flashBang = Cast<APhoenix_E_P_Curveball>(SpawnedProjectile))
 	{
-		flashBang->ActiveProjectileMovement(IsUnder);
+		flashBang->SetCurveDirection(IsRight);
 	}
 	return result;
 }
