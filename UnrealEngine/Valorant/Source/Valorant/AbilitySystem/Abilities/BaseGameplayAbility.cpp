@@ -22,12 +22,6 @@ UBaseGameplayAbility::UBaseGameplayAbility()
 	ActivationBlockedTags.AddTag(FValorantGameplayTags::Get().Block_Ability_Activation);
 }
 
-void UBaseGameplayAbility::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(UBaseGameplayAbility, CurrentPhase);
-}
-
 bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                               const FGameplayAbilityActorInfo* ActorInfo,
                                               const FGameplayTagContainer* SourceTags,
@@ -362,7 +356,10 @@ void UBaseGameplayAbility::SetAbilityPhase(FGameplayTag NewPhase)
 	}
 
 	CurrentPhase = NewPhase;
-	OnRep_CurrentPhase();
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		OnRep_CurrentPhase();
+	}
 }
 
 void UBaseGameplayAbility::OnRep_CurrentPhase()

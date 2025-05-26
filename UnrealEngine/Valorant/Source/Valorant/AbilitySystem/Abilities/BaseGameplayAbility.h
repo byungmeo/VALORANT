@@ -150,7 +150,7 @@ protected:
 	UPROPERTY()
 	FGameplayAbilityActorInfo CachedActorInfo;
 private:
-    UPROPERTY(ReplicatedUsing = OnRep_CurrentPhase)
+    UPROPERTY()
     FGameplayTag CurrentPhase;
     
     FTimerHandle WaitingTimeoutHandle;
