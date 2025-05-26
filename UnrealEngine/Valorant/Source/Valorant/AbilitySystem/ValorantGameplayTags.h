@@ -16,14 +16,10 @@ struct FValorantGameplayTags
     FGameplayTag InputTag_Default_RightClick;
     FGameplayTag InputTag_Default_Repeat;
     
-    // 어빌리티 상태 태그들 (State만 사용, Phase 제거)
-    FGameplayTag State_Ability_Preparing;          // "State.Ability.Preparing" (애니메이션 재생 중)
-    FGameplayTag State_Ability_Ready;              // "State.Ability.Ready"  (스킬 준비 완료)
-    FGameplayTag State_Ability_Aiming;             // "State.Ability.Aiming" (스킬 조준)
-    FGameplayTag State_Ability_Charging;           // "State.Ability.Charging" (스킬 차징)
-    FGameplayTag State_Ability_Executing;          // "State.Ability.Executing" (스킬 실행)
-    FGameplayTag State_Ability_Ended;              // "State.Ability.Ended"
-    FGameplayTag State_Ability_WaitingFollowUp;    // "State.Ability.WaitingFollowUp"
+    // 어빌리티 상태
+    FGameplayTag State_Ability_Preparing;    // 준비 애니메이션 재생 중
+    FGameplayTag State_Ability_Waiting;      // 입력 대기 중
+    FGameplayTag State_Ability_Executing;    // 실행 중
     
     // 어빌리티 차단 태그들
     FGameplayTag Block_Ability_Input;              // "Block.Ability.Input"

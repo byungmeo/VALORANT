@@ -10,5 +10,5 @@ class VALORANT_API UJett_Q_Updraft : public UBaseGameplayAbility
 
     UJett_Q_Updraft();
     
-    virtual void HandleExecutingState() override;
+    virtual void ExecuteAbility();
 }; 

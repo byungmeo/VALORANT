@@ -25,6 +25,6 @@ protected:
     UPROPERTY(EditAnywhere)
     TSubclassOf<UGameplayEffect> GameplayEffect = nullptr;
 
-    virtual void HandleLeftClick(FGameplayEventData EventData) override;
-    virtual void HandleRightClick(FGameplayEventData EventData) override;
+    virtual bool OnLeftClickInput() override;
+    virtual bool OnRightClickInput() override;
 }; 

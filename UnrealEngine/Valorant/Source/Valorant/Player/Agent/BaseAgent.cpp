@@ -1766,7 +1766,8 @@ EInteractorType ABaseAgent::GetPrevEquipmentType() const
 	return PrevEquipmentState;
 }
 
-void ABaseAgent::PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+void ABaseAgent::Client_PlayFirstPersonMontage_Implementation(UAnimMontage* MontageToPlay, float PlayRate,
+	FName StartSectionName)
 {
 	if (ABP_1P && MontageToPlay)
 	{
@@ -1778,7 +1779,8 @@ void ABaseAgent::PlayFirstPersonMontage(UAnimMontage* MontageToPlay, float PlayR
 	}
 }
 
-void ABaseAgent::PlayThirdPersonMontage(UAnimMontage* MontageToPlay, float PlayRate, FName StartSectionName)
+void ABaseAgent::NetMulti_PlayThirdPersonMontage_Implementation(UAnimMontage* MontageToPlay, float PlayRate,
+	FName StartSectionName)
 {
 	if (ABP_3P && MontageToPlay)
 	{

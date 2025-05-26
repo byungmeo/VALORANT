@@ -8,16 +8,12 @@ USage_Q_SlowOrb::USage_Q_SlowOrb()
 	SetAssetTags(Tags);
 
 	m_AbilityID = 1002;
-	InputType = EAbilityInputType::MultiPhase;
-
-	// === 후속 입력 설정 (CDO에서 안전한 방식) ===
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
+	ActivationType = EAbilityActivationType::WithPrepare;
+	FollowUpInputType = EFollowUpInputType::LeftOrRight;
 }
 
-void USage_Q_SlowOrb::HandleLeftClick(FGameplayEventData data)
+bool USage_Q_SlowOrb::OnLeftClickInput()
 {
-	CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-	TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
-	
-	SpawnProjectile(CachedActorInfo);
+	SpawnProjectile();
+	return true;
 }

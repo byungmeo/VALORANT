@@ -13,8 +13,8 @@ class VALORANT_API UPhoenix_E_Curveball : public UBaseGameplayAbility
 public:
     UPhoenix_E_Curveball();
 
-    virtual void HandleLeftClick(FGameplayEventData EventData) override;
-    virtual void HandleRightClick(FGameplayEventData EventData) override;
+    virtual bool OnLeftClickInput() override;
+    virtual bool OnRightClickInput() override;
     
     // 섬광탄 투사체 스폰 (BaseGameplayAbility의 SpawnProjectile 사용)
     UFUNCTION(BlueprintCallable, Category = "Flash")

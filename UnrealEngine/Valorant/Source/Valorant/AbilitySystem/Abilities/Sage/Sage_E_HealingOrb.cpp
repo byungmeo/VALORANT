@@ -11,20 +11,18 @@ USage_E_HealingOrb::USage_E_HealingOrb()
 	FGameplayTagContainer Tags;
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
 	SetAssetTags(Tags);
-
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")));
-	ValidFollowUpInputs.Add(FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")));
-
+	
 	m_AbilityID = 1003;
+	ActivationType = EAbilityActivationType::WithPrepare;
+	FollowUpInputType = EFollowUpInputType::LeftOrRight;
 }
 
-void USage_E_HealingOrb::HandleLeftClick(FGameplayEventData EventData)
+bool USage_E_HealingOrb::OnLeftClickInput()
 {
-	Super::HandleLeftClick(EventData);
-
+	bool bShouldExecute = false;
 	// 라인트레이스로 아군 탐지
 	AActor* Owner = CachedActorInfo.AvatarActor.Get();
-	if (!Owner) return;
+	if (!Owner) return bShouldExecute;
 	FVector Start = Owner->GetActorLocation();
 	FVector End = Start + Owner->GetActorForwardVector() * HealTraceDistance;
 	TArray<AActor*> ActorsToIgnore;
@@ -55,15 +53,15 @@ void USage_E_HealingOrb::HandleLeftClick(FGameplayEventData EventData)
 
 			// 힐링 이펙트/지속힐 적용 (Tick마다 HealAmount/HealDuration)
 			Target->ServerApplyGE(GameplayEffect);
-			TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
-			CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+			bShouldExecute = true;
 		}
 	}
+	return bShouldExecute;
 }
 
-void USage_E_HealingOrb::HandleRightClick(FGameplayEventData EventData)
+bool USage_E_HealingOrb::OnRightClickInput()
 {
-	Super::HandleRightClick(EventData);
+	bool bShouldExecute = false;
 
 	// 자신이 피해 입었을 때만 힐링
 	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
@@ -71,7 +69,8 @@ void USage_E_HealingOrb::HandleRightClick(FGameplayEventData EventData)
 	{
 		// 힐링 이펙트/지속힐 적용 (Tick마다 HealAmount/HealDuration)
 		OwnerAgent->ServerApplyGE(GameplayEffect);
-		CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-		TransitionToState(FValorantGameplayTags::Get().State_Ability_Executing);
+		bShouldExecute = true;
 	}
+
+	return bShouldExecute;
 }
