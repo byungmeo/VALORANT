@@ -115,13 +115,18 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Fire(const FVector& Location, const FVector& Direction);
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_PlayFireSound();
-	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayFireAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
-	void PlayFireSound();
+	void PlayFireSound(const USoundBase* Sound, const bool bIsFP, const bool bIsCU, const int Dir, const FName& MuzzleSocketName = FName(NAME_None));
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_PlayReloadAnimation();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastRPC_PlayFireSound();
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastRPC_PlayReloadSound();
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastRPC_PlayEquipSound();
 
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Reload();
@@ -180,13 +185,4 @@ public:
 	void Multicast_SpawnTracer(const FVector& Start, const FVector& End);
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SpawnImpactEffect(const FVector& Location, const FRotator& Rotation);
-
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_PlayFireSound();
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_PlayImpactSound(const FVector& Location);
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_PlayReloadSound();
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_PlayEquipSound();
 };

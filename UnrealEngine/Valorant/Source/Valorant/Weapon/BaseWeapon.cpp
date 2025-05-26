@@ -181,9 +181,6 @@ void ABaseWeapon::Fire()
 	FVector Start, Dir;
 	PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
 	ServerRPC_Fire(Start, Dir);
-
-	Multicast_SpawnMuzzleFlash();
-	Multicast_PlayFireSound();
 }
 
 FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction)
@@ -230,7 +227,11 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 
 	// 무기를 사용한 것으로 표시
 	bWasUsed = true;
-
+	
+	Multicast_SpawnMuzzleFlash();
+	MulticastRPC_PlayFireSound();
+	MulticastRPC_PlayFireAnimation();
+	
 	const FVector& Dir = GetSpreadDirection(Direction);
 	const FVector& Start = Location;
 	const FVector End = Start + Dir * 99999;
@@ -263,67 +264,63 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 			if (OwnerAgent && HitAgent->IsBlueTeam() == OwnerAgent->IsBlueTeam())
 			{
 				// 같은 팀이면 데미지를 주지 않고 임팩트 효과만 재생
-				Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
-				Multicast_PlayImpactSound(OutHit.ImpactPoint);
-				Multicast_SpawnTracer(Start, OutHit.ImpactPoint);
-				return;
+				// Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
+				// Multicast_SpawnTracer(Start, OutHit.ImpactPoint);
 			}
-
-			int FinalDamage = WeaponData->BaseDamage;
-			const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName);
-			switch (DamagedPart)
+			else
 			{
-			case EAgentDamagedPart::None:
-				break;
-			case EAgentDamagedPart::Head:
-				FinalDamage *= WeaponData->HeadshotMultiplier;
-				break;
-			case EAgentDamagedPart::Body:
-				break;
-			case EAgentDamagedPart::Legs:
-				FinalDamage *= WeaponData->LegshotMultiplier;
-				break;
-			}
-
-			const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
-			for (int i = FalloffArray.Num() - 1; i >= 0; i--)
-			{
-				const auto& FalloffData = FalloffArray[i];
-				if (OutHit.Distance >= FalloffData.RangeStart)
+				int FinalDamage = WeaponData->BaseDamage;
+				const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName);
+				switch (DamagedPart)
 				{
-					FinalDamage *= FalloffData.DamageMultiplier;
+				case EAgentDamagedPart::None:
+					break;
+				case EAgentDamagedPart::Head:
+					FinalDamage *= WeaponData->HeadshotMultiplier;
+					break;
+				case EAgentDamagedPart::Body:
+					break;
+				case EAgentDamagedPart::Legs:
+					FinalDamage *= WeaponData->LegshotMultiplier;
 					break;
 				}
-			}
-			FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
 
-			// 피격 방향 판정
-			EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
-			const FVector HitDir = (OutHit.TraceStart - OutHit.TraceEnd).GetSafeNormal();
-			FVector Forward = HitAgent->GetActorForwardVector();
-			FVector Cross = FVector::CrossProduct(Forward, -HitDir);
-			const float Dot = FVector::DotProduct(Forward, -HitDir);
-			if (Dot > 0.5f) DamagedDirection = EAgentDamagedDirection::Back;
-			else if (Dot < -0.5f) DamagedDirection = EAgentDamagedDirection::Front;
-			else if (Cross.Z > 0) DamagedDirection = EAgentDamagedDirection::Left;
-			else DamagedDirection = EAgentDamagedDirection::Right;
+				const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
+				for (int i = FalloffArray.Num() - 1; i >= 0; i--)
+				{
+					const auto& FalloffData = FalloffArray[i];
+					if (OutHit.Distance >= FalloffData.RangeStart)
+					{
+						FinalDamage *= FalloffData.DamageMultiplier;
+						break;
+					}
+				}
+				FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
 
-			NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"),
-			        *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
+				// 피격 방향 판정
+				EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
+				const FVector HitDir = (OutHit.TraceStart - OutHit.TraceEnd).GetSafeNormal();
+				FVector Forward = HitAgent->GetActorForwardVector();
+				FVector Cross = FVector::CrossProduct(Forward, -HitDir);
+				const float Dot = FVector::DotProduct(Forward, -HitDir);
+				if (Dot > 0.5f) DamagedDirection = EAgentDamagedDirection::Back;
+				else if (Dot < -0.5f) DamagedDirection = EAgentDamagedDirection::Front;
+				else if (Cross.Z > 0) DamagedDirection = EAgentDamagedDirection::Left;
+				else DamagedDirection = EAgentDamagedDirection::Right;
+
+				NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"),
+						*OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
 			
-			// 공격자 정보 전달
-			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent, DamagedPart, DamagedDirection);
+				// 공격자 정보 전달
+				HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent, DamagedPart, DamagedDirection);
+			}
 		}
-		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
+		// DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 
 		// 벽이든 캐릭터든 항상 임팩트 이펙트/사운드 호출
 		Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
-		Multicast_PlayImpactSound(OutHit.ImpactPoint);
+		Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
 	}
-
-	Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
-	MulticastRPC_PlayFireSound();
-	MulticastRPC_PlayFireAnimation();
 }
 
 void ABaseWeapon::EndFire()
@@ -365,12 +362,62 @@ void ABaseWeapon::ServerRPC_StartReload_Implementation()
 
 void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
 {
-	if (WeaponData && WeaponData->FireSound && Mesh)
+	if (WeaponData && WeaponData->FireSound)
+	{
+		bool bIsFP = false;
+		bool bIsCU = false;
+		int Dir = 0;
+		const auto* LocallyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
+		if (LocallyPC && LocallyPC->IsLocalController())
+		{
+			if (const auto* ViewTarget = LocallyPC->GetViewTarget())
+			{
+				if (OwnerAgent == ViewTarget)
+				{
+					bIsFP = true;
+				}
+				else
+				{
+					const auto& FireLocation = GetActorLocation();
+					const auto& MyLocation = ViewTarget->GetActorLocation();
+					const auto& MyForward = ViewTarget->GetActorForwardVector();
+					const auto ToFireLocation = (FireLocation - MyLocation).GetSafeNormal();
+					// 발사 지점과의 거리가 2000보다 작으면 근접 발사 사운드 출력
+					bIsCU = FVector::Dist(FireLocation, MyLocation) <= 2000.f;
+					// 내 전방 벡터를 기준으로 총소리가 어디서 들린 것인지 판단
+					const auto Dot = FVector::DotProduct(MyForward, ToFireLocation);
+					if (Dot > 0.7f)
+						Dir = 0; // 전방
+					else if (Dot < -0.7f)
+						Dir = 1; // 후방
+					else
+						Dir = 2; // 사이드
+				}
+			}
+		}
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, bIsFP: %hs, bIsCU: %hs, Dir: %d"), __FUNCTION__, bIsFP ? "True" : "False", bIsCU ? "True" : "False", Dir);
+		PlayFireSound(WeaponData->FireSound, true, true, 0, WeaponData->MuzzleSocketName);
+	}
+}
+
+void ABaseWeapon::MulticastRPC_PlayReloadSound_Implementation()
+{
+	if (WeaponData && WeaponData->ReloadSound && Mesh)
 	{
 		UGameplayStatics::SpawnSoundAttached(
-			WeaponData->FireSound,
-			Mesh,
-			WeaponData->MuzzleSocketName
+			WeaponData->ReloadSound,
+			Mesh
+		);
+	}
+}
+
+void ABaseWeapon::MulticastRPC_PlayEquipSound_Implementation()
+{
+	if (WeaponData && WeaponData->EquipSound && Mesh)
+	{
+		UGameplayStatics::SpawnSoundAttached(
+			WeaponData->EquipSound,
+			Mesh
 		);
 	}
 }
@@ -432,7 +479,7 @@ void ABaseWeapon::Reload()
 	}
 
 	bIsReloading = false;
-	Multicast_PlayReloadSound();
+	MulticastRPC_PlayReloadSound();
 }
 
 void ABaseWeapon::StopReload()
@@ -704,51 +751,6 @@ void ABaseWeapon::Multicast_SpawnImpactEffect_Implementation(const FVector& Loca
 			WeaponData->ImpactEffect,
 			Location,
 			Rotation
-		);
-	}
-}
-
-void ABaseWeapon::Multicast_PlayFireSound_Implementation()
-{
-	if (WeaponData && WeaponData->FireSound && Mesh)
-	{
-		UGameplayStatics::SpawnSoundAttached(
-			WeaponData->FireSound,
-			Mesh
-		);
-	}
-}
-
-void ABaseWeapon::Multicast_PlayImpactSound_Implementation(const FVector& Location)
-{
-	if (WeaponData && WeaponData->ImpactSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(
-			GetWorld(),
-			WeaponData->ImpactSound,
-			Location
-		);
-	}
-}
-
-void ABaseWeapon::Multicast_PlayReloadSound_Implementation()
-{
-	if (WeaponData && WeaponData->ReloadSound && Mesh)
-	{
-		UGameplayStatics::SpawnSoundAttached(
-			WeaponData->ReloadSound,
-			Mesh
-		);
-	}
-}
-
-void ABaseWeapon::Multicast_PlayEquipSound_Implementation()
-{
-	if (WeaponData && WeaponData->EquipSound && Mesh)
-	{
-		UGameplayStatics::SpawnSoundAttached(
-			WeaponData->EquipSound,
-			Mesh
 		);
 	}
 }
