@@ -354,6 +354,7 @@ void ABaseWeapon::ServerRPC_StartReload_Implementation()
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Reload Start"), __FUNCTION__);
 		bIsFiring = false;
 		bIsReloading = true;
+		MulticastRPC_PlayReloadSound();
 		MulticastRPC_PlayReloadAnimation();
 		GetWorld()->GetTimerManager().SetTimer(ReloadHandle, this, &ABaseWeapon::Reload, 3, false,
 		                                       WeaponData->ReloadTime);
@@ -479,7 +480,6 @@ void ABaseWeapon::Reload()
 	}
 
 	bIsReloading = false;
-	MulticastRPC_PlayReloadSound();
 }
 
 void ABaseWeapon::StopReload()
