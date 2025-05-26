@@ -24,12 +24,8 @@ void FValorantGameplayTags::InitializeNativeTags()
     
     // 어빌리티 상태 태그들 (State만 사용)
     REGISTER_TAG(State_Ability_Preparing, "State.Ability.Preparing");
-    REGISTER_TAG(State_Ability_Ready, "State.Ability.Ready");
-    REGISTER_TAG(State_Ability_Aiming, "State.Ability.Aiming");
-    REGISTER_TAG(State_Ability_Charging, "State.Ability.Charging");
+    REGISTER_TAG(State_Ability_Waiting, "State.Ability.Waiting");
     REGISTER_TAG(State_Ability_Executing, "State.Ability.Executing");
-    REGISTER_TAG(State_Ability_Ended, "State.Ability.Ended");
-    REGISTER_TAG(State_Ability_WaitingFollowUp, "State.Ability.WaitingFollowUp");
     
     // 어빌리티 차단 태그들
     REGISTER_TAG(Block_Ability_Input, "Block.Ability.Input");

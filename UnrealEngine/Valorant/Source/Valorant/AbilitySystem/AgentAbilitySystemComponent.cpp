@@ -48,48 +48,26 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
 
 int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
 {
+    // 부모 처리
     int32 Result = Super::HandleGameplayEvent(EventTag, Payload);
     
-    // 현재 활성화된 어빌리티 찾기
-    FGameplayAbilitySpec* FoundSpec = nullptr;
-    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+    // 후속 입력 대기 중인 경우
+    if (IsWaitingForFollowUp() && CurrentFollowUpInputs.Contains(EventTag))
     {
-        if (Spec.IsActive())
+        // 활성 어빌리티 찾기
+        for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
         {
-            FoundSpec = &Spec;
-            break;
+            if (Spec.IsActive())
+            {
+                if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
+                {
+                    Ability->HandleFollowUpInput(EventTag);
+                    break;
+                }
+            }
         }
     }
-
-    if (!FoundSpec) return Result;
-
-    UBaseGameplayAbility* AbilityInstance = Cast<UBaseGameplayAbility>(FoundSpec->GetPrimaryInstance());
-    if (!AbilityInstance) return Result;
-
-    FGameplayEventData EventData;
-    if (Payload)
-    {
-        EventData = *Payload;
-    }
-    EventData.EventTag = EventTag;
-
-    // 후속 입력인지 확인 후 적절한 메서드 호출
-    if (IsWaitingForFollowUp() && AbilityInstance->IsValidFollowUpInput(EventTag))
-    {
-        // 후속 입력으로 처리
-        AbilityInstance->HandleFollowUpInput(EventTag, EventData);
-    }
-    else if (EventTag == FGameplayTag::RequestGameplayTag(FName("Input.Default.LeftClick")))
-    {
-        // 일반 좌클릭 (후속 입력이 아닌 경우)
-        AbilityInstance->HandleLeftClick(EventData);
-    }
-    else if (EventTag == FGameplayTag::RequestGameplayTag(FName("Input.Default.RightClick")))
-    {
-        // 일반 우클릭 (후속 입력이 아닌 경우)
-        AbilityInstance->HandleRightClick(EventData);
-    }
-
+    
     return Result;
 }
 
@@ -213,14 +191,9 @@ bool UAgentAbilitySystemComponent::IsAbilityExecuting() const
     return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
 }
 
-bool UAgentAbilitySystemComponent::IsAbilityReady() const
-{
-    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Ready);
-}
-
 bool UAgentAbilitySystemComponent::IsWaitingForFollowUp() const
 {
-    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp);
+    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
 }
 
 bool UAgentAbilitySystemComponent::CanActivateAbilities() const
@@ -255,14 +228,14 @@ void UAgentAbilitySystemComponent::RegisterFollowUpInputs(const TSet<FGameplayTa
     CurrentFollowUpInputs = InputTags;
     CurrentExecutingAbility = AbilityTag;
     
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp, true);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting, true);
     
     for (FGameplayTag tag: InputTags)
     {
         UE_LOG(LogTemp,Warning,TEXT("%s 후속 입력 키로 등록"), *tag.GetTagName().ToString());
     }
     
-    OnAbilityStateChanged.Broadcast(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp);
+    OnAbilityStateChanged.Broadcast(FValorantGameplayTags::Get().State_Ability_Waiting);
 }
 
 void UAgentAbilitySystemComponent::ClearFollowUpInputs()
@@ -270,7 +243,7 @@ void UAgentAbilitySystemComponent::ClearFollowUpInputs()
     CurrentFollowUpInputs.Empty();
     CurrentExecutingAbility = FGameplayTag();
     
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting, false);
     
     OnAbilityStateChanged.Broadcast(FGameplayTag());
 }
@@ -280,11 +253,7 @@ void UAgentAbilitySystemComponent::CleanupAbilityState()
     // 모든 어빌리티 상태 정리
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Preparing, false);
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ready, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_WaitingFollowUp, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Charging, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Aiming, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Ended, false);
+    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting, false);
     
     ClearFollowUpInputs();
 }
@@ -311,12 +280,6 @@ bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
     else
     { 
         NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString());
-        
-        if (!IsAbilityReady())
-        {
-            // 준비 동작 진행중이거나 애니메이션 재생 중...
-            return true;
-        }
         
         if (IsValidFollowUpInput(inputTag))
         {
@@ -358,28 +321,5 @@ void UAgentAbilitySystemComponent::MulticastRPC_NotifyAbilityStateChanged_Implem
             RemoveLooseGameplayTag(StateTag);
         }
         BroadcastStateChange(StateTag);
-    }
-}
-
-void UAgentAbilitySystemComponent::MulticastRPC_NotifyAnimationCompleted_Implementation()
-{
-    // 모든 클라이언트에서 애니메이션 완료 처리
-    FGameplayAbilitySpec* FoundSpec = nullptr;
-    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
-    {
-        if (Spec.IsActive())
-        {
-            FoundSpec = &Spec;
-            break;
-        }
-    }
-
-    if (FoundSpec)
-    {
-        UBaseGameplayAbility* AbilityInstance = Cast<UBaseGameplayAbility>(FoundSpec->GetPrimaryInstance());
-        if (AbilityInstance)
-        {
-            AbilityInstance->OnPreparingAnimationCompleted();
-        }
     }
 }
