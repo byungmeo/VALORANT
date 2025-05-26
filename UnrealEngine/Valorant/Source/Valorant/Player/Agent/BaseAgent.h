@@ -125,7 +125,7 @@ public:
 	UCurveFloat* CrouchCurve;
 
 	UPROPERTY(EditAnywhere, Category= "Die")
-	float DieCameraTimeRange = 3.0f;;
+	float DieCameraTimeRange = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UTimelineComponent* TL_DieCamera;
@@ -242,7 +242,7 @@ public:
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
-	                          ABaseAgent* DamageInstigator = nullptr);
+	                          ABaseAgent* DamageInstigator = nullptr, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
@@ -458,6 +458,9 @@ protected:
 	UPROPERTY(Replicated)
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
+
+	EAgentDamagedPart LastDamagedPart;
+	EAgentDamagedDirection LastDamagedDirection;;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;

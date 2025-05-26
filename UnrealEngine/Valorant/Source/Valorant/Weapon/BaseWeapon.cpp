@@ -285,27 +285,6 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 				break;
 			}
 
-			// // 피격 방향 판정
-			// const FVector AttackDirection = -Dir;
-			// const FVector TargetForward = HitAgent->GetActorForwardVector();
-			// const float Dot = FVector::DotProduct(TargetForward, AttackDirection); // Vector A와 B 사이의 코사인 각도 (앞뒤 판단)
-			// const FVector Cross = FVector::CrossProduct(TargetForward, AttackDirection); // 양쪽 벡터에 모두 수직인 벡터 (좌우 판단)
-			// EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
-			// // 0.707 : cos 45의 근사값
-			// if (Dot > 0.707f)
-			// {
-			// 	DamagedDirection = EAgentDamagedDirection::Back;
-			// }
-			// else if (Dot < -0.707f)
-			// {
-			// 	DamagedDirection = EAgentDamagedDirection::Front;
-			// }
-			// else
-			// {
-			// 	// Cross.Z : Yaw 기준으로 좌우를 판단하겠다
-			// 	DamagedDirection = (Cross.Z > 0) ? EAgentDamagedDirection::Right : EAgentDamagedDirection::Left;
-			// }
-
 			const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
 			for (int i = FalloffArray.Num() - 1; i >= 0; i--)
 			{
@@ -318,11 +297,22 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 			}
 			FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
 
+			// 피격 방향 판정
+			EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
+			const FVector HitDir = (OutHit.TraceStart - OutHit.TraceEnd).GetSafeNormal();
+			FVector Forward = HitAgent->GetActorForwardVector();
+			FVector Cross = FVector::CrossProduct(Forward, -HitDir);
+			const float Dot = FVector::DotProduct(Forward, -HitDir);
+			if (Dot > 0.5f) DamagedDirection = EAgentDamagedDirection::Back;
+			else if (Dot < -0.5f) DamagedDirection = EAgentDamagedDirection::Front;
+			else if (Cross.Z > 0) DamagedDirection = EAgentDamagedDirection::Left;
+			else DamagedDirection = EAgentDamagedDirection::Right;
+
 			NET_LOG(LogTemp, Warning, TEXT("LineTraceSingle Hit: %s, BoneName: %s, Distance: %f, FinalDamage: %d"),
 			        *OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
 			
 			// 공격자 정보 전달
-			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent);
+			HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent, DamagedPart, DamagedDirection);
 		}
 		DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 
