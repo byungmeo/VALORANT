@@ -1,14 +1,9 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/BaseGameplayAbility.h"
 #include "KAYO_Q_FLASHDRIVE.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class VALORANT_API UKAYO_Q_FLASHDRIVE : public UBaseGameplayAbility
 {
@@ -16,4 +11,13 @@ class VALORANT_API UKAYO_Q_FLASHDRIVE : public UBaseGameplayAbility
 
 public:
 	UKAYO_Q_FLASHDRIVE();
+
+protected:
+	// 후속 입력 처리 (좌클릭: 직선, 우클릭: 포물선)
+	virtual bool OnLeftClickInput() override;
+	virtual bool OnRightClickInput() override;
+	
+	// 플래시뱅 던지기 실행
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	bool ThrowFlashbang(bool bAltFire);
 };

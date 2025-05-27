@@ -33,8 +33,7 @@ protected:
     // 각 클라이언트에서 시야 각도 체크하도록 RPC 호출
     UFUNCTION(NetMulticast, Reliable)
     void MulticastApplyFlashEffect(float BlindDuration);
-
-private:
+    
     // 섬광 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
     float FlashRadius = 2000.0f;

@@ -697,6 +697,27 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
 	if (HasAuthority())
 	{
+		// 무기 전환이 차단된 상태인지 확인
+		if (IsWeaponSwitchBlocked())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("무기 전환이 차단된 상태입니다."));
+			return;
+		}
+
+		// 어빌리티 실행 중인지 확인
+		if (IsAbilityExecuting())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("어빌리티 실행 중에는 무기를 전환할 수 없습니다."));
+			return;
+		}
+		// 어빌리티가 준비 / 대기 페이즈면 취소
+		else if (IsAbilityWaiting() || IsAbilityPreparing())
+		{
+			// 활성화된 어빌리티 취소
+			CancelActiveAbilities();
+		}
+
+
 		if (EquipmentType == CurrentEquipmentState)
 		{
 			return;
@@ -1557,6 +1578,45 @@ float ABaseAgent::GetMaxHealth() const
 bool ABaseAgent::IsFullHealth() const
 {
 	return FMath::IsNearlyEqual(GetCurrentHealth(), GetMaxHealth());
+}
+
+void ABaseAgent::CancelActiveAbilities()
+{
+	if (!ASC.IsValid())
+	{
+		return;
+	}
+
+	// 활성화된 모든 어빌리티 찾기
+	TArray<FGameplayAbilitySpec*> ActiveSpecs;
+	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (Spec.IsActive())
+		{
+			ActiveSpecs.Add(&Spec);
+		}
+	}
+
+	// 모든 활성 어빌리티 취소
+	for (FGameplayAbilitySpec* Spec : ActiveSpecs)
+	{
+		if (Spec)
+		{
+			ASC->CancelAbilityHandle(Spec->Handle);
+		}
+	}
+
+	// 어빌리티 상태 정리
+	ASC->CleanupAbilityState();
+}
+
+bool ABaseAgent::HasGameplayTag(const FGameplayTag& TagToCheck) const
+{
+	if (ASC.IsValid())
+	{
+		return ASC->HasMatchingGameplayTag(TagToCheck);
+	}
+	return false;
 }
 
 void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
