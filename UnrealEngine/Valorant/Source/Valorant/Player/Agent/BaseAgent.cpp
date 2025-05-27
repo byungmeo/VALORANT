@@ -165,20 +165,7 @@ ABaseAgent::ABaseAgent()
 	// 포스트 프로세스 컴포넌트 생성
 	PostProcessComponent = CreateDefaultSubobject<UFlashPostProcessComponent>(TEXT("PostProcessComponent"));
 
-
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	//             CYT             ♣
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-
-	// 기본값 설정
-	// 시야 체크 간격을 0.1초로 설정 (초당 10회)
-	VisibilityCheckInterval = 0.1f;
-	// 물음표 상태 지속 시간을 3초 설정
-	QuestionMarkDuration = 3.0f;
-	// 마지막 시야 체크 시간 초기화 
-	LastVisibilityCheckTime = 0.0f;
-
-
+	// 적/아군 테두리 외곽선 머터리얼 로딩
 	static const ConstructorHelpers::FObjectFinder<UMaterialInterface> EnemyMaterialFinder(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Resource/CommonMaterials/MI_Highlight_Enemy.MI_Highlight_Enemy'"));
 	if (EnemyMaterialFinder.Succeeded())
 	{
@@ -326,6 +313,25 @@ void ABaseAgent::BeginPlay()
 	TL_DieCamera->SetTimelineLength(DieCameraTimeRange);
 	TL_DieCamera->SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
 
+	// 기본 무기 쥐어주기
+	if (HasAuthority()) 
+	{
+		FTimerHandle SpawnWeaponTimerHandle;
+		if (UWorld* World = GetWorld())
+		{
+			FTimerDelegate TimerDel;
+			TimerDel.BindLambda([this, World]()
+			{
+				if (AMatchGameMode* gm = World->GetAuthGameMode<AMatchGameMode>())
+				{
+					gm->SpawnDefaultWeapon(this);
+				}
+			});
+            
+			World->GetTimerManager().SetTimer(SpawnWeaponTimerHandle,TimerDel,1.0f,false);
+		}
+	}
+	
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             LCH             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -335,91 +341,6 @@ void ABaseAgent::BeginPlay()
 	{
 		FlashComponent->OnFlashIntensityChanged.AddDynamic(this, &ABaseAgent::OnFlashIntensityChanged);
 	}
-
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	//             CYT             ♣
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-
-	
-	// 서버에서만 시야 체크 처리 -현재 액터가 서버에서 실행 중인지 확인 (권한 있음)
-    if (HasAuthority()) 
-    {
-        // 자동 시야 체크 설정 (시야 체크 함수 호출하여 초기 상태 설정)
-        PerformVisibilityChecks();
-    	
-    	FTimerHandle SpawnWeaponTimerHandle;
-        if (UWorld* World = GetWorld())
-        {
-            FTimerDelegate TimerDel;
-            TimerDel.BindLambda([this, World]()
-            {
-                if (AMatchGameMode* gm = World->GetAuthGameMode<AMatchGameMode>())
-                {
-                    gm->SpawnDefaultWeapon(this);
-                }
-            });
-            
-            World->GetTimerManager().SetTimer(SpawnWeaponTimerHandle,TimerDel,1.0f,false);
-        }
-    }
-
-    // 에이전트 ID에 따라 다른 아이콘 설정
-    if (MinimapIcon == nullptr && GetWorld())
-    {
-        // 게임 인스턴스에서 에이전트 데이터 가져오기
-        if (UValorantGameInstance* GameInstance = Cast<UValorantGameInstance>(GetGameInstance()))
-        {
-            // 에이전트 ID로 에이전트 데이터 얻기
-            FAgentData* AgentData = GameInstance->GetAgentData(m_AgentID);
-            if (AgentData)
-            {
-                // 데이터에서 아이콘 정보 가져오기
-                FString IconPath = AgentData->AgentName;
-                if (!IconPath.IsEmpty())
-                {
-                    // 경로에서 아이콘 로드
-                    MinimapIcon = LoadObject<UTexture2D>(nullptr, *IconPath);
-                }
-                
-                // 물음표 아이콘 설정 (모든 에이전트 공통 또는 각자 다른 물음표)
-                FString QuestionPath = AgentData->AgentName;
-                if (!QuestionPath.IsEmpty())
-                {
-                    QuestionMarkIcon = LoadObject<UTexture2D>(nullptr, *QuestionPath);
-                }
-            }
-        }
-        
-        // 여전히 아이콘이 없다면 기본 아이콘 설정
-        if (MinimapIcon == nullptr)
-        {
-            // 기본 아이콘 로드
-            MinimapIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Resource/MapObject/Images"));
-        }
-        
-        if (QuestionMarkIcon == nullptr)
-        {
-            // 기본 물음표 아이콘 로드
-            QuestionMarkIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Resource/MapObject/Images"));
-        }
-    }
-    
-    // 자신을 로컬 플레이어의 미니맵에 등록하기
-    // 약간의 지연을 두고 실행하여 모든 컨트롤러가 초기화될 시간을 확보
-    FTimerHandle RegisterTimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(RegisterTimerHandle, [this]()
-    {
-        // 모든 플레이어 컨트롤러 탐색
-        for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-        {
-            AAgentPlayerController* PC = Cast<AAgentPlayerController>(It->Get());
-        	if (IsValid(PC) && PC->IsLocalController() && PC->GetMinimapWidget())
-            {
-        		PC->GetMinimapWidget()->AddAgentToMinimap(this);
-                UE_LOG(LogTemp, Warning, TEXT("에이전트(%s)가 자신을 미니맵에 등록함"), *GetName());
-            }
-        }
-    }, 1.0f, false);
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -439,56 +360,10 @@ void ABaseAgent::Tick(float DeltaTime)
 	{
 		ReplicatedControlRotation = Controller->GetControlRotation();
 	}
-
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	//             CYT             ♣
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-
-	// 서버에서만 시야 체크 처리
-	// 현재 액터가 서버에서 실행 중인지 확인 (권한 있음)
+	
 	if (HasAuthority())
 	{
-		// 주기적으로 시야 체크
-		// 마지막 체크 이후 지정된 간격이 지났는지 확인
-		if (GetWorld()->GetTimeSeconds() - LastVisibilityCheckTime > VisibilityCheckInterval)
-		{
-			// 시야 체크 함수 호출
-			PerformVisibilityChecks();
-			// 마지막 체크 시간 업데이트
-			LastVisibilityCheckTime = GetWorld()->GetTimeSeconds();
-		}
-
-		// 물음표 타이머 관리 - TMap 대신 TArray 사용 방식으로 수정
-		// 업데이트가 필요한 항목의 인덱스 저장
-		TArray<int32> IndicesNeedingUpdate;
-        
-		// 모든 가시성 정보 순회하며 타이머 업데이트
-		for (int32 i = 0; i < VisibilityStateArray.Num(); i++)
-		{
-			FAgentVisibilityInfo& Info = VisibilityStateArray[i];
-            
-			// 물음표 상태이고 타이머가 동작 중인 경우에만 처리
-			if (Info.VisibilityState == EVisibilityState::QuestionMark && Info.QuestionMarkTimer > 0)
-			{
-				// 타이머 감소
-				Info.QuestionMarkTimer -= DeltaTime;
-				if (Info.QuestionMarkTimer <= 0)
-				{
-					// 타이머 만료 시 Hidden으로 변경할 항목 표시
-					IndicesNeedingUpdate.Add(i);
-				}
-			}
-		}
-        
-		// 타이머가 끝난 항목들을 Hidden으로 변경
-		// 배열의 끝에서부터 처리하여 인덱스 변경을 방지
-		for (int32 i = IndicesNeedingUpdate.Num() - 1; i >= 0; i--)
-		{
-			int32 Index = IndicesNeedingUpdate[i];
-			ABaseAgent* Observer = VisibilityStateArray[Index].Observer;
-			// 상태 업데이트
-			UpdateVisibilityState(Observer, EVisibilityState::Hidden);
-		}
+		CheckMinimapVisibility(DeltaTime);
 	}
 }
 
@@ -1319,261 +1194,6 @@ void ABaseAgent::UpdateEquipSpeedMultiplier()
 	}
 }
 
-//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-//             CYT             ♣
-//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-
-// 미니맵 아이콘 설정 함수
-void ABaseAgent::SetMinimapIcon(UTexture2D* NewIcon)
-{
-	// 새 아이콘으로 갱신
-	MinimapIcon = NewIcon;
-}
-
-// 가시성 상태 조회 함수 - TMap 대신 TArray에서 검색하도록 수정
-EVisibilityState ABaseAgent::GetVisibilityStateForAgent(ABaseAgent* Observer)
-{
-	// 자기 자신은 항상 보임
-	if (Observer == this)
-		// 항상 보이는 상태 반환
-		return EVisibilityState::Visible;
-
-	// TArray에서 Observer에 해당하는 정보 찾기
-	for (const FAgentVisibilityInfo& Info : VisibilityStateArray)
-	{
-		if (Info.Observer == Observer)
-			return Info.VisibilityState;
-	}
-	// 기본값은 숨김 상태
-	return EVisibilityState::Hidden;
-}
-
-// 헬퍼 함수 - TArray에서 특정 관찰자의 가시성 정보를 찾는 유틸리티 함수
-bool ABaseAgent::FindVisibilityInfo(ABaseAgent* Observer, FAgentVisibilityInfo& OutInfo, int32& OutIndex)
-{
-	OutIndex = -1;  // 기본값 -1 (찾지 못한 경우)
-    
-	// 배열 전체를 순회하며 일치하는 관찰자 찾기
-	for (int32 i = 0; i < VisibilityStateArray.Num(); i++)
-	{
-		if (VisibilityStateArray[i].Observer == Observer)
-		{
-			// 정보 반환
-			OutInfo = VisibilityStateArray[i];
-			// 인덱스 반환
-			OutIndex = i;
-			// 찾았음
-			return true;
-		}
-	}
-    
-	// 찾지 못함
-	return false;
-}
-
-// 상태 업데이트 헬퍼 함수 - 상태 업데이트 로직을 중앙화하여 코드 중복 방지
-void ABaseAgent::UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState)
-{
-	if (!IsValid(Observer))
-		return;
-        
-	// 기존 정보 찾기
-	FAgentVisibilityInfo Info;
-	int32 Index = -1;
-	bool bFound = FindVisibilityInfo(Observer, Info, Index);
-    
-	// 상태가 변경된 경우에만 처리 - 불필요한 업데이트 방지
-	if (!bFound || Info.VisibilityState != NewState)
-	{
-		// 이전 상태 저장 - 상태 전환 로직을 위해 필요
-		EVisibilityState OldState = bFound ? Info.VisibilityState : EVisibilityState::Hidden;
-        
-		// 배열 업데이트
-		if (bFound)
-		{
-			// 기존 항목 업데이트
-			VisibilityStateArray[Index].VisibilityState = NewState;
-            
-			// 질문표 타이머 설정 (Visible -> QuestionMark 전환 시)
-			if (OldState == EVisibilityState::Visible && NewState == EVisibilityState::QuestionMark)
-			{
-				VisibilityStateArray[Index].QuestionMarkTimer = QuestionMarkDuration;
-			}
-		}
-		else
-		{
-			// 새 정보 생성 및 추가
-			FAgentVisibilityInfo NewInfo;
-			NewInfo.Observer = Observer;
-			NewInfo.VisibilityState = NewState;
-            
-			// 질문표 상태인 경우 타이머 설정
-			if (NewState == EVisibilityState::QuestionMark)
-			{
-				NewInfo.QuestionMarkTimer = QuestionMarkDuration;
-			}
-            
-			VisibilityStateArray.Add(NewInfo);  // 배열에 추가
-		}
-        
-		// 모든 클라이언트에 상태 변경 알림
-		Multicast_OnVisibilityStateChanged(Observer, NewState);
-	}
-}
-
-// 서버 함수 유효성 검사
-bool ABaseAgent::Server_UpdateVisibilityState_Validate(ABaseAgent* Observer, EVisibilityState NewState)
-{
-	// 항상 유효함 (필요시 추가 검증 로직 구현 가능)
-	return true;
-}
-
-
-// 서버 함수 - 중앙화된 헬퍼 함수를 사용하도록 수정
-void ABaseAgent::Server_UpdateVisibilityState_Implementation(ABaseAgent* Observer, EVisibilityState NewState)
-{
-	// 헬퍼 함수 사용 - 코드 중복 방지
-	UpdateVisibilityState(Observer, NewState);
-}
-
-// 멀티캐스트 함수 - 모든 클라이언트에 상태 변경 알림
-void ABaseAgent::Multicast_OnVisibilityStateChanged_Implementation(ABaseAgent* Observer, EVisibilityState NewState)
-{
-	// 클라이언트에서 상태 업데이트 (UI 갱신용)
-	// OnRep 함수를 통해 대부분 처리 가능하지만, 추가 처리가 필요한 경우를 위해 유지
-    
-	// TArray 방식으로 업데이트 - 기존 정보가 있으면 업데이트, 없으면 추가
-	FAgentVisibilityInfo Info;
-	int32 Index;
-	bool bFound = FindVisibilityInfo(Observer, Info, Index);
-    
-	if (bFound)
-	{
-		// 기존 항목 업데이트
-		VisibilityStateArray[Index].VisibilityState = NewState;
-	}
-	else
-	{
-		// 새 항목 추가
-		FAgentVisibilityInfo NewInfo;
-		NewInfo.Observer = Observer;
-		NewInfo.VisibilityState = NewState;
-		VisibilityStateArray.Add(NewInfo);
-	}
-    
-	//************* 이 함수에서 변경한 값으로 인해 OnRep_VisibilityStateArray가 클라이언트에서 호출됨
-}
-
-// 시야 체크 수행 함수
-void ABaseAgent::PerformVisibilityChecks()
-{
-	// 서버가 아닌 경우
-	if (!HasAuthority())
-		// 함수 종료 (서버에서만 실행)
-		return;
-
-	// 게임의 모든 에이전트 가져오기
-	// 모든 에이전트 배열
-	TArray<AActor*> AllAgents;
-	// BaseAgent 클래스의 모든 인스턴스 가져오기
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), AllAgents);
-
-	// 각 에이전트에 대해 시야 체크 수행
-	// 모든 에이전트에 대해 반복
-	for (AActor* ActorAgent : AllAgents)
-	{
-		// Actor를 BaseAgent로 형변환
-		ABaseAgent* Observer = Cast<ABaseAgent>(ActorAgent);
-		// 관찰자가 유효하지 않거나 자기 자신인 경우
-		if (!IsValid(Observer) || Observer == this)
-			// 다음 에이전트로 넘어감
-			continue;
-
-		// 라인 트레이스로 시야 체크
-		// 충돌 결과 저장 구조체
-		FHitResult HitResult;
-		// 충돌 쿼리 매개변수
-		FCollisionQueryParams QueryParams;
-		// 관찰자 자신은 충돌 검사에서 제외
-		QueryParams.AddIgnoredActor(Observer);
-
-		// 관찰자의 눈 위치
-		FVector ObserverEyeLocation;
-		// 관찰자의 눈 회전
-		FRotator ObserverEyeRotation;
-		// 관찰자의 시점 정보 가져오기
-		Observer->GetActorEyesViewPoint(ObserverEyeLocation, ObserverEyeRotation);
-
-		// 대상(this)의 위치
-		FVector TargetLocation = GetActorLocation();
-		// 관찰자로부터 대상까지의 방향 벡터 (정규화)
-		FVector DirectionToTarget = (TargetLocation - ObserverEyeLocation).GetSafeNormal();
-
-		// 시야 각도 체크 (제한이 없으니 생략하지만, 필요하면 여기 추가)
-
-		// 시야 라인 트레이스
-		bool bHasLineOfSight = !GetWorld()->LineTraceSingleByChannel( // 라인 트레이스 수행하여 시야 확인
-			HitResult, // 충돌 결과
-			ObserverEyeLocation, // 시작점 (관찰자 눈)
-			TargetLocation, // 끝점 (타겟 위치)
-			ECC_Visibility, // 가시성 충돌 채널 사용
-			QueryParams // 쿼리 매개변수
-		); // 충돌이 없으면(true 반환) 시야 있음, 충돌이 있으면(false 반환) 시야 없음
-
-
-		// 이전 상태 찾기 - TMap 대신 헬퍼 함수 사용
-		FAgentVisibilityInfo Info;
-		int32 Index;
-		bool bFound = FindVisibilityInfo(Observer, Info, Index);
-		EVisibilityState OldState = bFound ? Info.VisibilityState : EVisibilityState::Hidden;
-
-		
-		// 새 상태 결정
-		// 새로운 가시성 상태
-		EVisibilityState NewState;
-		// 시야가 확보된 경우
-		if (bHasLineOfSight)
-		{
-			// 보이는 상태로 설정
-			NewState = EVisibilityState::Visible;
-		}
-		// 시야가 차단된 경우
-		else
-		{
-			// 이전에 보였다면 질문표로, 아니면 숨김 유지
-			// 이전에 보이던 상태였다면
-			if (OldState == EVisibilityState::Visible)
-			{
-				// 물음표 상태로 설정
-				NewState = EVisibilityState::QuestionMark;
-			}
-			// 이전에 보이지 않던 상태였다면
-			else
-			{
-				// 상태 유지 (변경 없음)
-				NewState = OldState;
-			}
-		}
-
-		// 상태가 변경된 경우만 업데이트
-		// 새 상태가 이전 상태와 다른 경우에만
-		if (NewState != OldState)
-		{
-			// 서버 함수 호출하여 상태 업데이트
-			Server_UpdateVisibilityState(Observer, NewState);
-		}
-	}
-}
-
-
-
-
-void ABaseAgent::OnRep_VisibilityStateArray()
-{
-	// 클라이언트에서 배열이 업데이트될 때 호출됨 
-	// UI 업데이트나 시각 효과 처리를 여기서 할 수 있음 
-}
-
 // 네트워크 복제 설정
 void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -1937,3 +1557,363 @@ void ABaseAgent::CreateFlashWidget()
 		}
 	}
 }
+
+#pragma region "Minimap"
+void ABaseAgent::OnRep_VisibilityStateArray()
+{
+	// 클라이언트에서 배열이 업데이트될 때 호출됨 
+	// UI 업데이트나 시각 효과 처리를 여기서 할 수 있음 
+}
+
+void ABaseAgent::InitMinimap()
+{
+	// 서버에서만 시야 체크 처리 -현재 액터가 서버에서 실행 중인지 확인 (권한 있음)
+	if (HasAuthority())
+	{
+		// 자동 시야 체크 설정 (시야 체크 함수 호출하여 초기 상태 설정)
+		PerformVisibilityChecks();
+	}
+	
+    // 에이전트 ID에 따라 다른 아이콘 설정
+    if (MinimapIcon == nullptr && GetWorld())
+    {
+        // 게임 인스턴스에서 에이전트 데이터 가져오기
+        if (UValorantGameInstance* GameInstance = Cast<UValorantGameInstance>(GetGameInstance()))
+        {
+            // 에이전트 ID로 에이전트 데이터 얻기
+            FAgentData* AgentData = GameInstance->GetAgentData(m_AgentID);
+            if (AgentData)
+            {
+                // 데이터에서 아이콘 정보 가져오기
+                FString IconPath = AgentData->AgentName;
+                if (!IconPath.IsEmpty())
+                {
+                    // 경로에서 아이콘 로드
+                    MinimapIcon = LoadObject<UTexture2D>(nullptr, *IconPath);
+                }
+                
+                // 물음표 아이콘 설정 (모든 에이전트 공통 또는 각자 다른 물음표)
+                FString QuestionPath = AgentData->AgentName;
+                if (!QuestionPath.IsEmpty())
+                {
+                    QuestionMarkIcon = LoadObject<UTexture2D>(nullptr, *QuestionPath);
+                }
+            }
+        }
+        
+        // 여전히 아이콘이 없다면 기본 아이콘 설정
+        if (MinimapIcon == nullptr)
+        {
+            // 기본 아이콘 로드
+            MinimapIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Resource/MapObject/Images"));
+        }
+        
+        if (QuestionMarkIcon == nullptr)
+        {
+            // 기본 물음표 아이콘 로드
+            QuestionMarkIcon = LoadObject<UTexture2D>(nullptr, TEXT("/Game/Resource/MapObject/Images"));
+        }
+    }
+    
+    // 자신을 로컬 플레이어의 미니맵에 등록하기
+    // 약간의 지연을 두고 실행하여 모든 컨트롤러가 초기화될 시간을 확보
+    FTimerHandle RegisterTimerHandle;
+    GetWorld()->GetTimerManager().SetTimer(RegisterTimerHandle, [this]()
+    {
+        // 모든 플레이어 컨트롤러 탐색
+        for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+        {
+            AAgentPlayerController* PC = Cast<AAgentPlayerController>(It->Get());
+        	if (IsValid(PC) && PC->IsLocalController() && PC->GetMinimapWidget())
+            {
+        		PC->GetMinimapWidget()->AddAgentToMinimap(this);
+                UE_LOG(LogTemp, Warning, TEXT("에이전트(%s)가 자신을 미니맵에 등록함"), *GetName());
+            }
+        }
+    }, 1.0f, false);
+}
+
+void ABaseAgent::SetMinimapIcon(UTexture2D* NewIcon)
+{
+	MinimapIcon = NewIcon;
+}
+
+// 가시성 상태 조회 함수 - TMap 대신 TArray에서 검색하도록 수정
+EVisibilityState ABaseAgent::GetVisibilityStateForAgent(ABaseAgent* Observer)
+{
+	// 자기 자신은 항상 보임
+	if (Observer == this)
+		// 항상 보이는 상태 반환
+			return EVisibilityState::Visible;
+
+	// TArray에서 Observer에 해당하는 정보 찾기
+	for (const FAgentVisibilityInfo& Info : VisibilityStateArray)
+	{
+		if (Info.Observer == Observer)
+			return Info.VisibilityState;
+	}
+	// 기본값은 숨김 상태
+	return EVisibilityState::Hidden;
+}
+
+// 서버 함수 유효성 검사
+bool ABaseAgent::Server_UpdateVisibilityState_Validate(ABaseAgent* Observer, EVisibilityState NewState)
+{
+	// 항상 유효함 (필요시 추가 검증 로직 구현 가능)
+	return true;
+}
+
+// 서버 함수 - 중앙화된 헬퍼 함수를 사용하도록 수정
+void ABaseAgent::Server_UpdateVisibilityState_Implementation(ABaseAgent* Observer, EVisibilityState NewState)
+{
+	// 헬퍼 함수 사용 - 코드 중복 방지
+	UpdateVisibilityState(Observer, NewState);
+}
+
+// 멀티캐스트 함수 - 모든 클라이언트에 상태 변경 알림
+void ABaseAgent::Multicast_OnVisibilityStateChanged_Implementation(ABaseAgent* Observer, EVisibilityState NewState)
+{
+	// 클라이언트에서 상태 업데이트 (UI 갱신용)
+	// OnRep 함수를 통해 대부분 처리 가능하지만, 추가 처리가 필요한 경우를 위해 유지
+    
+	// TArray 방식으로 업데이트 - 기존 정보가 있으면 업데이트, 없으면 추가
+	FAgentVisibilityInfo Info;
+	int32 Index;
+	bool bFound = FindVisibilityInfo(Observer, Info, Index);
+    
+	if (bFound)
+	{
+		// 기존 항목 업데이트
+		VisibilityStateArray[Index].VisibilityState = NewState;
+	}
+	else
+	{
+		// 새 항목 추가
+		FAgentVisibilityInfo NewInfo;
+		NewInfo.Observer = Observer;
+		NewInfo.VisibilityState = NewState;
+		VisibilityStateArray.Add(NewInfo);
+	}
+    
+	//************* 이 함수에서 변경한 값으로 인해 OnRep_VisibilityStateArray가 클라이언트에서 호출됨
+}
+
+// 시야 체크 수행 함수
+void ABaseAgent::PerformVisibilityChecks()
+{
+	// 서버가 아닌 경우
+	if (!HasAuthority())
+		// 함수 종료 (서버에서만 실행)
+		return;
+
+	// 게임의 모든 에이전트 가져오기
+	// 모든 에이전트 배열
+	TArray<AActor*> AllAgents;
+	// BaseAgent 클래스의 모든 인스턴스 가져오기
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), AllAgents);
+
+	// 각 에이전트에 대해 시야 체크 수행
+	// 모든 에이전트에 대해 반복
+	for (AActor* ActorAgent : AllAgents)
+	{
+		// Actor를 BaseAgent로 형변환
+		ABaseAgent* Observer = Cast<ABaseAgent>(ActorAgent);
+		// 관찰자가 유효하지 않거나 자기 자신인 경우
+		if (!IsValid(Observer) || Observer == this)
+			// 다음 에이전트로 넘어감
+			continue;
+
+		// 라인 트레이스로 시야 체크
+		// 충돌 결과 저장 구조체
+		FHitResult HitResult;
+		// 충돌 쿼리 매개변수
+		FCollisionQueryParams QueryParams;
+		// 관찰자 자신은 충돌 검사에서 제외
+		QueryParams.AddIgnoredActor(Observer);
+
+		// 관찰자의 눈 위치
+		FVector ObserverEyeLocation;
+		// 관찰자의 눈 회전
+		FRotator ObserverEyeRotation;
+		// 관찰자의 시점 정보 가져오기
+		Observer->GetActorEyesViewPoint(ObserverEyeLocation, ObserverEyeRotation);
+
+		// 대상(this)의 위치
+		FVector TargetLocation = GetActorLocation();
+		// 관찰자로부터 대상까지의 방향 벡터 (정규화)
+		FVector DirectionToTarget = (TargetLocation - ObserverEyeLocation).GetSafeNormal();
+
+		// 시야 각도 체크 (제한이 없으니 생략하지만, 필요하면 여기 추가)
+
+		// 시야 라인 트레이스
+		bool bHasLineOfSight = !GetWorld()->LineTraceSingleByChannel( // 라인 트레이스 수행하여 시야 확인
+			HitResult, // 충돌 결과
+			ObserverEyeLocation, // 시작점 (관찰자 눈)
+			TargetLocation, // 끝점 (타겟 위치)
+			ECC_Visibility, // 가시성 충돌 채널 사용
+			QueryParams // 쿼리 매개변수
+		); // 충돌이 없으면(true 반환) 시야 있음, 충돌이 있으면(false 반환) 시야 없음
+
+
+		// 이전 상태 찾기 - TMap 대신 헬퍼 함수 사용
+		FAgentVisibilityInfo Info;
+		int32 Index;
+		bool bFound = FindVisibilityInfo(Observer, Info, Index);
+		EVisibilityState OldState = bFound ? Info.VisibilityState : EVisibilityState::Hidden;
+
+		
+		// 새 상태 결정
+		// 새로운 가시성 상태
+		EVisibilityState NewState;
+		// 시야가 확보된 경우
+		if (bHasLineOfSight)
+		{
+			// 보이는 상태로 설정
+			NewState = EVisibilityState::Visible;
+		}
+		// 시야가 차단된 경우
+		else
+		{
+			// 이전에 보였다면 질문표로, 아니면 숨김 유지
+			// 이전에 보이던 상태였다면
+			if (OldState == EVisibilityState::Visible)
+			{
+				// 물음표 상태로 설정
+				NewState = EVisibilityState::QuestionMark;
+			}
+			// 이전에 보이지 않던 상태였다면
+			else
+			{
+				// 상태 유지 (변경 없음)
+				NewState = OldState;
+			}
+		}
+
+		// 상태가 변경된 경우만 업데이트
+		// 새 상태가 이전 상태와 다른 경우에만
+		if (NewState != OldState)
+		{
+			// 서버 함수 호출하여 상태 업데이트
+			Server_UpdateVisibilityState(Observer, NewState);
+		}
+	}
+}
+
+// 상태 업데이트 헬퍼 함수 - 상태 업데이트 로직을 중앙화하여 코드 중복 방지
+void ABaseAgent::UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState)
+{
+	if (!IsValid(Observer))
+		return;
+        
+	// 기존 정보 찾기
+	FAgentVisibilityInfo Info;
+	int32 Index = -1;
+	bool bFound = FindVisibilityInfo(Observer, Info, Index);
+    
+	// 상태가 변경된 경우에만 처리 - 불필요한 업데이트 방지
+	if (!bFound || Info.VisibilityState != NewState)
+	{
+		// 이전 상태 저장 - 상태 전환 로직을 위해 필요
+		EVisibilityState OldState = bFound ? Info.VisibilityState : EVisibilityState::Hidden;
+        
+		// 배열 업데이트
+		if (bFound)
+		{
+			// 기존 항목 업데이트
+			VisibilityStateArray[Index].VisibilityState = NewState;
+            
+			// 질문표 타이머 설정 (Visible -> QuestionMark 전환 시)
+			if (OldState == EVisibilityState::Visible && NewState == EVisibilityState::QuestionMark)
+			{
+				VisibilityStateArray[Index].QuestionMarkTimer = QuestionMarkDuration;
+			}
+		}
+		else
+		{
+			// 새 정보 생성 및 추가
+			FAgentVisibilityInfo NewInfo;
+			NewInfo.Observer = Observer;
+			NewInfo.VisibilityState = NewState;
+            
+			// 질문표 상태인 경우 타이머 설정
+			if (NewState == EVisibilityState::QuestionMark)
+			{
+				NewInfo.QuestionMarkTimer = QuestionMarkDuration;
+			}
+            
+			VisibilityStateArray.Add(NewInfo);  // 배열에 추가
+		}
+        
+		// 모든 클라이언트에 상태 변경 알림
+		Multicast_OnVisibilityStateChanged(Observer, NewState);
+	}
+}
+
+// 헬퍼 함수 - TArray에서 특정 관찰자의 가시성 정보를 찾는 유틸리티 함수
+bool ABaseAgent::FindVisibilityInfo(ABaseAgent* Observer, FAgentVisibilityInfo& OutInfo, int32& OutIndex)
+{
+	OutIndex = -1;  // 기본값 -1 (찾지 못한 경우)
+    
+	// 배열 전체를 순회하며 일치하는 관찰자 찾기
+	for (int32 i = 0; i < VisibilityStateArray.Num(); i++)
+	{
+		if (VisibilityStateArray[i].Observer == Observer)
+		{
+			// 정보 반환
+			OutInfo = VisibilityStateArray[i];
+			// 인덱스 반환
+			OutIndex = i;
+			// 찾았음
+			return true;
+		}
+	}
+    
+	// 찾지 못함
+	return false;
+}
+
+void ABaseAgent::CheckMinimapVisibility(const float DeltaTime)
+{
+	// 주기적으로 시야 체크
+	// 마지막 체크 이후 지정된 간격이 지났는지 확인
+	if (GetWorld()->GetTimeSeconds() - LastVisibilityCheckTime > VisibilityCheckInterval)
+	{
+		// 시야 체크 함수 호출
+		PerformVisibilityChecks();
+		// 마지막 체크 시간 업데이트
+		LastVisibilityCheckTime = GetWorld()->GetTimeSeconds();
+	}
+
+	// 물음표 타이머 관리 - TMap 대신 TArray 사용 방식으로 수정
+	// 업데이트가 필요한 항목의 인덱스 저장
+	TArray<int32> IndicesNeedingUpdate;
+        
+	// 모든 가시성 정보 순회하며 타이머 업데이트
+	for (int32 i = 0; i < VisibilityStateArray.Num(); i++)
+	{
+		FAgentVisibilityInfo& Info = VisibilityStateArray[i];
+            
+		// 물음표 상태이고 타이머가 동작 중인 경우에만 처리
+		if (Info.VisibilityState == EVisibilityState::QuestionMark && Info.QuestionMarkTimer > 0)
+		{
+			// 타이머 감소
+			Info.QuestionMarkTimer -= DeltaTime;
+			if (Info.QuestionMarkTimer <= 0)
+			{
+				// 타이머 만료 시 Hidden으로 변경할 항목 표시
+				IndicesNeedingUpdate.Add(i);
+			}
+		}
+	}
+        
+	// 타이머가 끝난 항목들을 Hidden으로 변경
+	// 배열의 끝에서부터 처리하여 인덱스 변경을 방지
+	for (int32 i = IndicesNeedingUpdate.Num() - 1; i >= 0; i--)
+	{
+		int32 Index = IndicesNeedingUpdate[i];
+		ABaseAgent* Observer = VisibilityStateArray[Index].Observer;
+		// 상태 업데이트
+		UpdateVisibilityState(Observer, EVisibilityState::Hidden);
+	}
+}
+#pragma endregion "Minimap"
