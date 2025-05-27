@@ -261,13 +261,16 @@ void ABaseAgent::OnRep_PlayerState()
 		
 		const auto* MyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
 		const auto* MyPS = MyPC->GetPlayerState<AAgentPlayerState>();
-		if (MyPS->bIsBlueTeam == OtherPS->bIsBlueTeam)
+		if (MyPS)
 		{
-			SetHighlight(true, false);
-		}
-		else
-		{
-			SetHighlight(true, true);
+			if (MyPS->bIsBlueTeam == OtherPS->bIsBlueTeam)
+			{
+				SetHighlight(true, false);
+			}
+			else
+			{
+				SetHighlight(true, true);
+			}
 		}
 	}
 }
