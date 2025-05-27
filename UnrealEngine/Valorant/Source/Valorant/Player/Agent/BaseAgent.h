@@ -168,7 +168,7 @@ public:
 	void SetHighlight(bool bEnable, bool bIsEnemy);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
+	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass, ABaseAgent* DamageInstigator);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
 	                          ABaseAgent* DamageInstigator = nullptr, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);

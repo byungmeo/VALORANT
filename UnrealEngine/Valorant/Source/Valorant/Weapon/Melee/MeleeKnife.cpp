@@ -4,7 +4,10 @@
 #include "MeleeKnife.h"
 
 #include "Valorant.h"
+#include "Engine/OverlapResult.h"
 #include "GameManager/SubsystemSteamManager.h"
+#include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Player/Animaiton/AgentAnimInstance.h"
 
@@ -20,6 +23,14 @@ void AMeleeKnife::BeginPlay()
 {
 	Super::BeginPlay();
 	InteractorType = EInteractorType::Melee;
+}
+
+void AMeleeKnife::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AMeleeKnife, bIsAttacking);
+	DOREPLIFETIME(AMeleeKnife, bIsCombo);
+	DOREPLIFETIME(AMeleeKnife, bIsComboTransition);
 }
 
 void AMeleeKnife::Tick(float DeltaTime)
@@ -46,13 +57,10 @@ void AMeleeKnife::StartFire()
 	}
 	
 	// 플레이 중인 애니메이션이 있고, 아직 콤보 상태에 진입 전이면, 입력 무시
-	if (bIsAttacking)
+	if (bIsAttacking && bIsCombo == false)
 	{
-		if (bIsCombo == false)
-		{
-			NET_LOG(LogTemp, Warning, TEXT("입력 무시"));
-			return;
-		}
+		// NET_LOG(LogTemp, Warning, TEXT("콤보 애니메이션 진행 전이라 입력 무시"));
+		return;
 	}
 	
 	Fire();
@@ -61,8 +69,38 @@ void AMeleeKnife::StartFire()
 void AMeleeKnife::Fire()
 {
 	// NET_LOG(LogTemp, Warning, TEXT("칼 콤보 상태 = %d."), MagazineAmmo);
+	
+	FVector Center = FVector();
+	FRotator CameraRotation = FRotator();
 
-	bIsComboTransition = true;
+	APlayerController* PC = Cast<APlayerController>(OwnerAgent->GetController());
+	if (PC)
+	{
+		int32 ViewportX, ViewportY;
+		PC->GetViewportSize(ViewportX, ViewportY);
+
+		float ScreenX = ViewportX * 0.5f;
+		float ScreenY = ViewportY * 0.5f;
+
+		FVector WorldLocation;
+		FVector WorldDirection;
+		
+		if (PC->DeprojectScreenPositionToWorld(ScreenX, ScreenY, WorldLocation, WorldDirection))
+		{
+			Center = WorldLocation + WorldDirection * 50.f;
+			CameraRotation = PC->PlayerCameraManager->GetCameraRotation();
+		}
+	}
+
+	if (HasAuthority())
+	{
+		bIsComboTransition = true;
+		DamageBox(Center, CameraRotation);
+	}
+	else
+	{
+		ServerRPC_DamageBox(Center, CameraRotation);
+	}
 	
 	switch (MagazineAmmo)
 	{
@@ -80,8 +118,49 @@ void AMeleeKnife::Fire()
 	}
 }
 
+void AMeleeKnife::ServerRPC_DamageBox_Implementation(FVector center, FRotator rot)
+{
+	bIsComboTransition = true;
+	DamageBox(center, rot);
+}
+
+
+void AMeleeKnife::DamageBox(FVector center, FRotator rot)
+{
+	auto BoxShape = FCollisionShape::MakeBox(FVector(30,30,5));
+	TArray<FOverlapResult> Overlaps;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.AddIgnoredActor(OwnerAgent);
+
+	const bool bOverlap = GetWorld()->OverlapMultiByChannel(Overlaps, center, rot.Quaternion(),ECC_EngineTraceChannel2, BoxShape, Params);
+	DrawDebugBox(GetWorld(),center,FVector(30,30,5),rot.Quaternion(),FColor::Green,false,2.0f);
+
+	if (bOverlap)
+	{
+		for (auto& OverlapResult : Overlaps)
+		{
+			AActor* hitActor = OverlapResult.GetActor();
+			ABaseAgent* agent = Cast<ABaseAgent>(hitActor);
+			if (agent == nullptr)
+			{
+				return;
+			}
+			
+			if (agent->IsBlueTeam() == OwnerAgent->IsBlueTeam())
+			{
+				return;
+			}
+
+			agent->ServerApplyGE(DamageEffectClass, OwnerAgent);
+		}
+	}
+}
+
 void AMeleeKnife::ResetCombo()
 {
+	// NET_LOG(LogTemp,Warning,TEXT("콤보 리셋"));
 	bIsAttacking = false;
 	bIsCombo = false;
 	MagazineAmmo = MagazineSize;
@@ -93,12 +172,10 @@ void AMeleeKnife::OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted)
 	//콤보에 의해 애니메이션이 끊기면
 	if (bInterrupted && bIsComboTransition)
 	{
-		// NET_LOG(LogTemp,Warning,TEXT("콤보에 의해 기존 몽타주 종료"));
 		bIsComboTransition = false;
 		return;
 	}
 	
-	// NET_LOG(LogTemp,Warning,TEXT("몽타주 정상 종료"));
 	ResetCombo();
 }
 
@@ -108,14 +185,14 @@ void AMeleeKnife::Server_PlayAttackAnim_Implementation(UAnimMontage* anim1P, UAn
 	{
 		return;
 	}
-	
+
+	bIsAttacking = true;
 	Multicast_PlayAttackAnim(anim1P, anim3P);
 }
 
 void AMeleeKnife::Multicast_PlayAttackAnim_Implementation(UAnimMontage* anim1P, UAnimMontage* anim3P)
 {
 	MagazineAmmo--;
-	bIsAttacking = true;
 
 	if (OwnerAgent == nullptr)
 	{

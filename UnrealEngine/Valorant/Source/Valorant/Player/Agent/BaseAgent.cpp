@@ -1081,7 +1081,7 @@ void ABaseAgent::Net_Die_Implementation()
 	// ABP_3P->Montage_Play(AM_Die, 1.0f);
 }
 
-void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)
+void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass, ABaseAgent* DamageInstigator)
 {
 	if (!geClass)
 	{
@@ -1091,6 +1091,12 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
+
+	if (DamageInstigator)
+	{
+		SetInstigator(DamageInstigator);
+		LastDamagedOrg = DamageInstigator->GetActorLocation();
+	}
 
 	if (SpecHandle.IsValid())
 	{
