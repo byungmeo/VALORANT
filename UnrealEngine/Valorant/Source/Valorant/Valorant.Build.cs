@@ -26,6 +26,7 @@ public class Valorant : ModuleRules
 			"OnlineSubsystem",
 			"OnlineSubsystemSteam",
 			"OnlineSubsystemUtils",
+			"PhysicsCore",
 			"HTTP",
 			"Json",
 			"JsonUtilities",
