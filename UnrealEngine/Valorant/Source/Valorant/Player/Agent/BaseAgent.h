@@ -274,6 +274,7 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetCurrentInteractor(ABaseInteractor* interactor);
+	void ResetCurrentInteractor();
 
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;

@@ -608,19 +608,24 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 {
 	if (CurrentInteractor && CurrentInteractor->ServerOnly_CanDrop())
 	{
-		if (CurrentInteractor == MainWeapon)
-		{
-			MainWeapon = nullptr;
-		}
-		else if (CurrentInteractor == SubWeapon)
-		{
-			SubWeapon = nullptr;
-		}
-		
 		CurrentInteractor->ServerRPC_Drop();
-		ServerRPC_SetCurrentInteractor(nullptr);
+		ResetCurrentInteractor();
 
-		EquipInteractor(CurrentInteractor);
+		if (MainWeapon != nullptr)
+		{
+			// NET_LOG(LogTemp,Warning,TEXT("Main있음. %s"),*MainWeapon->GetActorNameOrLabel());
+			SwitchEquipment(EInteractorType::MainWeapon);
+		}
+		else if (SubWeapon != nullptr)
+		{
+			// NET_LOG(LogTemp,Warning,TEXT("Main 없고, Sub있음"));
+			SwitchEquipment(EInteractorType::SubWeapon);
+		}
+		else
+		{
+			// NET_LOG(LogTemp,Warning,TEXT("Main 없고, Sub 없음"));
+			SwitchEquipment(EInteractorType::Melee);
+		}
 	}
 }
 
@@ -638,8 +643,29 @@ void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* 
 	if (CurrentInteractor)
 	{
 		CurrentInteractor->SetActive(true);
-		//NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 	}
+}
+
+void ABaseAgent::ResetCurrentInteractor()
+{
+	if (CurrentInteractor == MainWeapon)
+	{
+		NET_LOG(LogTemp,Warning,TEXT("버린 물건이 Main"));
+		MainWeapon = nullptr;
+	}
+	else if (CurrentInteractor == SubWeapon)
+	{
+		NET_LOG(LogTemp,Warning,TEXT("버린 물건이 Sub"));
+		SubWeapon = nullptr;
+	}
+	else if (CurrentInteractor == Spike)
+	{
+		NET_LOG(LogTemp,Warning,TEXT("버린 물건이 Spike"));
+		Spike = nullptr;
+	}
+	
+	CurrentInteractor = nullptr;
 }
 
 ABaseWeapon* ABaseAgent::GetMainWeapon() const

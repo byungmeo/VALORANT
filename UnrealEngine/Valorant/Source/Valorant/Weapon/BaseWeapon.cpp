@@ -86,6 +86,10 @@ void ABaseWeapon::BeginPlay()
 
 	AM_Fire = WeaponData->FireAnim;
 	AM_Reload = WeaponData->ReloadAnim;
+
+	Mesh->SetSimulatePhysics(true);
+	Mesh->SetMobility(EComponentMobility::Movable);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 }
 
 void ABaseWeapon::Tick(float DeltaSeconds)
@@ -507,6 +511,7 @@ void ABaseWeapon::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 void ABaseWeapon::ServerRPC_Drop_Implementation()
 {
 	Super::ServerRPC_Drop_Implementation();
+	Mesh->AddImpulse(GetActorForwardVector()*500,NAME_None,true);
 }
 
 void ABaseWeapon::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
