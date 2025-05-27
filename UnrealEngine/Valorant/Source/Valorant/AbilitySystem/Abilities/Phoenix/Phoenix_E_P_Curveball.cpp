@@ -33,24 +33,23 @@ APhoenix_E_P_Curveball::APhoenix_E_P_Curveball()
 	{
 		ProjectileMovement->InitialSpeed = InitialSpeed;
 		ProjectileMovement->MaxSpeed = InitialSpeed * 1.5f;  // 곡선을 그릴 때 속도가 증가할 수 있음
-		ProjectileMovement->ProjectileGravityScale = 0.3f;
+		ProjectileMovement->ProjectileGravityScale = 0.0f;
 		ProjectileMovement->bRotationFollowsVelocity = false;  // 수동으로 회전 제어
-		ProjectileMovement->bShouldBounce = false;
-		ProjectileMovement->Bounciness = 0.0f;
+		ProjectileMovement->bShouldBounce = true;
+		ProjectileMovement->Bounciness = 0.3f;
 		ProjectileMovement->Friction = 0.0f;
-		//ProjectileMovement->bShouldBounce = true;
-		//ProjectileMovement->Bounciness = 0.5f;
 		//ProjectileMovement->Friction = 0.2f;
 	}
 
 	// 섬광 설정 (FlashProjectile의 기본값 오버라이드)
-	SetLifeSpan(1.5f);
+	SetLifeSpan(1.2f);
     
 	// 피닉스 커브볼 전용 섬광 시간 설정
 	MaxBlindDuration = 1.1f;  // 최대 1.1초 완전 실명
 	MinBlindDuration = 0.3f;  // 최소 0.3초 완전 실명
 	RecoveryDuration = 0.7f;  // 0.7초 회복
-	DetonationDelay = 0.6f;   // 0.5초 후 폭발
+	DetonationDelay = 1.0f;   // 0.5초 후 폭발
+	FlashRadius = 3500.F;
 }
 
 // Called when the game starts or when spawned
@@ -103,7 +102,7 @@ void APhoenix_E_P_Curveball::Tick(float DeltaTime)
 
 		// 곡선 방향 계산 (오른쪽 또는 왼쪽)
 		FVector RightVector = FVector::CrossProduct(VelocityDirection, FVector::UpVector).GetSafeNormal();
-		if (!bShouldCurveRight)
+		if (bShouldCurveRight)
 		{
 			RightVector *= -1.0f;
 		}

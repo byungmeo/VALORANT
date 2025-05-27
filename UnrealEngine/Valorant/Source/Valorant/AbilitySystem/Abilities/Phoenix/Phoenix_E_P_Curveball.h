@@ -26,7 +26,7 @@ private:
 		
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMeshComponent* CurveballMesh;
-	float InitialSpeed = 1800.f;
+	float InitialSpeed = 2500.f;
 	float MaxAirTime = 2.0f;
 	float TimeSinceSpawn = 0.f;
 	FRotator SpinRate = FRotator(0, 720, 360);
