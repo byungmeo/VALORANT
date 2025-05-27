@@ -206,15 +206,6 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	
-	if (OwnerAgent->GetCurrentInterator() == this)
-	{
-		OwnerAgent->ServerRPC_SetCurrentInteractor(nullptr);
-	}
-
-	MulticastRPC_BroadcastOnDrop();
-	Multicast_SetActive(true);
-	
-	// TODO: 툭 놓는게 아니라 던지도록 변경
 	FDetachmentTransformRules DetachmentRule(
 		EDetachmentRule::KeepWorld,
 		EDetachmentRule::KeepWorld,
@@ -225,10 +216,14 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	Mesh->DetachFromComponent(DetachmentRule);
 	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
 	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
-	const FVector Offset = FVector(0, 0, 32);
-	const FVector NewLocation = FeetLocation + Offset + ForwardVector * 300;
-	SetActorLocation(NewLocation);
+	const FVector Offset = FVector(0, 0, 110);
+	const FVector NewLocation = FeetLocation + Offset + ForwardVector * 75;
+	SetActorLocation(NewLocation,false,nullptr,ETeleportType::TeleportPhysics);
+	
 	SetOwnerAgent(nullptr);
+	
+	MulticastRPC_BroadcastOnDrop();
+	Multicast_SetActive(true);
 }
 
 void ABaseInteractor::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
@@ -256,10 +251,17 @@ void ABaseInteractor::MulticastRPC_BroadcastOnDrop_Implementation()
 {
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnInteractorDrop.Broadcast();
+
+	Mesh->SetSimulatePhysics(true);
+	Mesh->SetMobility(EComponentMobility::Movable);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 }
 
 void ABaseInteractor::MulticastRPC_BroadcastOnPickUp_Implementation()
 {
+	Mesh->SetSimulatePhysics(false);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnPickUp.Broadcast();
 }
