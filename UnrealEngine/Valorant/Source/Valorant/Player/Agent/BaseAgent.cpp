@@ -177,6 +177,18 @@ ABaseAgent::ABaseAgent()
 	QuestionMarkDuration = 3.0f;
 	// 마지막 시야 체크 시간 초기화 
 	LastVisibilityCheckTime = 0.0f;
+
+
+	static const ConstructorHelpers::FObjectFinder<UMaterialInterface> EnemyMaterialFinder(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Resource/CommonMaterials/MI_Highlight_Enemy.MI_Highlight_Enemy'"));
+	if (EnemyMaterialFinder.Succeeded())
+	{
+		EnemyOverlayMaterial = EnemyMaterialFinder.Object;
+	}
+	static const ConstructorHelpers::FObjectFinder<UMaterialInterface> TeamMaterialFinder(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Resource/CommonMaterials/MI_Highlight_Team.MI_Highlight_Team'"));
+	if (TeamMaterialFinder.Succeeded())
+	{
+		TeamOverlayMaterial = TeamMaterialFinder.Object;
+	}
 }
 
 void ABaseAgent::OnRep_CurrentInteractorState()
@@ -208,6 +220,28 @@ void ABaseAgent::PossessedBy(AController* NewController)
 	}
 
 	CreateFlashWidget();
+
+	/*
+	 *	실루엣 관련
+	 */
+	if (const auto* OtherPS = GetPlayerState<AAgentPlayerState>())
+	{
+		if (IsLocallyControlled())
+		{
+			return;
+		}
+		
+		const auto* MyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
+		const auto* MyPS = MyPC->GetPlayerState<AAgentPlayerState>();
+		if (MyPS->bIsBlueTeam == OtherPS->bIsBlueTeam)
+		{
+			SetHighlight(true, false);
+		}
+		else
+		{
+			SetHighlight(true, true);
+		}
+	}
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -227,6 +261,28 @@ void ABaseAgent::OnRep_PlayerState()
 
 	// 로컬 플레이어에게만 UI 생성
 	CreateFlashWidget();
+
+	/*
+	 *	실루엣 관련
+	 */
+	if (const auto* OtherPS = GetPlayerState<AAgentPlayerState>())
+	{
+		if (IsLocallyControlled())
+		{
+			return;
+		}
+		
+		const auto* MyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
+		const auto* MyPS = MyPC->GetPlayerState<AAgentPlayerState>();
+		if (MyPS->bIsBlueTeam == OtherPS->bIsBlueTeam)
+		{
+			SetHighlight(true, false);
+		}
+		else
+		{
+			SetHighlight(true, true);
+		}
+	}
 }
 
 void ABaseAgent::BeginPlay()
@@ -490,6 +546,25 @@ void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	AgentInputComponent->BindInput(PlayerInputComponent);
+}
+
+void ABaseAgent::SetHighlight(bool bEnable, bool bIsEnemy)
+{
+	if (bEnable)
+	{
+		if (bIsEnemy)
+		{
+			GetMesh()->SetOverlayMaterial(EnemyOverlayMaterial);
+		}
+		else
+		{
+			GetMesh()->SetOverlayMaterial(TeamOverlayMaterial);
+		}
+	}
+	else
+	{
+		GetMesh()->SetOverlayMaterial(nullptr);
+	}
 }
 
 void ABaseAgent::SetIsRun(const bool _bIsRun)
@@ -1690,6 +1765,7 @@ void ABaseAgent::OnSpikeFinishDefuse()
 void ABaseAgent::OnRep_Controller()
 {
 	Super::OnRep_Controller();
+	
 	// 클라이언트 입장에서 Possess가 되었는지 알 수 있는 곳
 	// InteractionCapsule AddDynamic을 여기서 처리
 	if (false == bInteractionCapsuleInit && nullptr != Controller && false == HasAuthority() && IsLocallyControlled())

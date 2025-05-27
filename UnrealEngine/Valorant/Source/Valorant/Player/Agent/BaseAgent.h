@@ -238,6 +238,12 @@ public:
 	
 	int GetPoseIdx() const { return PoseIdx; }
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TObjectPtr<UMaterialInterface> EnemyOverlayMaterial = nullptr;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TObjectPtr<UMaterialInterface> TeamOverlayMaterial = nullptr;
+	void SetHighlight(bool bEnable, bool bIsEnemy);
+
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
