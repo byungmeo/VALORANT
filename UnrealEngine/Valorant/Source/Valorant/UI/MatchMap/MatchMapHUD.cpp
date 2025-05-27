@@ -231,8 +231,15 @@ void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAm
 	}
 }
 
+void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+{
+	OnDisplayIndicator(HitOrg);
+}
+
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
 {
+	pc->OnDamaged_PC.AddDynamic(this, &UMatchMapHUD::OnDamaged);
 	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
 	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);

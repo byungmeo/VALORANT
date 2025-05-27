@@ -487,6 +487,14 @@ void AAgentPlayerController::OnRep_Pawn()
 		// 미니맵 초기화 함수 호출
 		InitializeMinimap();
 	}
+
+	if (nullptr != GetPawn())
+	{
+		if (auto* Agent = Cast<ABaseAgent>(GetPawn()))
+		{
+			Agent->OnAgentDamaged.AddDynamic(this, &AAgentPlayerController::OnDamaged);
+		}
+	}
 }
 
 void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
@@ -513,4 +521,10 @@ void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
 	{
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, AgentWidget is nullptr"), __FUNCTION__);
 	}
+}
+
+void AAgentPlayerController::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart,
+	const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond)
+{
+	OnDamaged_PC.Broadcast(HitOrg, AgentDamagedPart, AgentDamagedDirection, bArg, bCond);
 }

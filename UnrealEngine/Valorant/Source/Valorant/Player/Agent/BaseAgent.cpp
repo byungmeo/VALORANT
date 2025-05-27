@@ -1116,6 +1116,7 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 	{
 		// GAS에서 Instigator를 설정하고 Die() 함수에서 GetInstigator()로 확인
 		SetInstigator(DamageInstigator);
+		LastDamagedOrg = DamageInstigator->GetActorLocation();
 		LastDamagedPart = DamagedPart;
 		LastDamagedDirection = DamagedDirection;
 
@@ -1137,7 +1138,7 @@ void ABaseAgent::UpdateHealth(float newHealth)
 	{
 		if (HasAuthority())
 		{
-			MulticastRPC_OnDamaged(LastDamagedPart, LastDamagedDirection, true, false);
+			MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, true, false);
 		}
 		Die();
 	}
@@ -1145,9 +1146,13 @@ void ABaseAgent::UpdateHealth(float newHealth)
 	{
 		if (HasAuthority())
 		{
-			MulticastRPC_OnDamaged(LastDamagedPart, LastDamagedDirection, false, false);
+			MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false);
 		}
 	}
+
+	LastDamagedOrg = FVector::ZeroVector;
+	LastDamagedPart = EAgentDamagedPart::None;
+	LastDamagedDirection = EAgentDamagedDirection::Front;
 }
 
 void ABaseAgent::UpdateMaxHealth(float newMaxHealth)
@@ -1164,12 +1169,12 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 	EffectSpeedMultiplier = newSpeed;
 }
 
-void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const EAgentDamagedPart DamagedPart,
+void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
 	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
 		__FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
-	OnAgentDamaged.Broadcast(DamagedPart, DamagedDirection, bDie, bLarge);
+	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge);
 }
 
 // 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트

@@ -59,7 +59,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnReload();
 	UFUNCTION(BlueprintImplementableEvent)
-	void OnDamaged(const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
+	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSpikeActive();
