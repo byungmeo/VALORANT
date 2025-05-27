@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "BaseGameplayAbility.generated.h"
 
 class ABaseProjectile;
@@ -154,6 +155,11 @@ protected:
 
 	UPROPERTY()
 	FGameplayAbilityActorInfo CachedActorInfo;
+
+    // 어빌리티 실행 전 무기 상태 저장
+    UPROPERTY()
+    EInteractorType PreviousEquipmentState = EInteractorType::None;
+
 private:
     UPROPERTY()
     FGameplayTag CurrentPhase;

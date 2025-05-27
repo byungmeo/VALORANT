@@ -46,6 +46,13 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 
 	CachedActorInfo = *ActorInfo;
 
+	// 어빌리티 실행 전 현재 무기 상태 저장, 어빌리티로 무기전환
+	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
+	{
+		PreviousEquipmentState = Agent->GetInteractorState();
+		Agent->SwitchEquipment(EInteractorType::Ability);
+	}
+
 	StartAbilityExecution();
 }
 
@@ -374,6 +381,23 @@ void UBaseGameplayAbility::SetAbilityPhase(FGameplayTag NewPhase)
 	{
 		OnRep_CurrentPhase();
 	}
+
+	// 어빌리티 실행 단계일 때 무기 교체 제한 태그 추가
+	if (NewPhase == FValorantGameplayTags::Get().State_Ability_Executing)
+	{
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+		}
+	}
+	// 다른 단계로 전환될 때 무기 사용 제한 태그 제거
+	else
+	{
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+		}
+	}
 }
 
 void UBaseGameplayAbility::OnRep_CurrentPhase()
@@ -461,6 +485,16 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 
 	// 상태 태그 정리
 	SetAbilityPhase(FGameplayTag());
+
+	// 어빌리티 종료 시 원래 무기로 복귀
+	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
+	{
+		// 이전 무기 상태로 복귀
+		if (PreviousEquipmentState != EInteractorType::None)
+		{
+			Agent->SwitchEquipment(PreviousEquipmentState);
+		}
+	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
