@@ -717,6 +717,20 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
 	if (HasAuthority())
 	{
+		// 무기 전환이 차단된 상태인지 확인
+		if (IsWeaponSwitchBlocked())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("무기 전환이 차단된 상태입니다."));
+			return;
+		}
+
+		// 어빌리티 실행 중인지 확인
+		if (IsAbilityExecuting())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("어빌리티 실행 중에는 무기를 전환할 수 없습니다."));
+			return;
+		}
+
 		if (EquipmentType == CurrentEquipmentState)
 		{
 			return;
@@ -1837,6 +1851,15 @@ float ABaseAgent::GetMaxHealth() const
 bool ABaseAgent::IsFullHealth() const
 {
 	return FMath::IsNearlyEqual(GetCurrentHealth(), GetMaxHealth());
+}
+
+bool ABaseAgent::HasGameplayTag(const FGameplayTag& TagToCheck) const
+{
+	if (ASC.IsValid())
+	{
+		return ASC->HasMatchingGameplayTag(TagToCheck);
+	}
+	return false;
 }
 
 void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
