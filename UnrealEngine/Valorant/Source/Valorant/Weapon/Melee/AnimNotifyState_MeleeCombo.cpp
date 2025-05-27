@@ -15,13 +15,13 @@ void UAnimNotifyState_MeleeCombo::NotifyBegin(USkeletalMeshComponent* MeshComp, 
 		auto* agent = Cast<ABaseAgent>(owner);
 		if (agent == nullptr)
 		{
-			UE_LOG(LogTemp, Error, TEXT("애님노티파이 소유자가 BaseAgent를 상속받아야 합니다."));
+			//UE_LOG(LogTemp, Error, TEXT("애님노티파이 소유자가 BaseAgent를 상속받아야 합니다."));
 			return;
 		}
 		if (AMeleeKnife* knife = Cast<AMeleeKnife>(agent->GetMeleeWeapon()))
 		{
 			knife->bIsCombo = true;
-			// UE_LOG(LogTemp, Error, TEXT("애님노티파이, 콤보 true"));
+			//UE_LOG(LogTemp, Error, TEXT("애님노티파이, 콤보 true"));
 		}
 	}
 }
@@ -34,13 +34,13 @@ void UAnimNotifyState_MeleeCombo::NotifyEnd(USkeletalMeshComponent* MeshComp, UA
 		auto* agent = Cast<ABaseAgent>(owner);
 		if (agent == nullptr)
 		{
-			UE_LOG(LogTemp, Error, TEXT("애님노티파이 소유자가 BaseAgent를 상속받아야 합니다."));
+			//UE_LOG(LogTemp, Error, TEXT("애님노티파이 소유자가 BaseAgent를 상속받아야 합니다."));
 			return;
 		}
 		if (AMeleeKnife* knife = Cast<AMeleeKnife>(agent->GetMeleeWeapon()))
 		{
 			knife->bIsCombo = false;
-			// UE_LOG(LogTemp, Error, TEXT("애님노티파이, 콤보 false"));
+			//UE_LOG(LogTemp, Error, TEXT("애님노티파이, 콤보 false"));
 		}
 	}
 }
