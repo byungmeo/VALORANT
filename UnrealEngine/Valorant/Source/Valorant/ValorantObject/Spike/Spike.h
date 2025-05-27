@@ -16,7 +16,7 @@ enum class ESpikeState : uint8
 	Planting,   // 설치 중인 상태
 	Planted,    // 설치 완료된 상태
 	Defusing,   // 해제 중인 상태
-	Defused     // 해제 완료된 상태
+	Defused,     // 해제 완료된 상태
 };
 
 UCLASS()
@@ -43,6 +43,34 @@ protected:
 	// 스파이크 설치 완료 후 폭발까지 남은 시간
 	UPROPERTY(Replicated)
 	float RemainingDetonationTime = 45.0f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TObjectPtr<USoundBase> BeepSound;
+
+	// 스파이크 비프사운드 반복을 위한 타이머 핸들
+	FTimerHandle BeepTimerHandle;
+
+	UPROPERTY()
+	UAudioComponent* BeepAudioComp;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	USoundBase* BeepSoundCue;
+
+	// 스파이크 설치 완료 후 비프사운드 울리는 간격
+	float BeepTimeRange_Calm = 1.0f;		
+	float BeepTimeRange_Caution = 0.5f;	
+	float BeepTimeRange_Warning = 0.25f;
+	float BeepTimeRange_Critical = 0.125f;
+	
+	// 스파이크 폭발까지 남은 시간이 아래와 같을 때, 비프사운드 간격을 변경
+	float DetonateTimeRemain_Caution = 20.0f;
+	float DetonateTimeRemain_Warning = 10.0f;
+	float DetonateTimeRemain_Critical = 5.0f;
+
+	// 비프사운드 간격이 업데이트 되었는지 확인
+	bool bBeepWarningStarted = false;
+	bool bBeepCautionStarted = false;
+	bool bBeepCriticalStarted = false;
 
 	// 스파이크 설치 필요 시간
 	UPROPERTY(EditDefaultsOnly, Category = "Spike")
@@ -83,6 +111,7 @@ protected:
 	UPROPERTY()
 	AMatchGameState* CachedGameState = nullptr;
 
+
 public:
 	virtual void ServerRPC_PickUp_Implementation(ABaseAgent* Agent) override;
 	virtual void ServerRPC_Drop_Implementation() override;
@@ -120,6 +149,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_Detonate();
 
+	// 비프사운드 더 빠르게 출력
+	void UpdateBeepPhase(float beepTimeRange);
+
 	// 스파이크 상태 반환
 	UFUNCTION(BlueprintCallable, Category = "Spike")
 	ESpikeState GetSpikeState() const { return SpikeState; }
@@ -141,6 +173,13 @@ public:
 	bool IsHalfDefused() const { return bIsHalfDefused; }
 
 	virtual void Destroyed() override;
+	
+	UFUNCTION()
+	void UpdateRemaingDetonateTime(float Time);
+
+	// 비프사운드 출력
+	UFUNCTION()
+	void PlayBeepSound();
 
 protected:
 	virtual bool ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const override;

@@ -4,9 +4,11 @@
 #include "StimBeacon.h"
 
 #include "StimBeaconAnim.h"
+#include "StimBeaconGround.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/World.h"
 
 
 AStimBeacon::AStimBeacon()
@@ -32,6 +34,13 @@ AStimBeacon::AStimBeacon()
 		Mesh->SetAnimInstanceClass(AnimInstanceClass.Class);
 	}
 	
+	// StimBeaconGround 클래스 찾기
+	static ConstructorHelpers::FClassFinder<AStimBeaconGround> GroundClass(TEXT("/Script/Engine.Blueprint'/Game/Blueprints/AgentAbility/Brimstone/BP_StimBeaconGround.BP_StimBeaconGround_C'"));
+	if (GroundClass.Succeeded())
+	{
+		StimBeaconGroundClass = GroundClass.Class;
+	}
+	
 	ProjectileMovement->InitialSpeed = Speed;
 	ProjectileMovement->MaxSpeed = Speed;
 	ProjectileMovement->ProjectileGravityScale = Gravity;
@@ -43,8 +52,11 @@ void AStimBeacon::BeginPlay()
 {
 	Super::BeginPlay();
 	AnimInstance = Cast<UStimBeaconAnim>(Mesh->GetAnimInstance());
-	AnimInstance->OnOutroEnded.AddDynamic(this, &AStimBeacon::OnOutroAnimationEnded);
-	AnimInstance->OnDeployEnded.AddDynamic(this, &AStimBeacon::OnDeployAnimationEnded);
+	if (AnimInstance)
+	{
+		AnimInstance->OnOutroEnded.AddDynamic(this, &AStimBeacon::OnOutroAnimationEnded);
+		AnimInstance->OnDeployEnded.AddDynamic(this, &AStimBeacon::OnDeployAnimationEnded);
+	}
 }
 
 void AStimBeacon::Tick(float DeltaSeconds)
@@ -86,6 +98,11 @@ void AStimBeacon::OnProjectileBounced(const FHitResult& ImpactResult, const FVec
 
 void AStimBeacon::OnOutroAnimationEnded()
 {
+	// Ground 제거
+	if (SpawnedGround)
+	{
+		SpawnedGround->Destroy();
+	}
 	Destroy();
 }
 
@@ -94,6 +111,47 @@ void AStimBeacon::OnDeployAnimationEnded()
 	if (HasAuthority())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%hs Called, Beacon is activated"), __FUNCTION__);
-		// TODO: 범위 효과 시작
+		
+		// StimBeaconGround 생성
+		if (StimBeaconGroundClass)
+		{
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = GetOwner();
+			SpawnParams.Instigator = GetInstigator();
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			
+			FVector SpawnLocation = GetActorLocation();
+			SpawnLocation.Z -= 50.0f; // 바닥에 정확히 위치하도록 조정
+			
+			SpawnedGround = GetWorld()->SpawnActor<AStimBeaconGround>(
+				StimBeaconGroundClass, 
+				SpawnLocation, 
+				FRotator::ZeroRotator, 
+				SpawnParams
+			);
+			
+			if (SpawnedGround)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("StimBeacon: Ground 생성 성공"));
+				
+				// 일정 시간 후 비콘 제거 시작
+				GetWorld()->GetTimerManager().SetTimer(
+					UnequipTimerHandle, 
+					this, 
+					&AStimBeacon::StartUnequip, 
+					BuffDuration - UnequipTime, 
+					false
+				);
+			}
+		}
+	}
+}
+
+void AStimBeacon::StartUnequip()
+{
+	if (AnimInstance)
+	{
+		State = EStimBeaconState::ESBS_Outtro;
+		//AnimInstance->OnOutro();
 	}
 }

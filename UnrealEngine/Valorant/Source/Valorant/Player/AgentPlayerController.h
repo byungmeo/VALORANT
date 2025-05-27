@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MatchPlayerController.h"
+#include "Animaiton/AgentAnimInstance.h"
 #include "Component/ShopComponent.h"
 #include "AgentPlayerController.generated.h"
 
@@ -13,7 +14,7 @@ class UAgentAbilitySystemComponent;
 class UMatchMapHUD;
 class UMiniMapWidget;
 
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnDamaged_PC, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged_PC, float, newHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor);
@@ -29,11 +30,11 @@ class VALORANT_API AAgentPlayerController : public AMatchPlayerController
 public:
 	AAgentPlayerController();
 	
-	UMatchMapHUD* GetAgentWidget() const { return AgentWidget; }
-	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UUserWidget> AgentWidgetClass;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnDamaged_PC OnDamaged_PC;
 	UPROPERTY(BlueprintAssignable)
 	FOnHealthChanged_PC OnHealthChanged_PC;
 	UPROPERTY(BlueprintAssignable)
@@ -179,4 +180,10 @@ public:
 
 	UFUNCTION()
 	void OnMatchEnd(const bool bBlueWin);
+
+	UFUNCTION()
+	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart, const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond);
+
+	UFUNCTION()
+	void OnSpikePlanted(AMatchPlayerController* Planter);
 };

@@ -10,4 +10,6 @@ class VALORANT_API UBrimstone_C_StimBeacon : public UBaseGameplayAbility
 
 public:
     UBrimstone_C_StimBeacon();
+
+    virtual void ExecuteAbility() override;
 }; 

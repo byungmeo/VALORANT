@@ -7,4 +7,12 @@ UBrimstone_C_StimBeacon::UBrimstone_C_StimBeacon(): UBaseGameplayAbility()
 	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")));
 	SetAssetTags(Tags);
 	m_AbilityID = 5001;
+
+	ActivationType = EAbilityActivationType::Instant;
+	FollowUpInputType = EFollowUpInputType::None;
+}
+
+void UBrimstone_C_StimBeacon::ExecuteAbility()
+{
+	SpawnProjectile();
 }

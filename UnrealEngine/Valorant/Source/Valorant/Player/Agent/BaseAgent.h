@@ -5,6 +5,7 @@
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "Player/Component/FlashComponent.h"
 #include "Player/Component/FlashPostProcessComponent.h"
+#include "AbilitySystem/ValorantGameplayTags.h"
 #include "BaseAgent.generated.h"
 
 class UFlashWidget;
@@ -72,7 +73,7 @@ struct FAgentVisibilityInfo
 	
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnAgentDamaged, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnAgentDamaged, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
@@ -168,7 +169,7 @@ public:
 	void SetHighlight(bool bEnable, bool bIsEnemy);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
+	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass, ABaseAgent* DamageInstigator);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
 	                          ABaseAgent* DamageInstigator = nullptr, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
@@ -304,6 +305,42 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
 	bool IsFullHealth() const;
 
+	// 활성화된 어빌리티 정리
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void CancelActiveAbilities();
+
+	// 게임플레이 태그 확인 함수들
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool HasGameplayTag(const FGameplayTag& TagToCheck) const;
+
+	// 자주 사용되는 태그 체크 함수들
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityPreparing() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityWaiting() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityExecuting() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsMovementBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Movement); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsWeaponSwitchBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityInputBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Ability_Input); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityActivationBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Ability_Activation); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsBlinded() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Flash_Blinded); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsSuppressed() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Debuff_Suppressed); }
+
 	// 섬광 관련 함수들
 	UFUNCTION(BlueprintCallable, Category = "Flash")
 	void OnFlashIntensityChanged(float NewIntensity);
@@ -389,6 +426,7 @@ protected:
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
 
+	FVector LastDamagedOrg = FVector::ZeroVector;
 	EAgentDamagedPart LastDamagedPart;
 	EAgentDamagedDirection LastDamagedDirection;;
 
@@ -443,7 +481,7 @@ protected:
 	void UpdateEffectSpeed(float newEffectSpeed);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_OnDamaged(const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false);
+	void MulticastRPC_OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false);
 
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();

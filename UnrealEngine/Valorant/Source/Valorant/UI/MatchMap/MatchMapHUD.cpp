@@ -9,6 +9,8 @@
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
@@ -198,6 +200,10 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Idx: %d, TransitionTime: %f"), __FUNCTION__, static_cast<int32>(MatchAnnouncement), DisplayTime);
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Visible);
 	WidgetSwitcherAnnouncement->SetActiveWidgetIndex(static_cast<int32>(MatchAnnouncement));
+
+	Overlay_Timer->SetVisibility(ESlateVisibility::Visible);
+	Img_Spike->SetVisibility(ESlateVisibility::Hidden);
+	
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
 	bIsPreRound = true;
 }
@@ -231,8 +237,15 @@ void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAm
 	}
 }
 
+void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+{
+	OnDisplayIndicator(HitOrg);
+}
+
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
 {
+	pc->OnDamaged_PC.AddDynamic(this, &UMatchMapHUD::OnDamaged);
 	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
 	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);

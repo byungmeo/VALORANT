@@ -59,7 +59,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnReload();
 	UFUNCTION(BlueprintImplementableEvent)
-	void OnDamaged(const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
+	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSpikeActive();
@@ -69,4 +69,15 @@ public:
 	void OnSpikeDeactive();
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSpikeDefuseFinish();
+
+	/*
+	 *	발소리 관련
+	 */
+public:
+	float AccumulatedDistance = 0.0f; // 총 이동거리
+	float StepInterval = 280.f; // 1보당 거리 (cm)
+	FVector PrevCharacterLocation = FVector::ZeroVector;
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayFootstepSound(const EPhysicalSurface SurfaceType, const FVector& FootLocation);
+	void CalcFootstep();
 };

@@ -70,6 +70,7 @@ ABaseAgent::ABaseAgent()
 	BaseCapsuleHalfHeight = 72.0f;
 	CrouchCapsuleHalfHeight = 68.0f;
 	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
+	GetCapsuleComponent()->bReturnMaterialOnMove = true;
 	
 	// SpringArm
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");
@@ -696,6 +697,27 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
 	if (HasAuthority())
 	{
+		// 무기 전환이 차단된 상태인지 확인
+		if (IsWeaponSwitchBlocked())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("무기 전환이 차단된 상태입니다."));
+			return;
+		}
+
+		// 어빌리티 실행 중인지 확인
+		if (IsAbilityExecuting())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("어빌리티 실행 중에는 무기를 전환할 수 없습니다."));
+			return;
+		}
+		// 어빌리티가 준비 / 대기 페이즈면 취소
+		else if (IsAbilityWaiting() || IsAbilityPreparing())
+		{
+			// 활성화된 어빌리티 취소
+			CancelActiveAbilities();
+		}
+
+
 		if (EquipmentType == CurrentEquipmentState)
 		{
 			return;
@@ -1081,7 +1103,7 @@ void ABaseAgent::Net_Die_Implementation()
 	// ABP_3P->Montage_Play(AM_Die, 1.0f);
 }
 
-void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass)
+void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass, ABaseAgent* DamageInstigator)
 {
 	if (!geClass)
 	{
@@ -1091,6 +1113,12 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
+
+	if (DamageInstigator)
+	{
+		SetInstigator(DamageInstigator);
+		LastDamagedOrg = DamageInstigator->GetActorLocation();
+	}
 
 	if (SpecHandle.IsValid())
 	{
@@ -1116,6 +1144,7 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 	{
 		// GAS에서 Instigator를 설정하고 Die() 함수에서 GetInstigator()로 확인
 		SetInstigator(DamageInstigator);
+		LastDamagedOrg = DamageInstigator->GetActorLocation();
 		LastDamagedPart = DamagedPart;
 		LastDamagedDirection = DamagedDirection;
 
@@ -1137,7 +1166,7 @@ void ABaseAgent::UpdateHealth(float newHealth)
 	{
 		if (HasAuthority())
 		{
-			MulticastRPC_OnDamaged(LastDamagedPart, LastDamagedDirection, true, false);
+			MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, true, false);
 		}
 		Die();
 	}
@@ -1145,9 +1174,13 @@ void ABaseAgent::UpdateHealth(float newHealth)
 	{
 		if (HasAuthority())
 		{
-			MulticastRPC_OnDamaged(LastDamagedPart, LastDamagedDirection, false, false);
+			MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false);
 		}
 	}
+
+	LastDamagedOrg = FVector::ZeroVector;
+	LastDamagedPart = EAgentDamagedPart::None;
+	LastDamagedDirection = EAgentDamagedDirection::Front;
 }
 
 void ABaseAgent::UpdateMaxHealth(float newMaxHealth)
@@ -1164,12 +1197,12 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 	EffectSpeedMultiplier = newSpeed;
 }
 
-void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const EAgentDamagedPart DamagedPart,
+void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
 	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
 {
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
 		__FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
-	OnAgentDamaged.Broadcast(DamagedPart, DamagedDirection, bDie, bLarge);
+	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge);
 }
 
 // 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
@@ -1545,6 +1578,45 @@ float ABaseAgent::GetMaxHealth() const
 bool ABaseAgent::IsFullHealth() const
 {
 	return FMath::IsNearlyEqual(GetCurrentHealth(), GetMaxHealth());
+}
+
+void ABaseAgent::CancelActiveAbilities()
+{
+	if (!ASC.IsValid())
+	{
+		return;
+	}
+
+	// 활성화된 모든 어빌리티 찾기
+	TArray<FGameplayAbilitySpec*> ActiveSpecs;
+	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (Spec.IsActive())
+		{
+			ActiveSpecs.Add(&Spec);
+		}
+	}
+
+	// 모든 활성 어빌리티 취소
+	for (FGameplayAbilitySpec* Spec : ActiveSpecs)
+	{
+		if (Spec)
+		{
+			ASC->CancelAbilityHandle(Spec->Handle);
+		}
+	}
+
+	// 어빌리티 상태 정리
+	ASC->CleanupAbilityState();
+}
+
+bool ABaseAgent::HasGameplayTag(const FGameplayTag& TagToCheck) const
+{
+	if (ASC.IsValid())
+	{
+		return ASC->HasMatchingGameplayTag(TagToCheck);
+	}
+	return false;
 }
 
 void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)

@@ -70,7 +70,7 @@ void AGE_Zone::OnActorxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AA
 	
 	if (agent->IsLocallyControlled())
 	{
-		agent->ServerApplyGE(EffectClass);
+		agent->ServerApplyGE(EffectClass, nullptr);
 	}
 
 	// if (HasAuthority() == false)

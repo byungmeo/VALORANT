@@ -32,7 +32,6 @@ void UJett_E_Tailwind::ExecuteAbility()
 			Forward.Z = 0.f;
 			Forward.Normalize();
 
-			const float DashStrength = 4000.0f; // 돌진 세기
 			FVector DashVelocity = Forward * DashStrength;
 
 			// 공중/지상 모두에서 동일하게 돌진: Z속도는 기존값 유지(또는 0으로 보정)
