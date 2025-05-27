@@ -52,7 +52,7 @@ bool USage_E_HealingOrb::OnLeftClickInput()
 			DrawDebugSphere(GetWorld(), OutHit.Location, 10.f, 32, FColor::Red, false, 2.f);
 
 			// 힐링 이펙트/지속힐 적용 (Tick마다 HealAmount/HealDuration)
-			Target->ServerApplyGE(GameplayEffect);
+			Target->ServerApplyGE(GameplayEffect, nullptr);
 			bShouldExecute = true;
 		}
 	}
@@ -68,7 +68,7 @@ bool USage_E_HealingOrb::OnRightClickInput()
 	if (OwnerAgent && !OwnerAgent->IsFullHealth())
 	{
 		// 힐링 이펙트/지속힐 적용 (Tick마다 HealAmount/HealDuration)
-		OwnerAgent->ServerApplyGE(GameplayEffect);
+		OwnerAgent->ServerApplyGE(GameplayEffect, nullptr);
 		bShouldExecute = true;
 	}
 

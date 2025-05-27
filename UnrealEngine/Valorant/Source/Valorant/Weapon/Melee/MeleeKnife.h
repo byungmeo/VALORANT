@@ -47,8 +47,8 @@ public:
 	virtual void Fire() override;
 
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_Sweep(FVector center, FRotator rot);
-	void Sweep(FVector center, FRotator rot);
+	void ServerRPC_DamageBox(FVector center, FRotator rot);
+	void DamageBox(FVector center, FRotator rot);
 
 	void ResetCombo();
 

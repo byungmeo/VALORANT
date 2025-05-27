@@ -95,11 +95,11 @@ void AMeleeKnife::Fire()
 	if (HasAuthority())
 	{
 		bIsComboTransition = true;
-		Sweep(Center, CameraRotation);
+		DamageBox(Center, CameraRotation);
 	}
 	else
 	{
-		ServerRPC_Sweep(Center, CameraRotation);
+		ServerRPC_DamageBox(Center, CameraRotation);
 	}
 	
 	switch (MagazineAmmo)
@@ -118,14 +118,14 @@ void AMeleeKnife::Fire()
 	}
 }
 
-void AMeleeKnife::ServerRPC_Sweep_Implementation(FVector center, FRotator rot)
+void AMeleeKnife::ServerRPC_DamageBox_Implementation(FVector center, FRotator rot)
 {
 	bIsComboTransition = true;
-	Sweep(center, rot);
+	DamageBox(center, rot);
 }
 
 
-void AMeleeKnife::Sweep(FVector center, FRotator rot)
+void AMeleeKnife::DamageBox(FVector center, FRotator rot)
 {
 	auto BoxShape = FCollisionShape::MakeBox(FVector(30,30,5));
 	TArray<FOverlapResult> Overlaps;
@@ -142,10 +142,18 @@ void AMeleeKnife::Sweep(FVector center, FRotator rot)
 		for (auto& OverlapResult : Overlaps)
 		{
 			AActor* hitActor = OverlapResult.GetActor();
-			if (ABaseAgent* agent = Cast<ABaseAgent>(hitActor))
+			ABaseAgent* agent = Cast<ABaseAgent>(hitActor);
+			if (agent == nullptr)
 			{
-				agent->ServerApplyGE(DamageEffectClass);
+				return;
 			}
+			
+			if (agent->IsBlueTeam() == OwnerAgent->IsBlueTeam())
+			{
+				return;
+			}
+
+			agent->ServerApplyGE(DamageEffectClass, OwnerAgent);
 		}
 	}
 }

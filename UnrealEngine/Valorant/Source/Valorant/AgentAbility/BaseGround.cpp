@@ -89,7 +89,7 @@ void ABaseGround::ApplyGameEffect()
 	
 	for (auto* Agent : OverlappedAgents)
 	{
-		Agent->ServerApplyGE(GameplayEffect);
+		Agent->ServerApplyGE(GameplayEffect, nullptr);
 	}
 }
 
