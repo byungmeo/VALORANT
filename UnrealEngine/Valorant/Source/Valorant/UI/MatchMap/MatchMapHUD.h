@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "GameManager/MatchGameState.h"
+#include "Player/Animaiton/AgentAnimInstance.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
@@ -139,6 +140,9 @@ protected:
 	UFUNCTION()
 	void UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo);
 
+	UFUNCTION()
+	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
+
 	// 어빌리티 스택 관련 함수들
 	UFUNCTION()
 	void HandleAbilityStackChanged(int32 AbilityID, int32 NewStack);
@@ -207,6 +211,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnMatchEnd(bool bWin);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnDisplayIndicator(const FVector& HitOrg);
 	
 public:
 	UPROPERTY(meta=(BindWidget))
