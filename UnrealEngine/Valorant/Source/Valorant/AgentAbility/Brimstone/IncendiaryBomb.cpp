@@ -3,6 +3,7 @@
 
 #include "IncendiaryBomb.h"
 
+#include "AgentAbility/BaseGround.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
@@ -50,6 +51,12 @@ void AIncendiaryBomb::OnProjectileBounced(const FHitResult& ImpactResult, const 
 
 	if (ImpactResult.ImpactNormal.Z > 0.5f && ImpactVelocity.Size() < 500.f)
 	{
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParameters.Instigator = this->GetInstigator();
+		
+		GetWorld()->SpawnActor<ABaseGround>(GroundClass, ImpactResult.ImpactPoint, FRotator::ZeroRotator, SpawnParameters);
+		
 		Destroy();
 	}
 }
