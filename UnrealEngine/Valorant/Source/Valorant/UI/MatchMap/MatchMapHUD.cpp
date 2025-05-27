@@ -9,6 +9,8 @@
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
@@ -198,6 +200,10 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Idx: %d, TransitionTime: %f"), __FUNCTION__, static_cast<int32>(MatchAnnouncement), DisplayTime);
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Visible);
 	WidgetSwitcherAnnouncement->SetActiveWidgetIndex(static_cast<int32>(MatchAnnouncement));
+
+	Overlay_Timer->SetVisibility(ESlateVisibility::Visible);
+	Img_Spike->SetVisibility(ESlateVisibility::Hidden);
+	
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
 	bIsPreRound = true;
 }
