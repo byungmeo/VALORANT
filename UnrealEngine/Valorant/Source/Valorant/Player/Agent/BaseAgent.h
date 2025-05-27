@@ -332,7 +332,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentAnimInstance* ABP_3P = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	ABaseInteractor* FindInteractActor = nullptr;
 
 	UPROPERTY(Replicated)
