@@ -623,7 +623,6 @@ void ASpike::MulticastRPC_OnDefusingFinished_Implementation()
 void ASpike::MulticastRPC_OnDetonated_Implementation()
 {
 	// 폭발 효과 (사운드, 파티클 등)
-	UE_LOG(LogTemp,Error,TEXT("타이머 없애기"));
 	GetWorldTimerManager().ClearTimer(BeepTimerHandle);
 	if (BeepAudioComp->IsPlaying())
 	{
