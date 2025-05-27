@@ -77,7 +77,10 @@ void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
 	{
 		PreviousEquipmentState = Agent->GetInteractorState();
-		Agent->SwitchEquipment(EInteractorType::Ability);
+		if (HasAuthority(&ActivationInfo))
+		{
+			Agent->SwitchEquipment(EInteractorType::Ability);
+		}
 	}
 
 	StartAbilityExecution();
@@ -519,7 +522,10 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		// 이전 무기 상태로 복귀
 		if (PreviousEquipmentState != EInteractorType::None)
 		{
-			Agent->SwitchEquipment(PreviousEquipmentState);
+			if (HasAuthority(&ActivationInfo))
+			{
+				Agent->SwitchEquipment(EInteractorType::Ability);
+			}
 			PreviousEquipmentState = EInteractorType::None;
 		}
 	}
