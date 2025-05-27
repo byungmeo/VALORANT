@@ -22,6 +22,18 @@ UBaseGameplayAbility::UBaseGameplayAbility()
 	ActivationBlockedTags.AddTag(FValorantGameplayTags::Get().Block_Ability_Activation);
 }
 
+bool UBaseGameplayAbility::CanBeCanceled() const
+{
+	// 실행 단계에서는 기본적으로 취소 불가
+	if (CurrentPhase == FValorantGameplayTags::Get().State_Ability_Executing)
+	{
+		return bAllowCancelDuringExecution;
+	}
+    
+	// 준비나 대기 단계에서는 취소 가능
+	return Super::CanBeCanceled();
+}
+
 bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                               const FGameplayAbilityActorInfo* ActorInfo,
                                               const FGameplayTagContainer* SourceTags,
@@ -35,6 +47,21 @@ bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle H
 
 	// 차지 확인
 	return GetAbilityStack() > 0;
+}
+
+void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateCancelAbility)
+{
+	// 정리 작업
+	UnregisterFollowUpInputs();
+	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
+	StopAllMontages();
+
+	// 상태 태그 정리
+	SetAbilityPhase(FGameplayTag());
+	
+	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 }
 
 void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -335,10 +362,10 @@ void UBaseGameplayAbility::StopAllMontages()
 	}
 
 	// 3인칭 몽타주
-	Agent->StopThirdPersonMontage();
+	Agent->StopThirdPersonMontage(0.1f);
 
 	// 1인칭 몽타주
-	Agent->StopFirstPersonMontage();
+	Agent->StopFirstPersonMontage(0.1f);
 }
 
 bool UBaseGameplayAbility::SpawnProjectile(FVector LocationOffset, FRotator RotationOffset)
@@ -493,6 +520,7 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		if (PreviousEquipmentState != EInteractorType::None)
 		{
 			Agent->SwitchEquipment(PreviousEquipmentState);
+			PreviousEquipmentState = EInteractorType::None;
 		}
 	}
 

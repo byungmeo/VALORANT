@@ -375,7 +375,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
 	bool IsFullHealth() const;
 
-	
+	// 활성화된 어빌리티 정리
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void CancelActiveAbilities();
 
 	// 게임플레이 태그 확인 함수들
 	UFUNCTION(BlueprintCallable, Category = "GAS")
