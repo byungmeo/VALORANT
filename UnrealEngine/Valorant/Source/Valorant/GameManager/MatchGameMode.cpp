@@ -454,9 +454,6 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 
 	// 라운드 종료 시 크레딧 보상 지급
 	AwardRoundEndCredits();
-
-	// 월드에 spawn된 spike 제거
-	DestroySpikeInWorld();
 }
 
 void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
@@ -530,6 +527,9 @@ void AMatchGameMode::ClearObjects()
 			}
 		}
 	}
+
+	// 월드에 spawn된 spike 제거
+	DestroySpikeInWorld();
 }
 
 void AMatchGameMode::RespawnAll()
@@ -1007,5 +1007,8 @@ void AMatchGameMode::SpawnDefaultWeapon(ABaseAgent* agent)
 
 void AMatchGameMode::DestroySpikeInWorld()
 {
-	Spike->Destroy();
+	if (Spike)
+	{
+		Spike->Destroy();
+	}
 }
