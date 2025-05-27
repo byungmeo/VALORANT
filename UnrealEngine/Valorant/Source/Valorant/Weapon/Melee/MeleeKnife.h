@@ -13,6 +13,7 @@ class VALORANT_API AMeleeKnife : public ABaseWeapon
 
 public:
 	AMeleeKnife();
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAnimMontage* AM_Fire1_1P;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -25,13 +26,17 @@ public:
 	UAnimMontage* AM_Fire3_1P;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UAnimMontage* AM_Fire3_3P;
-
+	
+	UPROPERTY(Replicated)
 	bool bIsAttacking = false;
+	UPROPERTY(Replicated)
 	bool bIsCombo = false;
+	UPROPERTY(Replicated)
 	bool bIsComboTransition = false;
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -40,6 +45,10 @@ public:
 
 	virtual void StartFire() override;
 	virtual void Fire() override;
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_Sweep(FVector center, FRotator rot);
+	void Sweep(FVector center, FRotator rot);
 
 	void ResetCombo();
 
