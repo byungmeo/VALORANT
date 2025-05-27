@@ -9,6 +9,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+class UOverlay;
 class UHorizontalBox;
 class UAgentAbilitySystemComponent;
 class AAgentPlayerState;
@@ -108,7 +109,8 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 
 	// 라운드 시작 3초전 카운트다운 음향을 위한 변수
 	bool bIsPreRound = false;
-	
+
+	UFUNCTION(BlueprintCallable)
 	void SetTrueVo();
 	void SetFalseVo();
 	
@@ -214,7 +216,10 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnDisplayIndicator(const FVector& HitOrg);
-	
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void SpikePlanted();
+
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
@@ -230,6 +235,10 @@ public:
 	TObjectPtr<UTextBlock> TextBlockMagazineAmmo = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockSpareAmmo = nullptr;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TObjectPtr<UOverlay> Overlay_Timer = nullptr;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TObjectPtr<UImage> Img_Spike = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_Armor;
