@@ -86,7 +86,7 @@ void UAgentAnimInstance::CalcFootstep()
 	{
 		const FFindFloorResult& CurrentFloor = OwnerAgent->GetCharacterMovement()->CurrentFloor;
 		const EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(CurrentFloor.HitResult.PhysMaterial.Get());
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PhysSurfece: %s"), __FUNCTION__, *EnumToString(SurfaceType));
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, PhysSurfece: %s"), __FUNCTION__, *EnumToString(SurfaceType));
 		PlayFootstepSound(SurfaceType, OwnerAgent->GetCharacterMovement()->GetFeetLocation());
 		AccumulatedDistance -= StepInterval;
 	}
