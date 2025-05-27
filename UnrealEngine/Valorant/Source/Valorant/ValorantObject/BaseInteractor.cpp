@@ -206,11 +206,6 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, InteractorName: %s"), __FUNCTION__, *GetName());
 	
-	if (OwnerAgent->GetCurrentInterator() == this)
-	{
-		OwnerAgent->ServerRPC_SetCurrentInteractor(nullptr);
-	}
-	
 	FDetachmentTransformRules DetachmentRule(
 		EDetachmentRule::KeepWorld,
 		EDetachmentRule::KeepWorld,
@@ -221,9 +216,8 @@ void ABaseInteractor::ServerRPC_Drop_Implementation()
 	Mesh->DetachFromComponent(DetachmentRule);
 	const FVector& ForwardVector = OwnerAgent->GetActorForwardVector();
 	const FVector& FeetLocation = OwnerAgent->GetMovementComponent()->GetActorFeetLocation();
-	const FVector Offset = FVector(0, 0, 100);
-	const FVector NewLocation = FeetLocation + Offset + ForwardVector * 50;
-	// const FVector NewLocation = OwnerAgent->GetActorLocation() + ForwardVector * 50;
+	const FVector Offset = FVector(0, 0, 110);
+	const FVector NewLocation = FeetLocation + Offset + ForwardVector * 75;
 	SetActorLocation(NewLocation,false,nullptr,ETeleportType::TeleportPhysics);
 	
 	SetOwnerAgent(nullptr);
