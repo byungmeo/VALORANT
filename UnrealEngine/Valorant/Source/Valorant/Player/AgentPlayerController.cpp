@@ -46,6 +46,7 @@ void AAgentPlayerController::BeginPlay()
 	{
 		GameState->OnShopClosed.AddDynamic(this, &AAgentPlayerController::CloseShopUI);
 		GameState->OnMatchEnd.AddDynamic(this, &AAgentPlayerController::OnMatchEnd);
+		GameState->OnSpikePlanted.AddDynamic(this, &AAgentPlayerController::OnSpikePlanted);
 	}
 }
 
@@ -527,4 +528,16 @@ void AAgentPlayerController::OnDamaged(const FVector& HitOrg, const EAgentDamage
 	const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond)
 {
 	OnDamaged_PC.Broadcast(HitOrg, AgentDamagedPart, AgentDamagedDirection, bArg, bCond);
+}
+
+void AAgentPlayerController::OnSpikePlanted(AMatchPlayerController* Planter)
+{
+	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
+	{
+		MatchMapHud->SpikePlanted();
+	}
+	else
+	{
+		NET_LOG(LogTemp, Error, TEXT("위젯 없어요."));
+	}
 }

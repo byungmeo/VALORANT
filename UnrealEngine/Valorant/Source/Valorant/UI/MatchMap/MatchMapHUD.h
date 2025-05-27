@@ -214,7 +214,10 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnDisplayIndicator(const FVector& HitOrg);
-	
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void SpikePlanted();
+
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;

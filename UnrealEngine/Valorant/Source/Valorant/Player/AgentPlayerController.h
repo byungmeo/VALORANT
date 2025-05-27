@@ -30,8 +30,6 @@ class VALORANT_API AAgentPlayerController : public AMatchPlayerController
 public:
 	AAgentPlayerController();
 	
-	UMatchMapHUD* GetAgentWidget() const { return AgentWidget; }
-	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Widget")
 	TSubclassOf<UUserWidget> AgentWidgetClass;
 
@@ -185,4 +183,7 @@ public:
 
 	UFUNCTION()
 	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart, const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond);
+
+	UFUNCTION()
+	void OnSpikePlanted(AMatchPlayerController* Planter);
 };
