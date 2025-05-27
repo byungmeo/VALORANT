@@ -616,11 +616,26 @@ void ABaseAgent::ServerRPC_DropCurrentInteractor_Implementation()
 		{
 			SubWeapon = nullptr;
 		}
+		else if (CurrentInteractor == Spike)
+		{
+			Spike = nullptr;
+		}
 		
 		CurrentInteractor->ServerRPC_Drop();
 		ServerRPC_SetCurrentInteractor(nullptr);
 
-		EquipInteractor(CurrentInteractor);
+		if (MainWeapon)
+		{
+			SwitchEquipment(EInteractorType::MainWeapon);
+		}
+		else if (SubWeapon)
+		{
+			SwitchEquipment(EInteractorType::SubWeapon);
+		}
+		else
+		{
+			SwitchEquipment(EInteractorType::Melee);
+		}
 	}
 }
 
@@ -638,7 +653,7 @@ void ABaseAgent::ServerRPC_SetCurrentInteractor_Implementation(ABaseInteractor* 
 	if (CurrentInteractor)
 	{
 		CurrentInteractor->SetActive(true);
-		//NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 현재 장착 중인 Interactor: %s"), __FUNCTION__, *CurrentInteractor->GetActorNameOrLabel());
 	}
 }
 
