@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "GameManager/MatchGameState.h"
+#include "Player/Animaiton/AgentAnimInstance.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+class UOverlay;
 class UHorizontalBox;
 class UAgentAbilitySystemComponent;
 class AAgentPlayerState;
@@ -107,7 +109,8 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 
 	// 라운드 시작 3초전 카운트다운 음향을 위한 변수
 	bool bIsPreRound = false;
-	
+
+	UFUNCTION(BlueprintCallable)
 	void SetTrueVo();
 	void SetFalseVo();
 	
@@ -138,6 +141,9 @@ protected:
 	void UpdateDisplayArmor(const float armor);
 	UFUNCTION()
 	void UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo);
+
+	UFUNCTION()
+	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
 
 	// 어빌리티 스택 관련 함수들
 	UFUNCTION()
@@ -207,7 +213,13 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnMatchEnd(bool bWin);
-	
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnDisplayIndicator(const FVector& HitOrg);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void SpikePlanted();
+
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
@@ -223,6 +235,10 @@ public:
 	TObjectPtr<UTextBlock> TextBlockMagazineAmmo = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockSpareAmmo = nullptr;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TObjectPtr<UOverlay> Overlay_Timer = nullptr;
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
+	TObjectPtr<UImage> Img_Spike = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_Armor;

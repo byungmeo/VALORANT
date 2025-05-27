@@ -21,6 +21,7 @@
 ABaseWeapon::ABaseWeapon()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	Mesh->SetUseCCD(true);
 }
 
 void ABaseWeapon::BeginPlay()

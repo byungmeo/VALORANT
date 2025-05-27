@@ -11,6 +11,7 @@ AStartBarrier::AStartBarrier()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+	bNetLoadOnClient = true;
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
@@ -48,12 +49,18 @@ void AStartBarrier::ActiveBarrier()
 
 void AStartBarrier::Multicast_ActiveBarrier_Implementation()
 {
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	Mesh->SetVisibility(true);
+	if (Mesh)
+	{
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Mesh->SetVisibility(true);
+	}
 }
 
 void AStartBarrier::Multicast_DeactiveBarrier_Implementation()
 {
-	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Mesh->SetVisibility(false);
+	if (Mesh)
+	{
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Mesh->SetVisibility(false);
+	}
 }

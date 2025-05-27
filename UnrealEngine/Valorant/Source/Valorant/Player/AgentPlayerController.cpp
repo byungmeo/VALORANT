@@ -46,6 +46,7 @@ void AAgentPlayerController::BeginPlay()
 	{
 		GameState->OnShopClosed.AddDynamic(this, &AAgentPlayerController::CloseShopUI);
 		GameState->OnMatchEnd.AddDynamic(this, &AAgentPlayerController::OnMatchEnd);
+		GameState->OnSpikePlanted.AddDynamic(this, &AAgentPlayerController::OnSpikePlanted);
 	}
 }
 
@@ -487,6 +488,14 @@ void AAgentPlayerController::OnRep_Pawn()
 		// 미니맵 초기화 함수 호출
 		InitializeMinimap();
 	}
+
+	if (nullptr != GetPawn())
+	{
+		if (auto* Agent = Cast<ABaseAgent>(GetPawn()))
+		{
+			Agent->OnAgentDamaged.AddDynamic(this, &AAgentPlayerController::OnDamaged);
+		}
+	}
 }
 
 void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
@@ -512,5 +521,23 @@ void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
 	else
 	{
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, AgentWidget is nullptr"), __FUNCTION__);
+	}
+}
+
+void AAgentPlayerController::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart,
+	const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond)
+{
+	OnDamaged_PC.Broadcast(HitOrg, AgentDamagedPart, AgentDamagedDirection, bArg, bCond);
+}
+
+void AAgentPlayerController::OnSpikePlanted(AMatchPlayerController* Planter)
+{
+	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
+	{
+		MatchMapHud->SpikePlanted();
+	}
+	else
+	{
+		NET_LOG(LogTemp, Error, TEXT("위젯 없어요."));
 	}
 }

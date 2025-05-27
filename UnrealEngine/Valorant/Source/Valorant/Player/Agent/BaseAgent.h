@@ -73,7 +73,7 @@ struct FAgentVisibilityInfo
 	
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnAgentDamaged, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnAgentDamaged, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
@@ -169,7 +169,7 @@ public:
 	void SetHighlight(bool bEnable, bool bIsEnemy);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
+	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass, ABaseAgent* DamageInstigator);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
 	                          ABaseAgent* DamageInstigator = nullptr, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
@@ -426,6 +426,7 @@ protected:
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
 
+	FVector LastDamagedOrg = FVector::ZeroVector;
 	EAgentDamagedPart LastDamagedPart;
 	EAgentDamagedDirection LastDamagedDirection;;
 
@@ -480,7 +481,7 @@ protected:
 	void UpdateEffectSpeed(float newEffectSpeed);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_OnDamaged(const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false);
+	void MulticastRPC_OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false);
 
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
