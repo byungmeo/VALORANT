@@ -536,8 +536,4 @@ void AAgentPlayerController::OnSpikePlanted(AMatchPlayerController* Planter)
 	{
 		MatchMapHud->SpikePlanted();
 	}
-	else
-	{
-		NET_LOG(LogTemp, Error, TEXT("위젯 없어요."));
-	}
 }
