@@ -2,6 +2,7 @@
 
 #include "Spike.h"
 
+#include "Components/AudioComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "GameManager/MatchGameMode.h"
@@ -29,6 +30,10 @@ ASpike::ASpike()
 
 	// 인터랙터 타입 설정
 	InteractorType = EInteractorType::Spike;
+
+	BeepAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("BeepAudioComp"));
+	BeepAudioComp->SetupAttachment(RootComponent);
+	BeepAudioComp->SetSound(BeepSoundCue);
 }
 
 void ASpike::BeginPlay()
@@ -90,17 +95,6 @@ void ASpike::Tick(float DeltaTime)
 			if (InteractProgress >= DefuseTime)
 			{
 				ServerRPC_FinishDefusing();
-			}
-		}
-		// 설치 완료된 스파이크 폭발 타이머 업데이트
-		else if (SpikeState == ESpikeState::Planted)
-		{
-			RemainingDetonationTime -= DeltaTime;
-			// UE_LOG(LogTemp, Log, TEXT("스파이크, %f"), RemainingDetonationTime);
-			if (RemainingDetonationTime <= 0)
-			{
-				// UE_LOG(LogTemp, Error, TEXT("스파이크 타임아웃"));
-				ServerRPC_Detonate();
 			}
 		}
 	}
@@ -498,24 +492,15 @@ void ASpike::ServerRPC_Detonate_Implementation()
 	{
 		return;
 	}
-
-	// 폭발 처리
-	// AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	// if (GameMode)
-	// {
-	// 	// 스파이크 폭발 시 공격팀 승리
-	// 	GameMode->StartEndPhaseBySpikeActive();
-	// }
-
+	
 	// 폭발 이벤트 발생
 	MulticastRPC_OnDetonated();
+}
 
-	// 스파이크 제거 (폭발 이펙트 후 삭제)
-	FTimerHandle DestroyTimerHandle;
-	GetWorldTimerManager().SetTimer(DestroyTimerHandle, [this]()
-	{
-		Destroy();
-	}, 3.0f, false);
+void ASpike::UpdateBeepPhase(float beepTimeRange)
+{
+	GetWorldTimerManager().ClearTimer(BeepTimerHandle);
+	GetWorldTimerManager().SetTimer(BeepTimerHandle,this,&ASpike::PlayBeepSound,beepTimeRange, true);
 }
 
 void ASpike::CheckHalfDefuse()
@@ -605,6 +590,9 @@ void ASpike::MulticastRPC_OnPlantingFinished_Implementation()
 {
 	// 설치 완료 효과
 	HandlePlantingFinished();
+	PlayBeepSound();
+	GetWorldTimerManager().SetTimer(BeepTimerHandle,this,&ASpike::PlayBeepSound, BeepTimeRange_Calm, true);
+	CachedGameState->OnRemainRoundStateTimeChanged.AddDynamic(this,&ASpike::UpdateRemaingDetonateTime);
 }
 
 void ASpike::MulticastRPC_OnDefusingStarted_Implementation(bool bHalfDefuse)
@@ -623,12 +611,25 @@ void ASpike::MulticastRPC_OnDefusingCancelled_Implementation()
 void ASpike::MulticastRPC_OnDefusingFinished_Implementation()
 {
 	// 해제 완료 효과
+	GetWorldTimerManager().ClearTimer(BeepTimerHandle);
+	if (BeepAudioComp->IsPlaying())
+	{
+		BeepAudioComp->Stop();
+	}
+	
 	HandleDefusingFinished();
 }
 
 void ASpike::MulticastRPC_OnDetonated_Implementation()
 {
 	// 폭발 효과 (사운드, 파티클 등)
+	UE_LOG(LogTemp,Error,TEXT("타이머 없애기"));
+	GetWorldTimerManager().ClearTimer(BeepTimerHandle);
+	if (BeepAudioComp->IsPlaying())
+	{
+		BeepAudioComp->Stop();
+	}
+	
 	HandleDetonated();
 }
 
@@ -640,6 +641,42 @@ void ASpike::Destroyed()
 	{
 		OwnerAgent->ResetOwnSpike();
 	}
+}
+
+void ASpike::UpdateRemaingDetonateTime(float Time)
+{
+	if (Time <DetonateTimeRemain_Caution && !bBeepCautionStarted)
+	{
+		// UE_LOG(LogTemp,Error,TEXT("폭발까지 20초"));
+		PlayBeepSound();
+		bBeepCautionStarted = true;
+		UpdateBeepPhase(BeepTimeRange_Caution);
+	}
+	else if (Time < DetonateTimeRemain_Warning && !bBeepWarningStarted)
+	{
+		// UE_LOG(LogTemp,Error,TEXT("폭발까지 10초"));
+		PlayBeepSound();
+		bBeepWarningStarted = true;
+		UpdateBeepPhase(BeepTimeRange_Warning);
+	}
+	else if (Time <DetonateTimeRemain_Critical && !bBeepCriticalStarted)
+	{
+		// UE_LOG(LogTemp,Error,TEXT("폭발까지 5초"));
+		PlayBeepSound();
+		bBeepCriticalStarted = true;
+		UpdateBeepPhase(BeepTimeRange_Critical);
+	}
+}
+
+void ASpike::PlayBeepSound()
+{
+	if (BeepAudioComp->IsPlaying())
+	{
+		BeepAudioComp->Stop();
+	}
+	
+	BeepAudioComp->SetSound(BeepSoundCue);
+	BeepAudioComp->Play();
 }
 
 void ASpike::MulticastRPC_AgentStartPlant_Implementation(ABaseAgent* Agent)
