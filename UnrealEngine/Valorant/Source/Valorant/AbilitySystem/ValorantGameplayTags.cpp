@@ -33,6 +33,9 @@ void FValorantGameplayTags::InitializeNativeTags()
     REGISTER_TAG(Block_Movement, "Block.Movement");
     REGISTER_TAG(Block_WeaponSwitch, "Block.WeaponSwitch");
 
+    // 디버프 태그
+    REGISTER_TAG(State_Debuff_Suppressed, "State.Debuff.Suppressed");
+    
     // 섬광 관련 태그들 등록
     REGISTER_TAG(Flash_Effect, "Flash.Effect");
     REGISTER_TAG(Flash_Intensity, "Flash.Intensity");

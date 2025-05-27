@@ -5,6 +5,7 @@
 #include "Valorant/ResourceManager/ValorantGameType.h"
 #include "Player/Component/FlashComponent.h"
 #include "Player/Component/FlashPostProcessComponent.h"
+#include "AbilitySystem/ValorantGameplayTags.h"
 #include "BaseAgent.generated.h"
 
 class UFlashWidget;
@@ -303,6 +304,42 @@ public:
 	// 체력이 가득 찼는지 확인
 	UFUNCTION(BlueprintCallable, Category = "Agent|Status")
 	bool IsFullHealth() const;
+
+	// 활성화된 어빌리티 정리
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void CancelActiveAbilities();
+
+	// 게임플레이 태그 확인 함수들
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool HasGameplayTag(const FGameplayTag& TagToCheck) const;
+
+	// 자주 사용되는 태그 체크 함수들
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityPreparing() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityWaiting() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityExecuting() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsMovementBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Movement); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsWeaponSwitchBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityInputBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Ability_Input); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityActivationBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Ability_Activation); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsBlinded() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Flash_Blinded); }
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsSuppressed() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Debuff_Suppressed); }
 
 	// 섬광 관련 함수들
 	UFUNCTION(BlueprintCallable, Category = "Flash")

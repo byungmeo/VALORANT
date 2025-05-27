@@ -6,6 +6,8 @@
 #include "AgentAbility/BaseProjectile.h"
 #include "IncendiaryBomb.generated.h"
 
+class ABaseGround;
+
 UCLASS()
 class VALORANT_API AIncendiaryBomb : public ABaseProjectile
 {
@@ -30,4 +32,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity) override;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ABaseGround> GroundClass;
 };

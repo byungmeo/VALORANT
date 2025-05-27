@@ -14,9 +14,15 @@ ABaseProjectile::ABaseProjectile()
 	PrimaryActorTick.bCanEverTick = true;
 	
 	bReplicates = true;
-	SetReplicateMovement(true);
-
+	AActor::SetReplicateMovement(true);
+	
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
+	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Sphere->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+	Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
+	Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);     // 벽, 바닥 등
+	Sphere->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);    // 박스, 오브젝트 등
+	Sphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);           // 플레이어 무시
 	SetRootComponent(Sphere);
 	
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));

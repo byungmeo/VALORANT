@@ -18,7 +18,7 @@ public:
     
     // 섬광탄 투사체 스폰 (BaseGameplayAbility의 SpawnProjectile 사용)
     UFUNCTION(BlueprintCallable, Category = "Flash")
-    bool SpawnFlashProjectile(bool IsUnder);
+    bool SpawnFlashProjectile(bool IsRight);
 
     // 섬광 어빌리티 특화 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings")

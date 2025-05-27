@@ -1,0 +1,148 @@
+﻿#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "BarrierWallActor.generated.h"
+
+UCLASS()
+class VALORANT_API ABarrierWallActor : public AActor
+{
+    GENERATED_BODY()
+
+public:
+    ABarrierWallActor();
+
+    // 장벽 초기화
+    UFUNCTION(BlueprintCallable, Category = "Barrier")
+    void InitializeBarrier(float SegmentHealth, float Lifespan, float BuildTime);
+
+    // 미리보기 모드 설정
+    UFUNCTION(BlueprintCallable, Category = "Barrier")
+    void SetPreviewMode(bool bPreview);
+    
+    // 미리보기 모드 확인
+    UFUNCTION(BlueprintPure, Category = "Barrier")
+    bool IsPreviewMode() const { return bIsPreviewMode; }
+    
+    // 설치 가능 여부 표시
+    UFUNCTION(BlueprintCallable, Category = "Barrier")
+    void SetPlacementValid(bool bValid);
+
+    // 데미지 처리
+    UFUNCTION()
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, 
+                            class AController* EventInstigator, AActor* DamageCauser) override;
+
+    void StartBuild(){StartBuildAnimation();};
+
+protected:
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
+
+    // 건설 애니메이션
+    UFUNCTION()
+    void StartBuildAnimation();
+    
+    UFUNCTION()
+    void CompleteBuild();
+    
+    // 세그먼트 파괴
+    UFUNCTION()
+    void DestroySegment(int32 SegmentIndex);
+    
+    UFUNCTION()
+    void DestroyBarrier();
+
+    // 컴포넌트들 - 블루프린트에서 설정
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    class USceneComponent* RootSceneComponent;
+    
+    // 3개의 세그먼트 - 블루프린트에서 메시 설정
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UStaticMeshComponent* SegmentMesh1;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UStaticMeshComponent* SegmentMesh2;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UStaticMeshComponent* SegmentMesh3;
+    
+    // 충돌 박스들
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UBoxComponent* SegmentCollision1;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UBoxComponent* SegmentCollision2;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UBoxComponent* SegmentCollision3;
+
+    // 세그먼트 체력
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Barrier State")
+    TArray<float> SegmentHealthArray;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Barrier State")
+    TArray<bool> SegmentDestroyedArray;
+
+    // 설정값들
+    UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
+    float DefaultSegmentHealth = 800.f;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
+    float DefaultLifespan = 40.f;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
+    float DefaultBuildTime = 2.0f;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
+    float SegmentSpacing = 310.f;  // 세그먼트 간격
+
+    // 머티리얼들
+    UPROPERTY(EditDefaultsOnly, Category = "Materials")
+    UMaterialInterface* BarrierMaterial;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Materials")
+    UMaterialInterface* BarrierDamagedMaterial;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Materials")
+    UMaterialInterface* ValidPreviewMaterial;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Materials")
+    UMaterialInterface* InvalidPreviewMaterial;
+
+    // 이펙트
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    class UNiagaraSystem* BuildEffect;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    class UNiagaraSystem* DestroyEffect;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    class UNiagaraSystem* DamageEffect;
+
+    // 사운드
+    UPROPERTY(EditDefaultsOnly, Category = "Sounds")
+    class USoundBase* BuildSound;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Sounds")
+    class USoundBase* DamageSound;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Sounds")
+    class USoundBase* DestroySound;
+
+private:
+    bool bIsBuilding = true;
+    bool bIsPreviewMode = false;
+    float BuildProgress = 0.f;
+    float BuildDuration = 2.0f;
+    
+    FTimerHandle BuildTimerHandle;
+    FTimerHandle LifespanTimerHandle;
+    
+    // 각 세그먼트 컴포넌트에 쉽게 접근하기 위한 배열
+    UPROPERTY()
+    TArray<UStaticMeshComponent*> SegmentMeshes;
+    
+    UPROPERTY()
+    TArray<UBoxComponent*> SegmentCollisions;
+};

@@ -32,6 +32,9 @@ struct FValorantGameplayTags
     FGameplayTag Flash_Intensity;                  // "Flash.Intensity"
     FGameplayTag Flash_Duration;                   // "Flash.Duration"
     FGameplayTag State_Flash_Blinded;              // "State.Flash.Blinded"
+
+    // 디버프 태그들
+    FGameplayTag State_Debuff_Suppressed;           // 
     
     // 이벤트 태그들
     FGameplayTag Event_Ability_Started;            // "Event.Ability.Started"

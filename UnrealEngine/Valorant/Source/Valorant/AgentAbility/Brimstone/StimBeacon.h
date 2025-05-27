@@ -7,6 +7,7 @@
 #include "StimBeacon.generated.h"
 
 class UStimBeaconAnim;
+class AStimBeaconGround;
 
 UENUM(BlueprintType)
 enum class EStimBeaconState : uint8
@@ -36,23 +37,38 @@ private:
 	// +10% Reload speed
 	// +10% Recovery speed
 	// +15% Speed Boost
-	const float BuffDuration = 4.0f;
+	const float BuffDuration = 12.0f;
 	
 public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
+	
 	UPROPERTY(Replicated, BlueprintReadWrite, EditAnywhere)
 	EStimBeaconState State = EStimBeaconState::ESBS_Idle;
+	
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<UStimBeaconAnim> AnimInstance = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Config")
+	TSubclassOf<AStimBeaconGround> StimBeaconGroundClass;
+	
+	UPROPERTY()
+	AStimBeaconGround* SpawnedGround = nullptr;
+	
+	FTimerHandle UnequipTimerHandle;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity) override;
+	
 	UFUNCTION()
 	void OnOutroAnimationEnded();
+	
 	UFUNCTION()
 	void OnDeployAnimationEnded();
+	
+	UFUNCTION()
+	void StartUnequip();
 };
