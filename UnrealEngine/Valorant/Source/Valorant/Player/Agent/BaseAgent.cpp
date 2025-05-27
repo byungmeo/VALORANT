@@ -1135,7 +1135,7 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 }
 
 void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
-                                                     ABaseAgent* DamageInstigator)
+	ABaseAgent* DamageInstigator, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection)
 {
 	if (!GEClass)
 	{
@@ -1152,10 +1152,12 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 	{
 		// GAS에서 Instigator를 설정하고 Die() 함수에서 GetInstigator()로 확인
 		SetInstigator(DamageInstigator);
+		LastDamagedPart = DamagedPart;
+		LastDamagedDirection = DamagedDirection;
 
 		// 디버깅 로그
 		NET_LOG(LogTemp, Warning, TEXT("데미지 적용: %s가 %s에게 %d 데미지를 입혔습니다."),
-		        *DamageInstigator->GetName(), *GetName(), Damage);
+				*DamageInstigator->GetName(), *GetName(), Damage);
 	}
 
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(GEClass, 1.f, Context);
@@ -1167,40 +1169,20 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 
 void ABaseAgent::UpdateHealth(float newHealth)
 {
-	// 피격 방향 판정
-	const AActor* Attacker = GetInstigator();
-	EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
-	if (Attacker)
-	{
-		const FVector Dir = (GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal();
-		const FVector Forward = GetActorForwardVector();
-		const float Dot = FVector::DotProduct(Forward, Dir); // Vector A와 B 사이의 코사인 각도 (앞뒤 판단)
-		const FVector Cross = FVector::CrossProduct(Forward, Dir); // 양쪽 벡터에 모두 수직인 벡터 (좌우 판단)
-	
-		// 0.707 : cos 45의 근사값
-		if (Dot > 0.707f)
-		{
-			DamagedDirection = EAgentDamagedDirection::Back;
-		}
-		else if (Dot < -0.707f)
-		{
-			DamagedDirection = EAgentDamagedDirection::Front;
-		}
-		else
-		{
-			// Cross.Z : Yaw 기준으로 좌우를 판단하겠다
-			DamagedDirection = (Cross.Z > 0) ? EAgentDamagedDirection::Left : EAgentDamagedDirection::Right;
-		}
-	}
-	
 	if (newHealth <= 0.f && bIsDead == false)
 	{
-		MulticastRPC_OnDamaged(EAgentDamagedPart::Body, DamagedDirection, true, false);
+		if (HasAuthority())
+		{
+			MulticastRPC_OnDamaged(LastDamagedPart, LastDamagedDirection, true, false);
+		}
 		Die();
 	}
 	else
 	{
-		MulticastRPC_OnDamaged(EAgentDamagedPart::Body, DamagedDirection, false, false);
+		if (HasAuthority())
+		{
+			MulticastRPC_OnDamaged(LastDamagedPart, LastDamagedDirection, false, false);
+		}
 	}
 }
 
@@ -1221,6 +1203,8 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const EAgentDamagedPart DamagedPart,
 	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
 {
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
+		__FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
 	OnAgentDamaged.Broadcast(DamagedPart, DamagedDirection, bDie, bLarge);
 }
 

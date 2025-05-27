@@ -48,6 +48,7 @@ protected:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<UWidgetComponent> DetectWidgetComponent = nullptr;
+	ABaseAgent* GetOwnerAgent() const { return OwnerAgent; }
 
 protected:
 	virtual void BeginPlay() override;
