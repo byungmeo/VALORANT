@@ -493,7 +493,11 @@ void AAgentPlayerController::OnRep_Pawn()
 	{
 		if (auto* Agent = Cast<ABaseAgent>(GetPawn()))
 		{
+			// 기존 바인딩 제거
+			Agent->OnAgentDamaged.RemoveDynamic(this, &AAgentPlayerController::OnDamaged);
+			// 새로 바인딩
 			Agent->OnAgentDamaged.AddDynamic(this, &AAgentPlayerController::OnDamaged);
+			
 		}
 	}
 }

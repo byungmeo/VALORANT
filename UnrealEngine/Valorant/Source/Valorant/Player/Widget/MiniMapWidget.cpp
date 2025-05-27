@@ -199,41 +199,57 @@ void UMiniMapWidget::UpdateAgentIcons()
 {
 	if (!IsValid(ObserverAgent)) // 관찰자 에이전트가 유효하지 않은 경우
 		return; // 함수 종료
-	
+
+	// 1. 내 팀원 목록 캐싱
+	TArray<ABaseAgent*> TeamAgents;
+	for (ABaseAgent* Agent : MappedAgents)
+	{
+		if (!IsValid(Agent)) continue;
+		if (Agent == ObserverAgent) continue;
+		if (Agent->IsDead()) continue;
+		if (Agent->IsAttacker() == ObserverAgent->IsAttacker()) // 같은 팀
+			TeamAgents.Add(Agent);
+	}
+
 	// 모든 에이전트 위치 및 아이콘 업데이트
 	for (ABaseAgent* Agent : MappedAgents) // 미니맵에 표시될 모든 에이전트에 대해 반복
 	{
 		if (!IsValid(Agent)) continue;
-		
+
 		FVector TargetActorLocation = Agent->GetActorLocation(); // 에이전트의 월드 위치 가져오기
 		FVector2D ConvertedMinimapPosition = WorldToMinimapPosition(TargetActorLocation); // 월드 위치를 미니맵 좌표로 변환
-        
-		// // 에이전트 가시성 상태 확인
-		// EVisibilityState VisState = Agent->GetVisibilityStateForAgent(ObserverAgent); // 현재 관찰자에게 보이는 상태 확인
-  //       
-		// // 적절한 아이콘 선택
-		// UTexture2D* IconToUse = nullptr; // 사용할 아이콘 텍스처
-  //       
-		// switch (VisState) // 가시성 상태에 따라 다른 아이콘 선택
-		// {
-		// case EVisibilityState::Visible: // 보이는 상태인 경우
-		// 	IconToUse = Agent->GetMinimapIcon(); // 에이전트의 기본 아이콘 사용
-		// 	break;
-		// case EVisibilityState::QuestionMark: // 물음표 상태인 경우
-		// 	IconToUse = Agent->GetQuestionMarkIcon(); // 물음표 아이콘 사용
-		// 	break;
-		// case EVisibilityState::Hidden: // 숨김 상태인 경우
-		// 	IconToUse = nullptr; // 아이콘 없음 (null)
-		// 	break;
-		// }
 
-		EVisibilityState VisState;
+		EVisibilityState VisState = EVisibilityState::Hidden;
 		UTexture2D* IconToUse = nullptr;
 		const bool bIsMe = ObserverAgent == Agent;
 		const bool bSameTeam = ObserverAgent->IsAttacker() == Agent->IsAttacker();
 		const bool bIsDead = Agent->IsDead();
-		if ((bIsMe || bSameTeam || ObserverAgent->IsInFrustum(Agent)) && false == bIsDead)
+
+		// 1. 내가 직접 본 경우
+		bool bVisible = (Agent->GetVisibilityStateForAgent(ObserverAgent) == EVisibilityState::Visible);
+
+		// 2. 내 팀원이 본 경우(아군 시야 공유)
+		if (!bVisible && !bIsMe && !bSameTeam && !bIsDead) // 적만 체크
 		{
+			for (ABaseAgent* Teammate : TeamAgents)
+			{
+				if (Agent->GetVisibilityStateForAgent(Teammate) == EVisibilityState::Visible)
+				{
+					bVisible = true;
+					break;
+				}
+			}
+		}
+
+		if ((bIsMe || bSameTeam) && !bIsDead)
+		{
+			// 내 자신, 아군은 항상 보임
+			IconToUse = Agent->GetMinimapIcon();
+			VisState = EVisibilityState::Visible;
+		}
+		else if (bVisible && !bIsDead)
+		{
+			// 적이지만 아군이 봤으므로 보임
 			IconToUse = Agent->GetMinimapIcon();
 			VisState = EVisibilityState::Visible;
 		}
@@ -242,9 +258,8 @@ void UMiniMapWidget::UpdateAgentIcons()
 			IconToUse = nullptr;
 			VisState = EVisibilityState::Hidden;
 		}
-        
+
 		// 아이콘 업데이트 (블루프린트에서 구현)
 		UpdateAgentIcon(Agent, ConvertedMinimapPosition, IconToUse, VisState, bIsMe ? 0 : bSameTeam ? 1 : 2); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
-		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, 아이콘 업데이트 함수 호출 "), __FUNCTION__);
 	}
 }
