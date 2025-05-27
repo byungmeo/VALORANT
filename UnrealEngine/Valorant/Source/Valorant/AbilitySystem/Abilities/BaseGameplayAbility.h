@@ -103,6 +103,11 @@ protected:
     virtual void HandleExecutePhase();
 
 	// == 어빌리티 동작 로직 ===
+	
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	virtual void PrepareAbility();
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	virtual void WaitAbility();
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	virtual void ExecuteAbility();
 

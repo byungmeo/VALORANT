@@ -69,6 +69,9 @@ void UBaseGameplayAbility::StartAbilityExecution()
 
 void UBaseGameplayAbility::HandlePreparePhase()
 {
+	// 하위 클래서에서 정의될 어빌리티 준비 로직
+	PrepareAbility();
+	
 	// 준비 애니메이션 재생
 	if (PrepareMontage_1P || PrepareMontage_3P)
 	{
@@ -131,6 +134,9 @@ void UBaseGameplayAbility::HandleWaitingPhase()
 		}
 	}
 
+	// 하위 클래서에서 정의될 어빌리티 대기 로직
+	WaitAbility();
+
 	// 후속 입력 등록
 	RegisterFollowUpInputs();
 
@@ -185,6 +191,18 @@ void UBaseGameplayAbility::HandleExecutePhase()
 	}
 }
 
+void UBaseGameplayAbility::PrepareAbility()
+{
+}
+
+void UBaseGameplayAbility::WaitAbility()
+{
+}
+
+void UBaseGameplayAbility::ExecuteAbility()
+{
+}
+
 bool UBaseGameplayAbility::OnLeftClickInput()
 {
 	return true;
@@ -198,10 +216,6 @@ bool UBaseGameplayAbility::OnRightClickInput()
 bool UBaseGameplayAbility::OnRepeatInput()
 {
 	return true;
-}
-
-void UBaseGameplayAbility::ExecuteAbility()
-{
 }
 
 void UBaseGameplayAbility::OnMontageCompleted()
