@@ -15,7 +15,7 @@ AStartBarrier::AStartBarrier()
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
 	
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BarrierMesh"));
 	Mesh->SetupAttachment(Root);
 	Mesh->SetCollisionObjectType(ECC_WorldStatic);
 }

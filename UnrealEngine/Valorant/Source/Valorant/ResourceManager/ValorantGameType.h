@@ -381,12 +381,6 @@ struct FWeaponData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
 	USoundBase* FireSound = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
-	USoundBase* ImpactSound = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
-	USoundBase* ReloadSound = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sound")
-	USoundBase* EquipSound = nullptr;
 };
 
 // GameplayEffectData

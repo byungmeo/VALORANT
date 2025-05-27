@@ -126,7 +126,7 @@ public:
 	UCurveFloat* CrouchCurve;
 
 	UPROPERTY(EditAnywhere, Category= "Die")
-	float DieCameraTimeRange = 3.0f;;
+	float DieCameraTimeRange = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UTimelineComponent* TL_DieCamera;
@@ -136,83 +136,6 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UCurveVector* DieCameraCurve;
-
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-	//             CYT             ♣
-	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
-
-	// 캐릭터별 미니맵 아이콘을 설정하는 함수
-	UFUNCTION(BlueprintCallable, Category = "Minimap")
-	// 캐릭터의 미니맵 아이콘을 설정하는 함수 선언
-	void SetMinimapIcon(UTexture2D* NewIcon);
-
-    // 다른 에이전트에게 보여질 상태 확인 함수
-	UFUNCTION(BlueprintCallable, Category = "Minimap")
-	// 특정 관찰자에게 현재 에이전트가 어떻게 보이는지 상태를 반환
-	EVisibilityState  GetVisibilityStateForAgent(ABaseAgent* Observer);
-
-	// 서버에서 시야 상태 업데이트 함수
-	UFUNCTION(Server, Reliable, WithValidation)
-	// 서버에서 실행되어 시야 상태를 업데이트
-	void Server_UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState);
-
-	// 모든 클라이언트에 시야 상태 전파 함수
-	UFUNCTION(NetMulticast, Reliable) 
-	// 모든 클라이언트에 시야 상태 변경을 알림
-	void Multicast_OnVisibilityStateChanged(ABaseAgent* Observer, EVisibilityState NewState);
-
-	// 미니맵 아이콘 가져오기 함수
-	UFUNCTION(BlueprintPure, Category = "Minimap")
-	// 현재 설정된 미니맵 아이콘을 반환
-	UTexture2D* GetMinimapIcon() const { return MinimapIcon; }
-
-	// 물음표 아이콘 가져오기 함수
-	UFUNCTION(BlueprintPure, Category = "Minimap")
-	// 물음표 아이콘을 반환
-	UTexture2D* GetQuestionMarkIcon() const { return QuestionMarkIcon; }
-
-	// 라인 트레이스로 시야 검사 수행하는 함수 (시야 검사를 수행하여 다른 에이전트의 가시성을 판단하는 함수)
-	void PerformVisibilityChecks();
-
-	// 상태 업데이트 헬퍼 함수 
-	void UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState);
-    
-	// 가시성 정보 찾기 헬퍼 함수 
-	bool FindVisibilityInfo(ABaseAgent* Observer, FAgentVisibilityInfo& OutInfo, int32& OutIndex); 
-
-	// TMap 대신 OnRep 사용하는 TArray로 변경 
-	UPROPERTY(ReplicatedUsing = OnRep_VisibilityStateArray) 
-	TArray<FAgentVisibilityInfo> VisibilityStateArray; 
-
-	// OnRep 함수 선언 
-	UFUNCTION() 
-	void OnRep_VisibilityStateArray(); 
-
-	// 마지막 시야 확인 시간 (최적화용)
-	UPROPERTY()
-	// 마지막으로 시야 체크를 수행한 시간을 저장
-	float LastVisibilityCheckTime;
-
-	// 시야 체크 주기 (초)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	// 시야 체크를 얼마나 자주 수행할지 결정하는 간격 (초 단위)
-	float VisibilityCheckInterval;
-
-	// 물음표 표시 지속 시간 (초)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap") 
-	// 물음표 상태가 유지되는 시간 (초 단위)
-	float QuestionMarkDuration;
-
-	// 캐릭터의 미니맵 아이콘
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap") 
-	// 미니맵에 표시될 캐릭터의 아이콘 텍스처
-	UTexture2D* MinimapIcon;
-
-	// 물음표 아이콘
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	// 시야에서 사라진 적을 표시할 물음표 아이콘 텍스처
-	UTexture2D* QuestionMarkIcon;
-	
 	
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -239,11 +162,17 @@ public:
 	
 	int GetPoseIdx() const { return PoseIdx; }
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TObjectPtr<UMaterialInterface> EnemyOverlayMaterial = nullptr;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TObjectPtr<UMaterialInterface> TeamOverlayMaterial = nullptr;
+	void SetHighlight(bool bEnable, bool bIsEnemy);
+
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
-	                          ABaseAgent* DamageInstigator = nullptr);
+	                          ABaseAgent* DamageInstigator = nullptr, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
@@ -275,6 +204,7 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_SetCurrentInteractor(ABaseInteractor* interactor);
+	void ResetCurrentInteractor();
 
 	ABaseWeapon* GetMainWeapon() const;
 	ABaseWeapon* GetSubWeapon() const;
@@ -440,7 +370,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentAnimInstance* ABP_3P = nullptr;
 
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	ABaseInteractor* FindInteractActor = nullptr;
 
 	UPROPERTY(Replicated)
@@ -495,6 +425,9 @@ protected:
 	UPROPERTY(Replicated)
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
+
+	EAgentDamagedPart LastDamagedPart;
+	EAgentDamagedDirection LastDamagedDirection;;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -568,6 +501,8 @@ public:
 	
 	FOnSpikeDeactive OnSpikeDeactive;
 	FOnSpikeDefuseFinish OnSpikeDefuseFinish;
+
+	FTimerHandle DeadTimerHandle;
 	
 	void OnEquip();
 	void OnFire();
@@ -604,4 +539,58 @@ private:
 
 	UPROPERTY()
 	UFlashWidget* FlashWidget;
+
+#pragma region "Minimap"
+public:
+	float LastVisibilityCheckTime = 0.0f; // 마지막으로 시야 체크를 수행한 시간을 저장
+	float VisibilityCheckInterval = 0.1f; // 시야 체크를 얼마나 자주 수행할지 결정하는 간격 (초 단위)
+	float QuestionMarkDuration = 3.0f; // 물음표 상태가 유지되는 시간 (초 단위)
+	UPROPERTY() 
+	UTexture2D* MinimapIcon = nullptr; // 미니맵에 표시될 캐릭터의 아이콘 텍스처
+	UPROPERTY()
+	UTexture2D* QuestionMarkIcon = nullptr; // 시야에서 사라진 적을 표시할 물음표 아이콘 텍스처
+	
+	UPROPERTY(ReplicatedUsing = OnRep_VisibilityStateArray) 
+	TArray<FAgentVisibilityInfo> VisibilityStateArray;
+	// OnRep 함수 선언 
+	UFUNCTION() 
+	void OnRep_VisibilityStateArray(); 
+	
+	void InitMinimap();
+	
+	// 캐릭터의 미니맵 아이콘을 설정하는 함수
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	void SetMinimapIcon(UTexture2D* NewIcon);
+
+	// 특정 관찰자에게 현재 에이전트가 어떻게 보이는지 상태를 반환
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	EVisibilityState GetVisibilityStateForAgent(ABaseAgent* Observer);
+
+	// 서버에서 실행되어 시야 상태를 업데이트
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState);
+
+	// 모든 클라이언트에 시야 상태 변경을 알림
+	UFUNCTION(NetMulticast, Reliable) 
+	void Multicast_OnVisibilityStateChanged(ABaseAgent* Observer, EVisibilityState NewState);
+
+	// 현재 설정된 미니맵 아이콘을 반환
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	UTexture2D* GetMinimapIcon() const { return MinimapIcon; }
+
+	// 물음표 아이콘을 반환
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	UTexture2D* GetQuestionMarkIcon() const { return QuestionMarkIcon; }
+
+	// 라인 트레이스로 시야 검사 수행하는 함수 (시야 검사를 수행하여 다른 에이전트의 가시성을 판단하는 함수)
+	void PerformVisibilityChecks();
+
+	// 상태 업데이트 헬퍼 함수 
+	void UpdateVisibilityState(ABaseAgent* Observer, EVisibilityState NewState);
+    
+	// 가시성 정보 찾기 헬퍼 함수 
+	bool FindVisibilityInfo(ABaseAgent* Observer, FAgentVisibilityInfo& OutInfo, int32& OutIndex);
+
+	void CheckMinimapVisibility(float DeltaTime);
+#pragma endregion "Minimap"
 };
