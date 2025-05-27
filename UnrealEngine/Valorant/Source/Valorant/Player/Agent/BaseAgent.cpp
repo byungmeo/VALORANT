@@ -70,6 +70,7 @@ ABaseAgent::ABaseAgent()
 	BaseCapsuleHalfHeight = 72.0f;
 	CrouchCapsuleHalfHeight = 68.0f;
 	GetCapsuleComponent()->SetCapsuleHalfHeight(BaseCapsuleHalfHeight);
+	GetCapsuleComponent()->bReturnMaterialOnMove = true;
 	
 	// SpringArm
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>("Spring Arm");

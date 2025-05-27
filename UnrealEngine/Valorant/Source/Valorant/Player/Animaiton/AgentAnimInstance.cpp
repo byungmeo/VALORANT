@@ -3,7 +3,9 @@
 
 #include "AgentAnimInstance.h"
 
+#include "Valorant.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Player/Agent/BaseAgent.h"
 
 void UAgentAnimInstance::NativeBeginPlay()
@@ -28,6 +30,7 @@ void UAgentAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 	UpdateState();
+	CalcFootstep();
 }
 
 void UAgentAnimInstance::UpdateState()
@@ -54,5 +57,37 @@ void UAgentAnimInstance::UpdateState()
 			InteractorState = OwnerAgent->GetInteractorState();
 			OnChangedWeaponState();
 		}
+	}
+}
+
+void UAgentAnimInstance::CalcFootstep()
+{
+	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetCharacterMovement())
+	{
+		return;
+	}
+
+	const FVector& CurrentLocation = OwnerAgent->GetActorLocation();
+	const float DeltaDistance = FVector::Dist2D(CurrentLocation, PrevCharacterLocation);
+	PrevCharacterLocation = CurrentLocation;
+
+	// 이동 유효성 검사
+	const bool bIsFalling = OwnerAgent->GetCharacterMovement()->IsFalling();
+	const bool bIsMoving = OwnerAgent->GetCharacterMovement()->Velocity.Size() > 400.f;
+	const bool bIsMovingOnGround = OwnerAgent->GetCharacterMovement()->IsMovingOnGround();
+	if (false == bIsMovingOnGround || false == bIsMoving || bIsFalling)
+	{
+		return;
+	}
+
+	// 무효인 경우에는 더하면 안되니까 다 체크하고나서 더하는거임
+	AccumulatedDistance += DeltaDistance;
+	if (AccumulatedDistance >= StepInterval)
+	{
+		const FFindFloorResult& CurrentFloor = OwnerAgent->GetCharacterMovement()->CurrentFloor;
+		const EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(CurrentFloor.HitResult.PhysMaterial.Get());
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, PhysSurfece: %s"), __FUNCTION__, *EnumToString(SurfaceType));
+		PlayFootstepSound(SurfaceType, OwnerAgent->GetCharacterMovement()->GetFeetLocation());
+		AccumulatedDistance -= StepInterval;
 	}
 }
