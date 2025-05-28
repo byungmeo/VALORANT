@@ -66,8 +66,10 @@ protected:
     
     // 미니맵 사이즈 (픽셀)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-    float MinimapSize = 256.0f; // 기본 미니맵 사이즈 설정 (256x256 픽셀)
-    
+    float MinimapSize = 450.0f; // 기본 미니맵 사이즈 설정 (450x450 픽셀)
+
+	FVector2D ConvertOffset = FVector2D(18, -14);
+	
     // 미니맵 중앙점 -미니맵의 중앙 좌표 (픽셀)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
     FVector2D MinimapCenter = FVector2D(MinimapSize / 2, MinimapSize / 2); // 미니맵 중앙점 계산 (미니맵 크기의 절반)
