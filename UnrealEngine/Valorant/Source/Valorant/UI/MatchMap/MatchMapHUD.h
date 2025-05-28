@@ -9,6 +9,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+enum class EFollowUpInputType : uint8;
 class UOverlay;
 class UHorizontalBox;
 class UAgentAbilitySystemComponent;
@@ -220,6 +221,14 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void SpikePlanted();
 
+	// 후속 입력 스킬 발동시, 후속 입력키 UI를 표시
+	UFUNCTION()
+	void DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType);
+	
+	// 후속 입력 스킬 종료시, 후속 입력키 UI를 숨김
+	UFUNCTION()
+	void HideFollowUpInputUI();
+
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
@@ -259,6 +268,27 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "Ability|UI")
 	UImage* AbilityX_Image;
 
+	// 후속 입력키 UI
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	UOverlay* Left_E;
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	UHorizontalBox* LeftOrRight_E;
+
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	UOverlay* Left_Q;
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	UHorizontalBox* LeftOrRight_Q;
+	
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	UOverlay* Left_C;
+	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	UHorizontalBox* LeftOrRight_C;
+	
+	// UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	// UOverlay* Left_X;
+	// UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
+	// UHorizontalBox* LeftOrRight_X;
+
 private:
 	UPROPERTY()
 	UAgentAbilitySystemComponent* ASC;
@@ -287,6 +317,12 @@ private:
 	// 게임 인스턴스 참조
 	UPROPERTY()
 	UValorantGameInstance* GameInstance;
+
+	// 활성화된 후속 입력키 UI 다시 숨기기
+	UPROPERTY()
+	UOverlay* DisplayedFollowUpInputUI_Overlay = nullptr;
+	UPROPERTY()
+	UHorizontalBox* DisplayedFollowUpInputUI_Horizontal = nullptr;
 	
 /*
  *	Debug

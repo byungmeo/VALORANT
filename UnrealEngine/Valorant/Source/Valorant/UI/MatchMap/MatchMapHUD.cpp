@@ -5,6 +5,7 @@
 
 #include "OnlineSubsystemUtils.h"
 #include "Valorant.h"
+#include "AbilitySystem/Abilities/BaseGameplayAbility.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
@@ -690,6 +691,74 @@ FHUDAbilityInfo UMatchMapHUD::GetAbilityInfoBySlot(EAbilitySlotType SlotType) co
 	
 	// 기본 빈 정보 반환
 	return FHUDAbilityInfo();
+}
+
+void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType)
+{
+	if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")))
+	{
+		if (inputType == EFollowUpInputType::LeftClick)
+		{
+			DisplayedFollowUpInputUI_Overlay = Left_E;
+			Left_E->SetVisibility(ESlateVisibility::Visible);
+		}
+		else if (inputType == EFollowUpInputType::LeftOrRight)
+		{
+			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_E;
+			LeftOrRight_E->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+	else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")))
+	{
+		if (inputType == EFollowUpInputType::LeftClick)
+		{
+			DisplayedFollowUpInputUI_Overlay = Left_Q;
+			Left_Q->SetVisibility(ESlateVisibility::Visible);
+		}
+		else if (inputType == EFollowUpInputType::LeftOrRight)
+		{
+			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_Q;
+			LeftOrRight_Q->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+	else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")))
+	{
+		if (inputType == EFollowUpInputType::LeftClick)
+		{
+			DisplayedFollowUpInputUI_Overlay = Left_C;
+			Left_C->SetVisibility(ESlateVisibility::Visible);
+		}
+		else if (inputType == EFollowUpInputType::LeftOrRight)
+		{
+			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_C;
+			LeftOrRight_C->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+	// else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.X")))
+	// {
+	// 	if (inputType == EFollowUpInputType::LeftClick)
+	// 	{
+	// 		Left_X->SetVisibility(ESlateVisibility::Visible);
+	// 	}
+	// 	else if (inputType == EFollowUpInputType::LeftOrRight)
+	// 	{
+	// 		LeftOrRight_X->SetVisibility(ESlateVisibility::Visible);
+	// 	}
+	// }
+}
+
+void UMatchMapHUD::HideFollowUpInputUI()
+{
+	if (DisplayedFollowUpInputUI_Overlay)
+	{
+		DisplayedFollowUpInputUI_Overlay->SetVisibility(ESlateVisibility::Hidden);
+		DisplayedFollowUpInputUI_Overlay = nullptr;
+	}
+	if (DisplayedFollowUpInputUI_Horizontal)
+	{
+		DisplayedFollowUpInputUI_Horizontal->SetVisibility(ESlateVisibility::Hidden);
+		DisplayedFollowUpInputUI_Horizontal = nullptr;
+	}
 }
 
 int32 UMatchMapHUD::GetAbilityStack(int32 AbilityID) const
