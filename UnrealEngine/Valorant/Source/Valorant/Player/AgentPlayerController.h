@@ -121,9 +121,15 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_ReceivePurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);
-
+	
 	UFUNCTION()
 	void OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& Info);
+	
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	void DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType);
+	
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	void HideFollowUpInputUI();
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

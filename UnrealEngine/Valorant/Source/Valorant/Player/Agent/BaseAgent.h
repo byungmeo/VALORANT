@@ -384,6 +384,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	bool IsSuppressed() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Debuff_Suppressed); }
 
+	// 어빌리티 관련 함수
+	UFUNCTION()
+	void OnAbilityPrepare(FGameplayTag slotTag, EFollowUpInputType inputType);
+	UFUNCTION()
+	void OnAbilityEnd();
+
 	// 섬광 관련 함수들
 	UFUNCTION(BlueprintCallable, Category = "Flash")
 	void OnFlashIntensityChanged(float NewIntensity);
