@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
 #include "Valorant.h"
+#include "AbilitySystem/Abilities/BaseGameplayAbility.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "AbilitySystem/Context/HitScanGameplayEffectContext.h"
 #include "Camera/CameraComponent.h"
@@ -30,6 +31,7 @@
 #include "Player/Component/FlashComponent.h"
 #include "Player/Component/FlashPostProcessComponent.h"
 #include "UI/FlashWidget.h"
+#include "UI/MatchMap/MatchMapHUD.h"
 #include "Weapon/BaseWeapon.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
@@ -1423,14 +1425,6 @@ void ABaseAgent::OnSpikeStartDefuse()
 	OnSpikeDeactive.Broadcast();
 }
 
-// void ABaseAgent::OnSpikeCancelDefuse()
-// {
-// 	DefusalMesh->SetVisibility(false);
-// 	
-// 	bCanMove = true;
-// 	OnSpikeCancel.Broadcast();
-// }
-
 void ABaseAgent::OnSpikeFinishDefuse()
 {
 	DefusalMesh->SetVisibility(false);
@@ -1625,6 +1619,32 @@ bool ABaseAgent::HasGameplayTag(const FGameplayTag& TagToCheck) const
 		return ASC->HasMatchingGameplayTag(TagToCheck);
 	}
 	return false;
+}
+
+void ABaseAgent::OnAbilityPrepare(FGameplayTag slotTag, EFollowUpInputType inputType)
+{
+	auto* pc = Cast<AMatchPlayerController>(GetController());
+	if (pc)
+	{
+		if (auto* MatchMapHud = Cast<UMatchMapHUD>(pc->GetMatchMapHud()))
+		{
+			MatchMapHud->DisplayFollowUpInputUI(slotTag, inputType);
+		}
+	}
+	// NET_LOG(LogTemp,Display,TEXT("어빌리티 준비"));
+}
+
+void ABaseAgent::OnAbilityEnd()
+{
+	// NET_LOG(LogTemp,Display,TEXT("어빌리티 종료"));
+	auto* pc = Cast<AMatchPlayerController>(GetController());
+	if (pc)
+	{
+		if (auto* MatchMapHud = Cast<UMatchMapHUD>(pc->GetMatchMapHud()))
+		{
+			MatchMapHud->HideFollowUpInputUI();
+		}
+	}
 }
 
 void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
