@@ -315,7 +315,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 						*OutHit.GetActor()->GetName(), *OutHit.BoneName.ToString(), OutHit.Distance, FinalDamage);
 			
 				// 공격자 정보 전달
-				HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent, DamagedPart, DamagedDirection);
+				HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent, WeaponID, DamagedPart, DamagedDirection);
 			}
 		}
 		// DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);

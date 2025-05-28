@@ -297,6 +297,9 @@ struct FAgentData : public FTableRowBase
 	UAnimMontage* CharSelectCharacterMontage = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	UAnimMontage* CharSelectCameraMontage = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UTexture2D* KillFeedIcon = nullptr;
 };
 
 USTRUCT(BlueprintType)
@@ -343,6 +346,9 @@ struct FWeaponData : public FTableRowBase
 	// 무기 메쉬
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	USkeletalMesh* WeaponMesh = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UTexture2D* WeaponIcon = nullptr;
 	
 	// 무기 대미지 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")

@@ -3,19 +3,18 @@
 
 #include "MatchMapHUD.h"
 
-#include "OnlineSubsystemUtils.h"
 #include "Valorant.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/Overlay.h"
-#include "Components/OverlaySlot.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
 #include "GameManager/ValorantGameInstance.h"
+#include "Player/Agent/BaseAgent.h"
 
 void UMatchMapHUD::SetTrueVo()
 {
@@ -246,6 +245,7 @@ void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart Dama
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
 {
 	pc->OnDamaged_PC.AddDynamic(this, &UMatchMapHUD::OnDamaged);
+	pc->OnKillEvent_PC.AddDynamic(this, &UMatchMapHUD::OnKillEvent);
 	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
 	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);
@@ -690,6 +690,58 @@ FHUDAbilityInfo UMatchMapHUD::GetAbilityInfoBySlot(EAbilitySlotType SlotType) co
 	
 	// 기본 빈 정보 반환
 	return FHUDAbilityInfo();
+}
+
+void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& KillFeedInfo)
+{
+	auto* GI = GetWorld()->GetGameInstance<UValorantGameInstance>();
+	if (nullptr == GI)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, GameInstance is nullptr"), __FUNCTION__);
+		return;
+	}
+	
+	const auto* MyAgent = GetOwningPlayerPawn<ABaseAgent>();
+	if (nullptr == MyAgent)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyAgent is nullptr"), __FUNCTION__);
+		return;
+	}
+
+	FString InstigatorName = "";
+	bool bInstigatorIsMyTeam = false;
+	const UTexture2D* InstigatorIcon = nullptr;
+	if (InstigatorAgent)
+	{
+		InstigatorName = InstigatorAgent->GetPlayerNickname();
+		bInstigatorIsMyTeam = InstigatorAgent->IsBlueTeam() == MyAgent->IsBlueTeam();
+		if (const FAgentData* InstigatorData = GI->GetAgentData(InstigatorAgent->GetAgentID()))
+		{
+			InstigatorIcon = InstigatorData->KillFeedIcon;
+		}
+	}
+
+	FString VictimName = "";
+	bool bVictimIsMyTeam = false;
+	const UTexture2D* VictimIcon = nullptr;
+	if (VictimAgent)
+	{
+		VictimName = VictimAgent->GetPlayerNickname();
+		bVictimIsMyTeam = VictimAgent->IsBlueTeam() == MyAgent->IsBlueTeam();
+		if (const FAgentData* VictimData = GI->GetAgentData(VictimAgent->GetAgentID()))
+		{
+			VictimIcon = VictimData->KillFeedIcon;
+		}
+	}
+	
+	const UTexture2D* ReasonIcon = nullptr;
+	const int WeaponID = KillFeedInfo.WeaponID;
+	if (const auto* Data = GI->GetWeaponData(WeaponID))
+	{
+		ReasonIcon = Data->WeaponIcon;
+	}
+	
+	DisplayKillFeed(InstigatorIcon, InstigatorName, bInstigatorIsMyTeam, VictimIcon, VictimName, bVictimIsMyTeam, KillFeedInfo, ReasonIcon);
 }
 
 int32 UMatchMapHUD::GetAbilityStack(int32 AbilityID) const

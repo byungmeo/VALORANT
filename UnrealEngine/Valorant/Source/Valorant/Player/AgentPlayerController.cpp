@@ -174,6 +174,13 @@ void AAgentPlayerController::HandleHealthChanged(float NewHealth, bool bIsDamage
 	OnHealthChanged_PC.Broadcast(NewHealth, bIsDamage);
 }
 
+void AAgentPlayerController::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent,
+	const FKillFeedInfo& Info)
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InstigatorAgentName: %s"), __FUNCTION__, *InstigatorAgent->GetName());
+	OnKillEvent_PC.Broadcast(InstigatorAgent, VictimAgent, Info);
+}
+
 void AAgentPlayerController::HandleMaxHealthChanged(float NewMaxHealth)
 {
 	//UE_LOG(LogTemp,Display,TEXT("PC, MaxHealth Changed"));
@@ -493,11 +500,8 @@ void AAgentPlayerController::OnRep_Pawn()
 	{
 		if (auto* Agent = Cast<ABaseAgent>(GetPawn()))
 		{
-			// 기존 바인딩 제거
 			Agent->OnAgentDamaged.RemoveDynamic(this, &AAgentPlayerController::OnDamaged);
-			// 새로 바인딩
 			Agent->OnAgentDamaged.AddDynamic(this, &AAgentPlayerController::OnDamaged);
-			
 		}
 	}
 }

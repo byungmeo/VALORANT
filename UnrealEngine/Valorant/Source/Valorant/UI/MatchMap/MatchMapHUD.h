@@ -9,6 +9,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+struct FKillFeedInfo;
 class UOverlay;
 class UHorizontalBox;
 class UAgentAbilitySystemComponent;
@@ -219,6 +220,13 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void SpikePlanted();
+
+	UFUNCTION()
+	void OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& KillFeedInfo);
+	UFUNCTION(BlueprintImplementableEvent)
+	void DisplayKillFeed(const UTexture2D* InstigatorIcon, const FString& InstigatorName, const bool bInstigatorIsMyTeam,
+		const UTexture2D* VictimIcon, const FString& VictimName, const bool bVictimIsMyTeam,
+		const FKillFeedInfo& KillFeedReason, const UTexture2D* ReasonIcon);
 
 public:
 	UPROPERTY(meta=(BindWidget))
