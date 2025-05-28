@@ -1181,6 +1181,11 @@ void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 		}
 	}
 	
+	if (GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		ServerApplyGE(GE_HitSlow, nullptr);
+	}
+	
 	LastDamagedOrg = FVector::ZeroVector;
 	LastDamagedPart = EAgentDamagedPart::None;
 	LastDamagedDirection = EAgentDamagedDirection::Front;
