@@ -26,9 +26,15 @@ void UAnimNotifyState_MeleeCombo::NotifyBegin(USkeletalMeshComponent* MeshComp, 
 	}
 }
 
-void UAnimNotifyState_MeleeCombo::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+// void UAnimNotifyState_MeleeCombo::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+// {
+// 	Super::NotifyEnd(MeshComp, Animation);
+// }
+
+void UAnimNotifyState_MeleeCombo::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+	const FAnimNotifyEventReference& EventReference)
 {
-	Super::NotifyEnd(MeshComp, Animation);
+	Super::NotifyEnd(MeshComp, Animation, EventReference);
 	if (AActor* owner = MeshComp->GetOwner())
 	{
 		auto* agent = Cast<ABaseAgent>(owner);
