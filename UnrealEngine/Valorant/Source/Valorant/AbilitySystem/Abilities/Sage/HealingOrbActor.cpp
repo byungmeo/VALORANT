@@ -7,7 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Net/UnrealNetwork.h"
-#include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 
 AHealingOrbActor::AHealingOrbActor()
 {
@@ -50,33 +50,6 @@ AHealingOrbActor::AHealingOrbActor()
     OrbLight->SetCastShadows(false);
 }
 
-void AHealingOrbActor::SetIsReplicated(bool bShouldReplicate)
-{
-    SetReplicates(bShouldReplicate);
-    SetReplicateMovement(bShouldReplicate);
-    
-    // 컴포넌트들도 복제 설정
-    if (OrbMesh)
-    {
-        OrbMesh->SetIsReplicated(bShouldReplicate);
-    }
-    
-    if (OrbEffect)
-    {
-        OrbEffect->SetIsReplicated(bShouldReplicate);
-    }
-    
-    if (HighlightEffect)
-    {
-        HighlightEffect->SetIsReplicated(bShouldReplicate);
-    }
-    
-    if (OrbLight)
-    {
-        OrbLight->SetIsReplicated(bShouldReplicate);
-    }
-}
-
 void AHealingOrbActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -101,21 +74,67 @@ void AHealingOrbActor::BeginPlay()
         }
     }
     
-    // 아이들 사운드 재생
-    if (OrbIdleSound)
+    // 아이들 사운드 재생 (로컬에서만)
+    if (OrbIdleSound && GetOwner())
     {
-        IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
-            OrbIdleSound, 
-            OrbMesh, 
-            NAME_None, 
-            FVector::ZeroVector, 
-            EAttachLocation::KeepRelativeOffset, 
-            true
-        );
+        APawn* OwnerPawn = Cast<APawn>(GetOwner());
+        if ((OrbViewType == EOrbViewType::FirstPerson && OwnerPawn && OwnerPawn->IsLocallyControlled()) ||
+            (OrbViewType == EOrbViewType::ThirdPerson))
+        {
+            IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
+                OrbIdleSound, 
+                OrbMesh, 
+                NAME_None, 
+                FVector::ZeroVector, 
+                EAttachLocation::KeepRelativeOffset, 
+                true
+            );
+        }
     }
     
-    // 초기 가시성 업데이트
-    UpdateVisibility();
+    // 가시성 설정은 SetOrbViewType이 호출된 후에 처리됨
+}
+
+void AHealingOrbActor::SetOrbViewType(EOrbViewType ViewType)
+{
+    OrbViewType = ViewType;
+    UpdateVisibilitySettings();
+}
+
+void AHealingOrbActor::UpdateVisibilitySettings()
+{
+    if (!GetOwner())
+        return;
+        
+    APawn* OwnerPawn = Cast<APawn>(GetOwner());
+    if (!OwnerPawn)
+        return;
+    
+    if (OrbViewType == EOrbViewType::FirstPerson)
+    {
+        // 1인칭 오브 - 오직 오너만 볼 수 있음
+        OrbMesh->SetOnlyOwnerSee(true);
+        OrbEffect->SetOnlyOwnerSee(true);
+        HighlightEffect->SetOnlyOwnerSee(true);
+        OrbLight->SetVisibility(true);
+        
+        // 복제 비활성화
+        SetReplicates(false);
+    }
+    else  // ThirdPerson
+    {
+        // 3인칭 오브 - 오너는 볼 수 없음
+        OrbMesh->SetOwnerNoSee(true);
+        OrbEffect->SetOwnerNoSee(true);
+        HighlightEffect->SetOwnerNoSee(true);
+        
+        // 라이트는 로컬 플레이어가 오너가 아닐 때만 표시
+        bool bIsLocalOwner = OwnerPawn->IsLocallyControlled();
+        OrbLight->SetVisibility(!bIsLocalOwner);
+        
+        // 복제 활성화
+        SetReplicates(true);
+    }
 }
 
 void AHealingOrbActor::Tick(float DeltaTime)
@@ -132,8 +151,8 @@ void AHealingOrbActor::Tick(float DeltaTime)
     float PulseValue = FMath::Sin(CurrentPulseTime) * OrbPulseScale + 1.0f;
     OrbMesh->SetRelativeScale3D(BaseScale * PulseValue);
     
-    // 라이트 강도 펄스
-    if (OrbLight)
+    // 라이트 강도 펄스 (가시성 체크)
+    if (OrbLight && OrbLight->IsVisible())
     {
         float LightIntensity = bIsHighlighted ? 1000.0f : 500.0f;
         LightIntensity *= PulseValue;
@@ -148,10 +167,22 @@ void AHealingOrbActor::SetTargetHighlight(bool bHighlight)
     
     bIsHighlighted = bHighlight;
     
+    // 로컬에서 즉시 업데이트
+    UpdateHighlightVisuals();
+}
+
+void AHealingOrbActor::OnRep_IsHighlighted()
+{
+    // 복제된 값이 변경되었을 때 비주얼 업데이트
+    UpdateHighlightVisuals();
+}
+
+void AHealingOrbActor::UpdateHighlightVisuals()
+{
     // 하이라이트 이펙트 활성화/비활성화
     if (HighlightEffect)
     {
-        if (bHighlight)
+        if (bIsHighlighted)
         {
             HighlightEffect->Activate();
         }
@@ -162,10 +193,10 @@ void AHealingOrbActor::SetTargetHighlight(bool bHighlight)
     }
     
     // 색상 변경
-    FLinearColor TargetColor = bHighlight ? HighlightColor : NormalColor;
+    FLinearColor TargetColor = bIsHighlighted ? HighlightColor : NormalColor;
     
-    // 라이트 색상 변경
-    if (OrbLight)
+    // 라이트 색상 변경 (가시성 체크)
+    if (OrbLight && OrbLight->IsVisible())
     {
         OrbLight->SetLightColor(TargetColor);
     }
@@ -180,93 +211,25 @@ void AHealingOrbActor::SetTargetHighlight(bool bHighlight)
         }
     }
     
-    // 하이라이트 사운드 재생
-    if (bHighlight && OrbHighlightSound)
+    // 하이라이트 사운드 재생 (로컬에서만, 적절한 경우에만)
+    if (bIsHighlighted && OrbHighlightSound && IsValid(this))
     {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), OrbHighlightSound, GetActorLocation());
-    }
-}
-
-void AHealingOrbActor::SetOnlyOwnerSee(bool bNewOnlyOwnerSee)
-{
-    if (OrbMesh)
-    {
-        OrbMesh->SetOnlyOwnerSee(bNewOnlyOwnerSee);
-    }
-    
-    if (OrbEffect)
-    {
-        OrbEffect->SetOnlyOwnerSee(bNewOnlyOwnerSee);
-    }
-    
-    if (HighlightEffect)
-    {
-        HighlightEffect->SetOnlyOwnerSee(bNewOnlyOwnerSee);
-    }
-    
-    // PointLight는 SetVisibility로 제어
-    if (OrbLight && bNewOnlyOwnerSee)
-    {
-        OrbLight->SetVisibility(true);
-    }
-}
-
-void AHealingOrbActor::SetOwnerNoSee(bool bNewOwnerNoSee)
-{
-    if (OrbMesh)
-    {
-        OrbMesh->SetOwnerNoSee(bNewOwnerNoSee);
-    }
-    
-    if (OrbEffect)
-    {
-        OrbEffect->SetOwnerNoSee(bNewOwnerNoSee);
-    }
-    
-    if (HighlightEffect)
-    {
-        HighlightEffect->SetOwnerNoSee(bNewOwnerNoSee);
-    }
-    
-    // PointLight는 SetVisibility로 제어
-    UpdateVisibility();
-}
-
-void AHealingOrbActor::SetIsOwnerOnly(bool bIsOwnerOnly)
-{
-    this->IsOwnerOnly = bIsOwnerOnly;
-    SetOwnerNoSee(bIsOwnerOnly);
-    //UpdateVisibility();
-}
-
-void AHealingOrbActor::UpdateVisibility()
-{
-    if (!OrbLight)
-        return;
-    
-    // 로컬 플레이어가 오너인지 확인
-    bool bIsLocalOwner = false;
-    if (GetOwner())
-    {
+        // 1인칭이면 오너가 로컬일 때만, 3인칭이면 항상 재생
         APawn* OwnerPawn = Cast<APawn>(GetOwner());
-        if (OwnerPawn && OwnerPawn->IsLocallyControlled())
+        bool bShouldPlaySound = false;
+        
+        if (OrbViewType == EOrbViewType::FirstPerson)
         {
-            bIsLocalOwner = true;
+            bShouldPlaySound = OwnerPawn && OwnerPawn->IsLocallyControlled();
+        }
+        else
+        {
+            bShouldPlaySound = true;
+        }
+        
+        if (bShouldPlaySound)
+        {
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), OrbHighlightSound, GetActorLocation());
         }
     }
-    
-    // bIsOwnerOnly가 true면 오너가 아닌 경우에만 라이트 표시
-    if (IsOwnerOnly)
-    {
-        OrbLight->SetVisibility(!bIsLocalOwner);
-    }
-    else
-    {
-        OrbLight->SetVisibility(true);
-    }
-}
-
-void AHealingOrbActor::UpdateHighlightState_Implementation(bool bHighlight)
-{
-    SetTargetHighlight(bHighlight);
 }

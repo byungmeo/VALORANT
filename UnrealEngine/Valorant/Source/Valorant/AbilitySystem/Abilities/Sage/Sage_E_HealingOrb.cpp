@@ -1,4 +1,5 @@
 #include "Sage_E_HealingOrb.h"
+#include "HealingOrbActor.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -6,7 +7,6 @@
 #include "GameFramework/Character.h"
 #include "TimerManager.h"
 #include "Player/Agent/BaseAgent.h"
-#include "HealingOrbActor.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "Components/AudioComponent.h"
@@ -60,13 +60,6 @@ bool USage_E_HealingOrb::OnRightClickInput()
 	{
 		ApplyHealing(OwnerAgent, true);
 		PlayHealingEffects(OwnerAgent);
-
-		// 타이머 정리
-		if (GetWorld())
-		{
-			GetWorld()->GetTimerManager().ClearTimer(OrbUpdateTimer);
-		}
-		
 		return true;
 	}
 	
@@ -83,37 +76,10 @@ void USage_E_HealingOrb::SpawnHealingOrb()
 	if (!OwnerAgent)
 		return;
 	
-	// 로컬 플레이어인 경우 1인칭 오브 생성
-	if (OwnerAgent->IsLocallyControlled())
-	{
-		FVector HandLocation1P = OwnerAgent->GetMesh1P()->GetSocketLocation(FName("R_WeaponPoint"));
-		FRotator HandRotation = OwnerAgent->GetControlRotation();
-		
-		FActorSpawnParameters SpawnParams1P;
-		SpawnParams1P.Owner = OwnerAgent;
-		SpawnParams1P.Instigator = OwnerAgent;
-		SpawnParams1P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		
-		SpawnedHealingOrb1P = GetWorld()->SpawnActor<AHealingOrbActor>(
-			HealingOrbActorClass, HandLocation1P, HandRotation, SpawnParams1P);
-		
-		if (SpawnedHealingOrb1P)
-		{
-			// 1인칭 메쉬에 부착
-			SpawnedHealingOrb1P->AttachToComponent(OwnerAgent->GetMesh1P(), 
-				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
-			
-			// 1인칭 오브 설정
-			SpawnedHealingOrb1P->SetOnlyOwnerSee(true);
-			SpawnedHealingOrb1P->SetReplicates(false);
-		}
-	}
-	
-	// 서버에서만 3인칭 오브 생성 (자동으로 복제됨)
+	// 서버에서 3인칭 오브 생성 (모든 클라이언트에 자동 복제)
 	if (HasAuthority(&CurrentActivationInfo))
 	{
 		FVector HandLocation3P = OwnerAgent->GetMesh()->GetSocketLocation(FName("R_Hand"));
-		HandLocation3P.Z += 100.f;
 		FRotator HandRotation = OwnerAgent->GetControlRotation();
 		
 		FActorSpawnParameters SpawnParams3P;
@@ -126,34 +92,55 @@ void USage_E_HealingOrb::SpawnHealingOrb()
 		
 		if (SpawnedHealingOrb)
 		{
+			// 3인칭 오브로 설정
+			SpawnedHealingOrb->SetOrbViewType(EOrbViewType::ThirdPerson);
+			
 			// 3인칭 메쉬에 부착
 			SpawnedHealingOrb->AttachToComponent(OwnerAgent->GetMesh(), 
-				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_Hand"));
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
+		}
+	}
+	
+	// 로컬 플레이어인 경우에만 1인칭 오브 생성
+	if (OwnerAgent->IsLocallyControlled())
+	{
+		FVector HandLocation1P = OwnerAgent->GetMesh1P()->GetSocketLocation(FName("R_Hand"));
+		FRotator HandRotation = OwnerAgent->GetControlRotation();
+		
+		FActorSpawnParameters SpawnParams1P;
+		SpawnParams1P.Owner = OwnerAgent;
+		SpawnParams1P.Instigator = OwnerAgent;
+		SpawnParams1P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
+		SpawnedHealingOrb1P = GetWorld()->SpawnActor<AHealingOrbActor>(
+			HealingOrbActorClass, HandLocation1P, HandRotation, SpawnParams1P);
+		
+		if (SpawnedHealingOrb1P)
+		{
+			// 1인칭 오브로 설정
+			SpawnedHealingOrb1P->SetOrbViewType(EOrbViewType::FirstPerson);
 			
-			// 네트워크 복제 설정
-			SpawnedHealingOrb->SetReplicates(true);
-			SpawnedHealingOrb->SetReplicateMovement(true);
-			
-			// 3인칭 오브는 로컬 플레이어에게는 보이지 않도록 설정
-			SpawnedHealingOrb->SetIsOwnerOnly(false);
+			// 1인칭 메쉬에 부착
+			SpawnedHealingOrb1P->AttachToComponent(OwnerAgent->GetMesh1P(), 
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
 		}
 	}
 }
 
 void USage_E_HealingOrb::DestroyHealingOrb()
 {
-	// 1인칭 오브 제거 (로컬에서만)
-	if (SpawnedHealingOrb1P)
-	{
-		SpawnedHealingOrb1P->Destroy();
-		SpawnedHealingOrb1P = nullptr;
-	}
-	
 	// 3인칭 오브 제거 (서버에서만)
 	if (HasAuthority(&CurrentActivationInfo) && SpawnedHealingOrb)
 	{
 		SpawnedHealingOrb->Destroy();
 		SpawnedHealingOrb = nullptr;
+	}
+	
+	// 1인칭 오브 제거 (로컬에서만)
+	if (SpawnedHealingOrb1P)
+	{
+		SpawnedHealingOrb1P->Destroy();
+		SpawnedHealingOrb1P = nullptr;
 	}
 	
 	// 타이머 정리
@@ -202,7 +189,6 @@ ABaseAgent* USage_E_HealingOrb::FindHealableAlly()
 	// 가장 가까운 힐링 가능한 아군 찾기
 	ABaseAgent* BestTarget = nullptr;
 	float BestDistance = MaxHealRange;
-	float BestAngle = MaxHealAngle;
 	
 	for (const FHitResult& Hit : HitResults)
 	{
@@ -223,7 +209,6 @@ ABaseAgent* USage_E_HealingOrb::FindHealableAlly()
 		{
 			BestTarget = Target;
 			BestDistance = Distance;
-			BestAngle = Angle;
 		}
 	}
 	
@@ -291,7 +276,7 @@ void USage_E_HealingOrb::ApplyHealing(ABaseAgent* Target, bool bIsSelfHeal)
 		Target->ServerApplyGE(EffectToApply, OwnerAgent);
 	}
 	
-	// 힐링 시작 사운드 재생
+	// 힐링 시작 사운드 재생 (멀티캐스트로 모든 클라이언트에서 재생)
 	if (HealingStartSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), HealingStartSound, Target->GetActorLocation());
@@ -303,36 +288,56 @@ void USage_E_HealingOrb::PlayHealingEffects(ABaseAgent* Target)
 	if (!Target)
 		return;
 	
-	// 힐링 이펙트 생성
-	if (HealingEffect)
+	// 서버에서만 이펙트 생성 (자동으로 복제됨)
+	if (HasAuthority(&CurrentActivationInfo))
 	{
-		UNiagaraFunctionLibrary::SpawnSystemAttached(
-			HealingEffect,
-			Target->GetRootComponent(),
-			NAME_None,
-			FVector::ZeroVector,
-			FRotator::ZeroRotator,
-			EAttachLocation::KeepRelativeOffset,
-			true
-		);
+		// 힐링 이펙트 생성
+		if (HealingEffect)
+		{
+			UNiagaraComponent* HealingComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
+				HealingEffect,
+				Target->GetRootComponent(),
+				NAME_None,
+				FVector::ZeroVector,
+				FRotator::ZeroRotator,
+				EAttachLocation::KeepRelativeOffset,
+				true,
+				true,  // Auto Destroy
+				ENCPoolMethod::AutoRelease,
+				true   // Auto Activate
+			);
+			
+			if (HealingComp)
+			{
+				HealingComp->SetIsReplicated(true);
+			}
+		}
+		
+		// 대상에게 힐링 표시 이펙트
+		if (HealingTargetEffect)
+		{
+			UNiagaraComponent* TargetComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
+				HealingTargetEffect,
+				Target->GetRootComponent(),
+				NAME_None,
+				FVector(0, 0, 50),
+				FRotator::ZeroRotator,
+				EAttachLocation::KeepRelativeOffset,
+				true,
+				true,  // Auto Destroy
+				ENCPoolMethod::AutoRelease,
+				true   // Auto Activate
+			);
+			
+			if (TargetComp)
+			{
+				TargetComp->SetIsReplicated(true);
+			}
+		}
 	}
 	
-	// 대상에게 힐링 표시 이펙트
-	if (HealingTargetEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAttached(
-			HealingTargetEffect,
-			Target->GetRootComponent(),
-			NAME_None,
-			FVector(0, 0, 50),
-			FRotator::ZeroRotator,
-			EAttachLocation::KeepRelativeOffset,
-			true
-		);
-	}
-	
-	// 힐링 완료 사운드 예약
-	if (HealingEndSound && GetWorld())
+	// 힐링 완료 사운드 예약 (서버에서만)
+	if (HealingEndSound && GetWorld() && HasAuthority(&CurrentActivationInfo))
 	{
 		FTimerHandle SoundTimer;
 		GetWorld()->GetTimerManager().SetTimer(SoundTimer, 
@@ -359,10 +364,10 @@ void USage_E_HealingOrb::UpdateHealingOrbPosition()
 		SpawnedHealingOrb1P->SetTargetHighlight(bShouldHighlight);
 	}
 	
-	// 3인칭 오브 업데이트 (서버에서만)
+	// 3인칭 오브 업데이트 (서버에서만, 자동으로 클라이언트에 복제됨)
 	if (HasAuthority(&CurrentActivationInfo) && SpawnedHealingOrb)
 	{
-		SpawnedHealingOrb->UpdateHighlightState(bShouldHighlight);
+		SpawnedHealingOrb->SetTargetHighlight(bShouldHighlight);
 	}
 }
 
