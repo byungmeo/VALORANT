@@ -242,17 +242,17 @@ void UBaseGameplayAbility::ExecuteAbility()
 
 bool UBaseGameplayAbility::OnLeftClickInput()
 {
-	return true;
+	return false;
 }
 
 bool UBaseGameplayAbility::OnRightClickInput()
 {
-	return true;
+	return false;
 }
 
 bool UBaseGameplayAbility::OnRepeatInput()
 {
-	return true;
+	return false;
 }
 
 void UBaseGameplayAbility::OnMontageCompleted()
