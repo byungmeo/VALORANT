@@ -13,7 +13,7 @@ GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged, float, newHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, float, newHealth, bool, bIsDamage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged, float, newMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged, float, newArmor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged, float, newEffectSpeed);
@@ -45,6 +45,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Agent", ReplicatedUsing = OnRep_EffectSpeed)
 	FGameplayAttributeData EffectSpeedMultiplier = 1.0f;
 	PLAY_ATTRIBUTE_ACCESSORS(UBaseAttributeSet, EffectSpeedMultiplier);
+
+	UPROPERTY(Replicated)
+	bool CachedWasDamaged = false;
+	float CachedOldHealth = 0.0f;
 
 	//통합 델리게이트
 	UPROPERTY(BlueprintAssignable)

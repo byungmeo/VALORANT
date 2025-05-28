@@ -136,7 +136,7 @@ protected:
 	void HideAnnouncement();
 
 	UFUNCTION()
-	void UpdateDisplayHealth(const float health);
+	void UpdateDisplayHealth(const float health, bool bIsDamage);
 	UFUNCTION()
 	void UpdateDisplayArmor(const float armor);
 	UFUNCTION()
