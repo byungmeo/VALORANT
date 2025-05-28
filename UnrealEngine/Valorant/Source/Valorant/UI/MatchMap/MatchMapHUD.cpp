@@ -213,7 +213,7 @@ void UMatchMapHUD::HideAnnouncement()
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Hidden);
 }
 
-void UMatchMapHUD::UpdateDisplayHealth(const float health)
+void UMatchMapHUD::UpdateDisplayHealth(const float health, bool bIsDamage)
 {
 	txt_HP->SetText(FText::AsNumber(health));
 }
