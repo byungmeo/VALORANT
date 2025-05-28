@@ -14,6 +14,9 @@
 ACharSelectCamera::ACharSelectCamera()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
+	bNetLoadOnClient = true;
+	bAlwaysRelevant = true;
 
 	Root = CreateDefaultSubobject<USceneComponent>("Root");
 	SetRootComponent(Root);

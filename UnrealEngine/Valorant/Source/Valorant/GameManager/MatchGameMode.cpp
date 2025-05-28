@@ -231,12 +231,7 @@ void AMatchGameMode::HandleMatchHasStarted()
 	for (auto* Actor : OutActors)
 	{
 		auto* PlayerStart = Cast<APlayerStart>(Actor);
-		if (PlayerStart->PlayerStartTag == FName("AgentSelect"))
-		{
-			AgentSelectStartPoint = PlayerStart;
-			UE_LOG(LogTemp, Warning, TEXT("AgentSelectStartPoint Found"));
-		}
-		else if (PlayerStart->PlayerStartTag == FName("Attackers"))
+		if (PlayerStart->PlayerStartTag == FName("Attackers"))
 		{
 			AttackersStartPoint = PlayerStart;
 			UE_LOG(LogTemp, Warning, TEXT("AttackersStartPoint Found"));
@@ -247,15 +242,6 @@ void AMatchGameMode::HandleMatchHasStarted()
 			UE_LOG(LogTemp, Warning, TEXT("DefendersStartPoint Found"));
 		}
 	}
-
-	// for (const auto& PlayerInfo : MatchPlayers)
-	// {
-	// 	if (AgentSelectStartPoint)
-	// 	{
-	// 		const FViewTargetTransitionParams Params;
-	// 		PlayerInfo.Controller->ClientSetViewTarget(AgentSelectStartPoint, Params);
-	// 	}
-	// }
 
 	StartSelectAgent();
 }
@@ -344,6 +330,7 @@ void AMatchGameMode::HandleRoundSubState_SelectAgent()
 		{
 			MatchPlayer.Controller->ClientRPC_ShowSelectUI(RedTeamPlayerNameArray);
 		}
+		MatchPlayer.Controller->ClientRPC_SetViewTargetOnAgentSelectCamera();
 	}
 	// 일정 시간 후에 요원 강제 선택 후 라운드 준비
 	MaxTime = SelectAgentTime;

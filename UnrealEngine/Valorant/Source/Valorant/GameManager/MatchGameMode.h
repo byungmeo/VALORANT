@@ -87,8 +87,6 @@ private:
 	TArray<FString> RedTeamPlayerNameArray;
 	TArray<FString> BlueTeamPlayerNameArray;
 	UPROPERTY()
-	TObjectPtr<APlayerStart> AgentSelectStartPoint = nullptr;
-	UPROPERTY()
 	TObjectPtr<APlayerStart> AttackersStartPoint = nullptr;
 	UPROPERTY()
 	TObjectPtr<APlayerStart> DefendersStartPoint = nullptr;
