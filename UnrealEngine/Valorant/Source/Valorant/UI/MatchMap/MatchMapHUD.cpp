@@ -702,10 +702,17 @@ void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAg
 		return;
 	}
 	
-	const auto* MyAgent = GetOwningPlayerPawn<ABaseAgent>();
-	if (nullptr == MyAgent)
+	const auto* MyController = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
+	if (nullptr == MyController)
 	{
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyAgent is nullptr"), __FUNCTION__);
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyController is nullptr"), __FUNCTION__);
+		return;
+	}
+
+	const auto* MyPS = MyController->GetPlayerState<AAgentPlayerState>();
+	if (nullptr == MyPS)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyPS is nullptr"), __FUNCTION__);
 		return;
 	}
 
@@ -715,7 +722,7 @@ void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAg
 	if (InstigatorAgent)
 	{
 		InstigatorName = InstigatorAgent->GetPlayerNickname();
-		bInstigatorIsMyTeam = InstigatorAgent->IsBlueTeam() == MyAgent->IsBlueTeam();
+		bInstigatorIsMyTeam = InstigatorAgent->IsBlueTeam() == MyPS->bIsBlueTeam;
 		if (const FAgentData* InstigatorData = GI->GetAgentData(InstigatorAgent->GetAgentID()))
 		{
 			InstigatorIcon = InstigatorData->KillFeedIcon;
@@ -728,7 +735,7 @@ void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAg
 	if (VictimAgent)
 	{
 		VictimName = VictimAgent->GetPlayerNickname();
-		bVictimIsMyTeam = VictimAgent->IsBlueTeam() == MyAgent->IsBlueTeam();
+		bVictimIsMyTeam = VictimAgent->IsBlueTeam() == MyPS->bIsBlueTeam;
 		if (const FAgentData* VictimData = GI->GetAgentData(VictimAgent->GetAgentID()))
 		{
 			VictimIcon = VictimData->KillFeedIcon;
@@ -743,6 +750,7 @@ void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAg
 	}
 	
 	DisplayKillFeed(InstigatorIcon, InstigatorName, bInstigatorIsMyTeam, VictimIcon, VictimName, bVictimIsMyTeam, KillFeedInfo, ReasonIcon);
+}
 
 void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType)
 {
