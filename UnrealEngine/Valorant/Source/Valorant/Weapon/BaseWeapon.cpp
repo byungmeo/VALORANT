@@ -126,7 +126,7 @@ void ABaseWeapon::StartFire()
 		TotalRecoilOffsetPitch = 0.0f;
 		TotalRecoilOffsetYaw = 0.0f;
 	}
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
 	GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
 	// InRate가 0.01인 이유는 단순히 체크하는 용도이지 FireInterval에 따른 실제 사격은 Fire에서 체크하기 때문
@@ -225,8 +225,8 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 
 	MagazineAmmo--;
 	OnRep_Ammo();
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, MagazineAmmo: %d, SpareAmmo: %d"), __FUNCTION__, MagazineAmmo,
-	        SpareAmmo);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, MagazineAmmo: %d, SpareAmmo: %d"), __FUNCTION__, MagazineAmmo,
+	        // SpareAmmo);
 
 	// 무기를 사용한 것으로 표시
 	bWasUsed = true;
@@ -398,7 +398,7 @@ void ABaseWeapon::MulticastRPC_PlayFireSound_Implementation()
 				}
 			}
 		}
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, bIsFP: %hs, bIsCU: %hs, Dir: %d"), __FUNCTION__, bIsFP ? "True" : "False", bIsCU ? "True" : "False", Dir);
+		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, bIsFP: %hs, bIsCU: %hs, Dir: %d"), __FUNCTION__, bIsFP ? "True" : "False", bIsCU ? "True" : "False", Dir);
 		PlayFireSound(WeaponData->FireSound, true, true, 0, WeaponData->MuzzleSocketName);
 	}
 }
@@ -417,7 +417,7 @@ void ABaseWeapon::MulticastRPC_PlayFireAnimation_Implementation()
 		return;
 	}
 	
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
 	OnFire.Broadcast();
 	if (OwnerAgent)
 	{
