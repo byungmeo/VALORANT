@@ -74,7 +74,7 @@ public:
 	void InitUI(AAgentPlayerState* ps);
 
 	UFUNCTION(BlueprintCallable)
-	void UpdateDisplayHealth(const float health);
+	void UpdateDisplayHealth(const float health, bool bIsDamage);
 	UFUNCTION(BlueprintCallable)
 	void UpdateDisplayArmor(const float armor);
 	UFUNCTION(BlueprintCallable)

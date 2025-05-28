@@ -5,6 +5,7 @@
 
 #include "GameplayEffectExtension.h"
 #include "Valorant.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Valorant/Player/Agent/BaseAgent.h"
 #include "Net/UnrealNetwork.h"
 
@@ -28,6 +29,10 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	}
 	
 	Super::PreAttributeChange(Attribute, NewValue);
+	if (Attribute == GetHealthAttribute())
+	{
+		CachedOldHealth = Health.GetCurrentValue();
+	}
 	
 	ClampAttribute(Attribute,NewValue);
 }
@@ -45,8 +50,17 @@ void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute,
 	
 	if (Attribute == GetHealthAttribute())
 	{
-		OnHealthChanged.Broadcast(NewValue);
-		OnHealthChanged_Manual.Broadcast(NewValue);
+		bool bIsDamage = false;
+		if (OldValue > NewValue)
+		{
+			bIsDamage = true;
+		}
+
+		// NET_LOG(LogTemp,Error,TEXT("기존 체력: %f / 새 체력: %f / 데미지 여부: %d"), OldValue, NewValue, bIsDamage);
+		
+		CachedWasDamaged = bIsDamage;
+		OnHealthChanged.Broadcast(NewValue, CachedWasDamaged);
+		OnHealthChanged_Manual.Broadcast(NewValue, CachedWasDamaged);
 		//NET_LOG(LogTemp,Warning,TEXT("OnHealthChanged_Manual %f"),Health.GetCurrentValue());
 	}
 	if (Attribute == GetMaxHealthAttribute())
@@ -81,7 +95,18 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		const int32 newValue = GetHealth();
-		OnHealthChanged_FromGE.Broadcast(newValue);
+
+		bool bIsDamage = false;
+		if (CachedOldHealth > newValue)
+		{
+			bIsDamage = true;
+		}
+		
+		// UE_LOG(LogTemp,Warning,TEXT("기존 체력: %f / 새 체력: %d / 데미지 여부: %d"), CachedOldHealth, newValue, bIsDamage);
+		
+		CachedWasDamaged = bIsDamage;
+		OnHealthChanged_FromGE.Broadcast(newValue, bIsDamage);
+
 		//NET_LOG(LogTemp,Warning,TEXT("OnHealthChanged_FromGE %f"),Health.GetCurrentValue());
 	}
 	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
@@ -108,6 +133,7 @@ void UBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxHealth,COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, Armor,COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, EffectSpeedMultiplier,COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME(UBaseAttributeSet, CachedWasDamaged);
 }
 
 void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute,
@@ -132,7 +158,7 @@ void UBaseAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 	//GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Health, OldHealth);
 	
 	//NET_LOG(LogTemp,Warning,TEXT("UBaseAttributeSet::OnRep_Health %f"),Health.GetCurrentValue());
-	OnHealthChanged.Broadcast(Health.GetCurrentValue());
+	OnHealthChanged.Broadcast(Health.GetCurrentValue(), CachedWasDamaged);
 }
 
 void UBaseAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth)
