@@ -29,7 +29,7 @@ void UAgentBaseWidget::InitUI(AAgentPlayerState* ps)
 	txt_Armor->SetText(FText::AsNumber(ps->GetArmor()));
 }
 
-void UAgentBaseWidget::UpdateDisplayHealth(const float health)
+void UAgentBaseWidget::UpdateDisplayHealth(const float health, bool bIsDamage)
 {
 	txt_HP->SetText(FText::AsNumber(health));
 }

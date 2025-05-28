@@ -15,7 +15,7 @@ class UMatchMapHUD;
 class UMiniMapWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnDamaged_PC, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChanged_PC, float, newHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged_PC, float, newHealth, bool, bIsDamage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged_PC, float, newSpeed);
@@ -142,7 +142,7 @@ protected:
 	void InitAgentWidget();
 	
 	UFUNCTION()
-	void HandleHealthChanged(float NewHealth);
+	void HandleHealthChanged(float NewHealth, bool bIsDamage);
 	UFUNCTION()
 	void HandleMaxHealthChanged(float NewMaxHealth);
 	UFUNCTION(BlueprintCallable)

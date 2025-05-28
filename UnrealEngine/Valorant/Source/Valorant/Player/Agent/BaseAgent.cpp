@@ -1098,9 +1098,6 @@ void ABaseAgent::Net_Die_Implementation()
 	}
 	
 	bIsDead = true;
-
-	// ABP_3P->Montage_Stop(0.1f);
-	// ABP_3P->Montage_Play(AM_Die, 1.0f);
 }
 
 void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geClass, ABaseAgent* DamageInstigator)
@@ -1160,8 +1157,14 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 	}
 }
 
-void ABaseAgent::UpdateHealth(float newHealth)
+void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 {
+	// NET_LOG(LogTemp,Display,TEXT("Char, Health Changed 데미지 여부: %d"), bIsDamage);
+	if (!bIsDamage)
+	{
+		return;
+	}
+	
 	if (newHealth <= 0.f && bIsDead == false)
 	{
 		if (HasAuthority())
@@ -1177,7 +1180,12 @@ void ABaseAgent::UpdateHealth(float newHealth)
 			MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false);
 		}
 	}
-
+	
+	if (GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		ServerApplyGE(GE_HitSlow, nullptr);
+	}
+	
 	LastDamagedOrg = FVector::ZeroVector;
 	LastDamagedPart = EAgentDamagedPart::None;
 	LastDamagedDirection = EAgentDamagedDirection::Front;
@@ -1193,15 +1201,15 @@ void ABaseAgent::UpdateArmor(float newArmor)
 
 void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 {
-	NET_LOG(LogTemp, Warning, TEXT("%f dp"), newSpeed);
+	// NET_LOG(LogTemp, Warning, TEXT("%f dp"), newSpeed);
 	EffectSpeedMultiplier = newSpeed;
 }
 
 void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
 	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
 {
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
-		__FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
+		// __FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
 	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge);
 }
 
