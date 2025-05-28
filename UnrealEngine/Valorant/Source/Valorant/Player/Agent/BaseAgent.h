@@ -113,6 +113,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCapsuleComponent* InteractionCapsule;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "GAS")
+	TSubclassOf<UGameplayEffect> GE_HitSlow;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Anim")
 	UAnimMontage* AM_Die;
 
@@ -472,7 +475,7 @@ protected:
 	void Net_Die();
 
 	UFUNCTION()
-	void UpdateHealth(float newHealth);
+	void UpdateHealth(float newHealth, bool bIsDamage);
 	UFUNCTION()
 	void UpdateMaxHealth(float newMaxHealth);
 	UFUNCTION()
