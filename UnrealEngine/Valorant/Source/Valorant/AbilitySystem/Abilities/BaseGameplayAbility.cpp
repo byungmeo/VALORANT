@@ -524,7 +524,7 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		{
 			if (HasAuthority(&ActivationInfo))
 			{
-				Agent->SwitchEquipment(EInteractorType::Ability);
+				Agent->SwitchEquipment(PreviousEquipmentState);
 			}
 			PreviousEquipmentState = EInteractorType::None;
 		}
