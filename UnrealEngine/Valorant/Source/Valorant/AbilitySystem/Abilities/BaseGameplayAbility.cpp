@@ -384,19 +384,43 @@ bool UBaseGameplayAbility::SpawnProjectile(FVector LocationOffset, FRotator Rota
 		return false;
 	}
 
-	// 카메라 위치에서 스폰
-	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f +
-		LocationOffset;
-	FRotator SpawnRotation = Character->GetControlRotation() + RotationOffset;
-
+	// 카메라 컴포넌트 가져오기
+	UCameraComponent* CameraComp = Character->FindComponentByClass<UCameraComponent>();
+	FVector SpawnLocation;
+	FRotator SpawnRotation;
+    
+	if (CameraComp)
+	{
+		// 카메라 위치에서 약간 앞쪽/아래쪽에서 스폰 (손 위치처럼)
+		SpawnLocation = CameraComp->GetComponentLocation() + 
+					   CameraComp->GetForwardVector() * 30.0f + 
+					   CameraComp->GetRightVector() * 15.0f +    // 오른손 위치
+					   CameraComp->GetUpVector() * -10.0f +      // 약간 아래
+					   LocationOffset;
+        
+		SpawnRotation = CameraComp->GetComponentRotation() + RotationOffset;
+	}
+	else
+	{
+		// 폴백: 캐릭터 눈 높이에서 스폰
+		FVector EyeLocation = Character->GetActorLocation() + FVector(0, 0, Character->BaseEyeHeight);
+		SpawnLocation = EyeLocation + Character->GetActorForwardVector() * 50.0f + LocationOffset;
+		SpawnRotation = Character->GetControlRotation() + RotationOffset;
+	}
+    
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = Character;
 	SpawnParams.Instigator = Character;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	SpawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, SpawnParams);
-
-	return true;
+    
+	SpawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(
+		ProjectileClass, 
+		SpawnLocation, 
+		SpawnRotation, 
+		SpawnParams
+	);
+    
+	return SpawnedProjectile != nullptr;
 }
 
 void UBaseGameplayAbility::SetAbilityPhase(FGameplayTag NewPhase)
