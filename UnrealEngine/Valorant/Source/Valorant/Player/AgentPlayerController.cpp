@@ -168,10 +168,10 @@ void AAgentPlayerController::InitAgentWidget()
 	}
 }
 
-void AAgentPlayerController::HandleHealthChanged(float NewHealth)
+void AAgentPlayerController::HandleHealthChanged(float NewHealth, bool bIsDamage)
 {
-	//UE_LOG(LogTemp,Display,TEXT("PC, Health Changed"));
-	OnHealthChanged_PC.Broadcast(NewHealth);
+	// NET_LOG(LogTemp,Display,TEXT("PC, Health Changed 데미지 여부: %d"), bIsDamage);
+	OnHealthChanged_PC.Broadcast(NewHealth, bIsDamage);
 }
 
 void AAgentPlayerController::HandleMaxHealthChanged(float NewMaxHealth)
