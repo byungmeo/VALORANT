@@ -108,7 +108,7 @@ protected:
     float SegmentHeight = 400.f;  // 세그먼트 높이
     
     UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
-    float SegmentThickness = 30.f;  // 세그먼트 두께
+    float SegmentThickness = 100.f;  // 세그먼트 두께
 
     // 머티리얼들
     UPROPERTY(EditDefaultsOnly, Category = "Materials")
@@ -155,4 +155,7 @@ private:
     
     UPROPERTY()
     TArray<UBoxComponent*> SegmentCollisions;
+
+    void SetSegmentsFinalPosition();
+    float GetSegmentXPosition(int32 SegmentIndex) const;
 };
