@@ -204,6 +204,7 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 
 	Overlay_Timer->SetVisibility(ESlateVisibility::Visible);
 	Img_Spike->SetVisibility(ESlateVisibility::Hidden);
+	OnLowState(false);
 	
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
 	bIsPreRound = true;
@@ -239,9 +240,13 @@ void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAm
 }
 
 void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
-	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge, const bool bLowState)
 {
 	OnDisplayIndicator(HitOrg);
+	if (bLowState)
+	{
+		OnLowState(true);
+	}
 }
 
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
