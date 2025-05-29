@@ -239,9 +239,13 @@ void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAm
 }
 
 void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
-	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge, const bool bLowState)
 {
 	OnDisplayIndicator(HitOrg);
+	if (bLowState)
+	{
+		OnLowState(true);
+	}
 }
 
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
