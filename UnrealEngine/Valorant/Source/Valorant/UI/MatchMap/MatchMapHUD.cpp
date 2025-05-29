@@ -204,7 +204,9 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 
 	Overlay_Timer->SetVisibility(ESlateVisibility::Visible);
 	Img_Spike->SetVisibility(ESlateVisibility::Hidden);
+	
 	OnLowState(false);
+	HideFollowUpInputUI();
 	
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
 	bIsPreRound = true;
@@ -217,12 +219,14 @@ void UMatchMapHUD::HideAnnouncement()
 
 void UMatchMapHUD::UpdateDisplayHealth(const float health, bool bIsDamage)
 {
-	txt_HP->SetText(FText::AsNumber(health));
+	int32 intHealth = FMath::TruncToInt(health);
+	txt_HP->SetText(FText::AsNumber(intHealth));
 }
 
 void UMatchMapHUD::UpdateDisplayArmor(const float armor)
 {
-	txt_Armor->SetText(FText::AsNumber(armor));
+	int32 intArmor = FMath::TruncToInt(armor);
+	txt_Armor->SetText(FText::AsNumber(intArmor));
 }
 
 void UMatchMapHUD::UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo)

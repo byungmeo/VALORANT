@@ -7,6 +7,7 @@
 #include "OnlineSessionSettings.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
+#include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameManager/ValorantGameInstance.h"
@@ -545,7 +546,7 @@ void AMatchGameMode::RespawnAll()
 			return;
 		}
 
-		ResetAgentAtrributeData(agentPS);
+		ResetAgentGAS(agentPS);
 		RespawnPlayer(agentPS, MatchPlayer.Controller, SpawnTransform);
 	}
 	// 3초 후에 공격팀에게 스파이크 스폰
@@ -611,10 +612,11 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	}
 }
 
-// 체력 등 정상화
-void AMatchGameMode::ResetAgentAtrributeData(AAgentPlayerState* AgentPS)
+// 체력 정상화, 어빌리티 상태 초기화
+void AMatchGameMode::ResetAgentGAS(AAgentPlayerState* AgentPS)
 {
 	AgentPS->GetBaseAttributeSet()->ResetAttributeData();
+	AgentPS->GetAbilitySystemComponent()->CleanupAbilityState();
 }
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)

@@ -23,11 +23,6 @@ void UBaseAttributeSet::ResetAttributeData()
 // 용도: 최종적으로 값을 점검 (e.g. 최대값을 넘지 않도록 제한 / 비율 유지)
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
-	if (GetOwningAbilitySystemComponent()->GetOwnerRole() != ROLE_Authority)
-	{
-		return;
-	}
-	
 	Super::PreAttributeChange(Attribute, NewValue);
 	if (Attribute == GetHealthAttribute())
 	{
