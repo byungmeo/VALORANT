@@ -147,7 +147,7 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	FMatchPlayer PlayerInfo;
 	PlayerInfo.Controller = Cast<AAgentPlayerController>(Controller);
 	PlayerInfo.Nickname = Nickname;
-	PlayerInfo.bIsBlueTeam = MatchPlayers.Num() % 2 == 0;
+	PlayerInfo.bIsBlueTeam = RequiredPlayerCount / 2 > MatchPlayers.Num();
 	if (PlayerInfo.bIsBlueTeam)
 	{
 		BlueTeamPlayerNameArray.Add(Nickname);
