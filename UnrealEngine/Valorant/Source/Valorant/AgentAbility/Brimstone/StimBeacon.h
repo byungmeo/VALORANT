@@ -31,13 +31,8 @@ private:
 	const bool bShouldBounce = true;
 	const float Bounciness = 0.5f;
 	const float UnequipTime = 0.7f;
-	const float Radius = 600.0f;
-	// +10% Equip speed
-	// +15% Fire rate
-	// +10% Reload speed
-	// +10% Recovery speed
-	// +15% Speed Boost
-	const float BuffDuration = 12.0f;
+	const float Radius = 1200.0f; // 12미터 
+	const float BuffDuration = 12.0f; // 12초 지속
 	
 public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
