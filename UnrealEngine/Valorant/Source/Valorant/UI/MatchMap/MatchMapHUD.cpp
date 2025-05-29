@@ -204,6 +204,7 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 
 	Overlay_Timer->SetVisibility(ESlateVisibility::Visible);
 	Img_Spike->SetVisibility(ESlateVisibility::Hidden);
+	OnLowState(false);
 	
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
 	bIsPreRound = true;
