@@ -448,6 +448,7 @@ void ABaseAgent::SetHighlight(bool bEnable, bool bIsEnemy)
 		}
 		else
 		{
+			GetMesh()->SetRenderCustomDepth(true);
 			GetMesh()->SetOverlayMaterial(TeamOverlayMaterial);
 		}
 	}
@@ -1496,6 +1497,7 @@ bool ABaseAgent::IsBlueTeam() const
 	{
 		return PS->bIsBlueTeam;
 	}
+	NET_LOG(LogTemp, Error, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
 	return false;
 }
 
@@ -1505,6 +1507,7 @@ bool ABaseAgent::IsAttacker() const
 	{
 		return PS->bIsAttacker;
 	}
+	NET_LOG(LogTemp, Error, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
 	return false;
 }
 
