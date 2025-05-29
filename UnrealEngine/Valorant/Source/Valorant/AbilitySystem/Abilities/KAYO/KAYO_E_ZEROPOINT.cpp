@@ -2,6 +2,7 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "AgentAbility/KayO/KayoKnife.h"
 #include "GameFramework/Character.h"
+#include "Kismet/GameplayStatics.h"
 
 UKAYO_E_ZEROPOINT::UKAYO_E_ZEROPOINT(): UBaseGameplayAbility()
 {
@@ -20,7 +21,21 @@ void UKAYO_E_ZEROPOINT::PrepareAbility()
 {
 	Super::PrepareAbility();
 	
-	// 나이프 장착 시 추가 로직이 필요하면 여기에 구현
+	// 준비 효과 재생
+	if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+	{
+		PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+		
+		// 나이프 장착 애니메이션
+		if (SpawnedProjectile)
+		{
+			if (AKayoKnife* Knife = Cast<AKayoKnife>(SpawnedProjectile))
+			{
+				Knife->OnEquip();
+			}
+		}
+	}
+	
 	UE_LOG(LogTemp, Warning, TEXT("KAYO E - ZERO/point 준비 중"));
 }
 
@@ -45,8 +60,8 @@ bool UKAYO_E_ZEROPOINT::ThrowKnife()
 		return false;
 	}
 
-	// 나이프 스폰
-	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f;
+	// 나이프 스폰 위치 계산
+	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f + FVector(0, 0, 50.0f);
 	FRotator SpawnRotation = Character->GetControlRotation();
 
 	FActorSpawnParameters SpawnParams;
@@ -61,6 +76,12 @@ bool UKAYO_E_ZEROPOINT::ThrowKnife()
 		// 나이프 던지기 활성화
 		Knife->OnThrow();
 		SpawnedProjectile = Knife;
+		
+		// 발사 효과 재생
+		PlayCommonEffects(ProjectileLaunchEffect, ProjectileLaunchSound, SpawnLocation);
+		
+		// 실행 효과 재생
+		PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
 		
 		UE_LOG(LogTemp, Warning, TEXT("KAYO E - 억제 나이프 생성 및 던지기 성공"));
 		return true;
