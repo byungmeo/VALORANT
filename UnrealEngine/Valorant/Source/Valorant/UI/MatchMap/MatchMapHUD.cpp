@@ -10,6 +10,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/Overlay.h"
+#include "Components/VerticalBox.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
@@ -758,12 +759,12 @@ void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputTy
 	{
 		if (inputType == EFollowUpInputType::LeftClick)
 		{
-			DisplayedFollowUpInputUI_Overlay = Left_E;
+			DisplayedFollowUpInputUI = Left_E;
 			Left_E->SetVisibility(ESlateVisibility::Visible);
 		}
 		else if (inputType == EFollowUpInputType::LeftOrRight)
 		{
-			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_E;
+			DisplayedFollowUpInputUI = LeftOrRight_E;
 			LeftOrRight_E->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
@@ -771,12 +772,12 @@ void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputTy
 	{
 		if (inputType == EFollowUpInputType::LeftClick)
 		{
-			DisplayedFollowUpInputUI_Overlay = Left_Q;
+			DisplayedFollowUpInputUI = Left_Q;
 			Left_Q->SetVisibility(ESlateVisibility::Visible);
 		}
 		else if (inputType == EFollowUpInputType::LeftOrRight)
 		{
-			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_Q;
+			DisplayedFollowUpInputUI = LeftOrRight_Q;
 			LeftOrRight_Q->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
@@ -784,12 +785,12 @@ void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputTy
 	{
 		if (inputType == EFollowUpInputType::LeftClick)
 		{
-			DisplayedFollowUpInputUI_Overlay = Left_C;
+			DisplayedFollowUpInputUI = Left_C;
 			Left_C->SetVisibility(ESlateVisibility::Visible);
 		}
 		else if (inputType == EFollowUpInputType::LeftOrRight)
 		{
-			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_C;
+			DisplayedFollowUpInputUI = LeftOrRight_C;
 			LeftOrRight_C->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
@@ -808,15 +809,10 @@ void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputTy
 
 void UMatchMapHUD::HideFollowUpInputUI()
 {
-	if (DisplayedFollowUpInputUI_Overlay)
+	if (DisplayedFollowUpInputUI)
 	{
-		DisplayedFollowUpInputUI_Overlay->SetVisibility(ESlateVisibility::Hidden);
-		DisplayedFollowUpInputUI_Overlay = nullptr;
-	}
-	if (DisplayedFollowUpInputUI_Horizontal)
-	{
-		DisplayedFollowUpInputUI_Horizontal->SetVisibility(ESlateVisibility::Hidden);
-		DisplayedFollowUpInputUI_Horizontal = nullptr;
+		DisplayedFollowUpInputUI->SetVisibility(ESlateVisibility::Hidden);
+		DisplayedFollowUpInputUI = nullptr;
 	}
 }
 
