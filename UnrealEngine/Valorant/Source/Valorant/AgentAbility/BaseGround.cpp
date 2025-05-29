@@ -26,6 +26,9 @@ ABaseGround::ABaseGround()
 		GroundMesh->SetMaterial(0, GroundMaterial.Object);
 	}
 	GroundMesh->SetCollisionProfileName("OverlapOnlyPawn");
+
+	bReplicates = true;
+	AActor::SetReplicateMovement(true);
 }
 
 // Called when the game starts or when spawned

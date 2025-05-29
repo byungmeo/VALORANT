@@ -211,6 +211,7 @@ void AKayoKnifeEquipped::OnEquip()
     {
         bIsEquipped = true;
         OnRep_IsEquipped();
+        MulticastPlayEquipSound();
     }
     
     // 애니메이션 실행
@@ -226,6 +227,7 @@ void AKayoKnifeEquipped::OnUnequip()
     {
         bIsEquipped = false;
         OnRep_IsEquipped();
+        MulticastPlayUnequipSound();
     }
     
     // 애니메이션 실행 (필요시 구현)
@@ -252,6 +254,7 @@ void AKayoKnifeEquipped::UpdateEquipVisuals()
         if (bIsEquipped)
         {
             GlowEffectComponent->Activate();
+            MulticastPlayIdleSound();
         }
         else
         {
@@ -259,45 +262,36 @@ void AKayoKnifeEquipped::UpdateEquipVisuals()
         }
     }
     
-    // 장착/해제 사운드 재생
-    if (IsValid(this))
+    // 장착/해제 사운드 재생은 Multicast 함수에서 처리
+}
+
+void AKayoKnifeEquipped::MulticastPlayEquipSound_Implementation()
+{
+    if (KnifeEquipSound)
     {
-        // 로컬 플레이어에게만 재생
-        APlayerController* LocalPC = GEngine ? GEngine->GetFirstLocalPlayerController(GetWorld()) : nullptr;
-        if (LocalPC)
-        {
-            APawn* OwnerPawn = Cast<APawn>(GetOwner());
-            bool bIsLocalOwner = LocalPC->GetPawn() == OwnerPawn;
-            
-            bool bShouldPlaySound = (KnifeViewType == EKnifeViewType::FirstPerson && bIsLocalOwner) ||
-                                   (KnifeViewType == EKnifeViewType::ThirdPerson && !bIsLocalOwner);
-            
-            if (bShouldPlaySound)
-            {
-                USoundBase* SoundToPlay = bIsEquipped ? KnifeEquipSound : KnifeUnequipSound;
-                if (SoundToPlay)
-                {
-                    UGameplayStatics::PlaySoundAtLocation(GetWorld(), SoundToPlay, GetActorLocation());
-                }
-                
-                // Idle 사운드 처리
-                if (bIsEquipped && KnifeIdleSound && !IdleAudioComponent)
-                {
-                    IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
-                        KnifeIdleSound, 
-                        KnifeMesh, 
-                        NAME_None, 
-                        FVector::ZeroVector, 
-                        EAttachLocation::KeepRelativeOffset, 
-                        true
-                    );
-                }
-                else if (!bIsEquipped && IdleAudioComponent)
-                {
-                    IdleAudioComponent->Stop();
-                    IdleAudioComponent = nullptr;
-                }
-            }
-        }
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), KnifeEquipSound, GetActorLocation());
+    }
+}
+
+void AKayoKnifeEquipped::MulticastPlayUnequipSound_Implementation()
+{
+    if (KnifeUnequipSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), KnifeUnequipSound, GetActorLocation());
+    }
+}
+
+void AKayoKnifeEquipped::MulticastPlayIdleSound_Implementation()
+{
+    if (KnifeIdleSound && !IdleAudioComponent)
+    {
+        IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
+            KnifeIdleSound, 
+            KnifeMesh, 
+            NAME_None, 
+            FVector::ZeroVector, 
+            EAttachLocation::KeepRelativeOffset, 
+            true
+        );
     }
 }

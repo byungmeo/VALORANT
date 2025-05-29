@@ -103,4 +103,11 @@ private:
     
     // 가시성 초기화 완료 플래그
     bool bVisibilityInitialized = false;
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastPlayEquipSound();
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastPlayUnequipSound();
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastPlayIdleSound();
 };
