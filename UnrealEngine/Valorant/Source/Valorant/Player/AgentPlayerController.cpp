@@ -548,9 +548,9 @@ void AAgentPlayerController::OnMatchEnd(const bool bBlueWin)
 }
 
 void AAgentPlayerController::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart,
-	const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond)
+	const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond, const bool bLowState)
 {
-	OnDamaged_PC.Broadcast(HitOrg, AgentDamagedPart, AgentDamagedDirection, bArg, bCond);
+	OnDamaged_PC.Broadcast(HitOrg, AgentDamagedPart, AgentDamagedDirection, bArg, bCond, bLowState);
 }
 
 void AAgentPlayerController::OnSpikePlanted(AMatchPlayerController* Planter)

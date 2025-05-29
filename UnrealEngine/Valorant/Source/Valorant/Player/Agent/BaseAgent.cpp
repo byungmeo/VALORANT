@@ -1201,7 +1201,14 @@ void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 	{
 		if (HasAuthority())
 		{
-			MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false);
+			if (newHealth < 34.0f)
+			{
+				MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false, true);
+			}
+			else
+			{
+				MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false);
+			}
 		}
 	}
 	
@@ -1230,11 +1237,11 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 }
 
 void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
-	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge, const bool bLowState)
 {
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
 		// __FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
-	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge);
+	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge, bLowState);
 }
 
 // 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트

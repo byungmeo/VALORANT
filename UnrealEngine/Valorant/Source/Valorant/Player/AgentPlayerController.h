@@ -15,7 +15,7 @@ class UAgentAbilitySystemComponent;
 class UMatchMapHUD;
 class UMiniMapWidget;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnDamaged_PC, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FOnDamaged_PC, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge, const bool, bLowState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnKillEvent_PC, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged_PC, float, newHealth, bool, bIsDamage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
@@ -195,7 +195,7 @@ public:
 	void OnMatchEnd(const bool bBlueWin);
 
 	UFUNCTION()
-	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart, const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond);
+	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart, const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond, const bool bLowState);
 
 	UFUNCTION()
 	void OnSpikePlanted(AMatchPlayerController* Planter);
