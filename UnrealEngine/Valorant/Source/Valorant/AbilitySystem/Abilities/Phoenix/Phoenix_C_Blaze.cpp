@@ -22,7 +22,7 @@ bool UPhoenix_C_Blaze::OnLeftClickInput()
     bool bShouldExecute = true;
     
     // 직선 벽 생성
-    if (SpawnBlazeProjectile(EBlazeMovement2Type::Straight))
+    if (SpawnBlazeProjectile(EBlazeMovementType::Straight))
     {
         UE_LOG(LogTemp, Warning, TEXT("Phoenix C - 직선 벽 생성 시작"));
     }
@@ -41,7 +41,7 @@ bool UPhoenix_C_Blaze::OnRightClickInput()
     bool bShouldExecute = true;
     
     // 커브 벽 생성
-    if (SpawnBlazeProjectile(EBlazeMovement2Type::Curved))
+    if (SpawnBlazeProjectile(EBlazeMovementType::Curved))
     {
         UE_LOG(LogTemp, Warning, TEXT("Phoenix C - 커브 벽 생성 시작"));
     }
@@ -61,7 +61,7 @@ void UPhoenix_C_Blaze::ExecuteAbility()
     UE_LOG(LogTemp, Warning, TEXT("Phoenix C - Blaze 실행 완료"));
 }
 
-bool UPhoenix_C_Blaze::SpawnBlazeProjectile(EBlazeMovement2Type MovementType)
+bool UPhoenix_C_Blaze::SpawnBlazeProjectile(EBlazeMovementType MovementType)
 {
     if (!HasAuthority(&CurrentActivationInfo) || !BlazeProjectileClass)
     {
@@ -110,11 +110,11 @@ bool UPhoenix_C_Blaze::SpawnBlazeProjectile(EBlazeMovement2Type MovementType)
         BlazeProjectile->SetMovementType(MovementType);
         
         // 실행 애니메이션 재생 (MovementType에 따라 다른 애니메이션 가능)
-        if (MovementType == EBlazeMovement2Type::Straight && ExecuteStraightMontage_1P && ExecuteStraightMontage_3P)
+        if (MovementType == EBlazeMovementType::Straight && ExecuteStraightMontage_1P && ExecuteStraightMontage_3P)
         {
             PlayMontages(ExecuteStraightMontage_1P, ExecuteStraightMontage_3P);
         }
-        else if (MovementType == EBlazeMovement2Type::Curved && ExecuteCurvedMontage_1P && ExecuteCurvedMontage_3P)
+        else if (MovementType == EBlazeMovementType::Curved && ExecuteCurvedMontage_1P && ExecuteCurvedMontage_3P)
         {
             PlayMontages(ExecuteCurvedMontage_1P, ExecuteCurvedMontage_3P);
         }
@@ -125,7 +125,7 @@ bool UPhoenix_C_Blaze::SpawnBlazeProjectile(EBlazeMovement2Type MovementType)
         }
         
         UE_LOG(LogTemp, Warning, TEXT("Phoenix C - Blaze 투사체 생성 성공 (Type: %s)"), 
-            MovementType == EBlazeMovement2Type::Straight ? TEXT("Straight") : TEXT("Curved"));
+            MovementType == EBlazeMovementType::Straight ? TEXT("Straight") : TEXT("Curved"));
         
         return true;
     }
