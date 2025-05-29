@@ -9,6 +9,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+class UVerticalBox;
 struct FKillFeedInfo;
 enum class EFollowUpInputType : uint8;
 class UOverlay;
@@ -280,17 +281,17 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
 	UOverlay* Left_E;
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
-	UHorizontalBox* LeftOrRight_E;
+	UVerticalBox* LeftOrRight_E;
 
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
 	UOverlay* Left_Q;
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
-	UHorizontalBox* LeftOrRight_Q;
+	UVerticalBox* LeftOrRight_Q;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
 	UOverlay* Left_C;
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
-	UHorizontalBox* LeftOrRight_C;
+	UVerticalBox* LeftOrRight_C;
 	
 	// UPROPERTY(meta=(BindWidget), BlueprintReadOnly, Category = "FollowUpInput")
 	// UOverlay* Left_X;
@@ -328,9 +329,7 @@ private:
 
 	// 활성화된 후속 입력키 UI 다시 숨기기
 	UPROPERTY()
-	UOverlay* DisplayedFollowUpInputUI_Overlay = nullptr;
-	UPROPERTY()
-	UHorizontalBox* DisplayedFollowUpInputUI_Horizontal = nullptr;
+	UPanelWidget* DisplayedFollowUpInputUI = nullptr;
 	
 /*
  *	Debug
