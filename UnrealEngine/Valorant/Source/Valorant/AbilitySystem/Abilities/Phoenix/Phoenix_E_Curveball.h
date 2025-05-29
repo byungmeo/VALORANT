@@ -23,11 +23,4 @@ public:
     // 섬광 어빌리티 특화 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings")
     TSubclassOf<AFlashProjectile> FlashProjectileClass;
-
-    // 추가 섬광 설정들
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings")
-    float ThrowForce = 1000.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings") 
-    float UpwardForce = 300.0f;
 }; 
