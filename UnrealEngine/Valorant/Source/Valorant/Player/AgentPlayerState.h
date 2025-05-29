@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "MatchPlayerState.h"
+#include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "AgentPlayerState.generated.h"
 
 class UValorantGameInstance;
@@ -34,7 +35,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable)
-	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	UAgentAbilitySystemComponent* GetAbilitySystemComponent() const;
 	
 	UBaseAttributeSet* GetBaseAttributeSet() const;
 

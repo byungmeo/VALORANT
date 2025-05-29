@@ -199,7 +199,7 @@ void AAgentPlayerState::OnCreditChanged(int32 NewCredit)
 	OnCreditChangedDelegate.Broadcast(NewCredit);
 }
 
-UAbilitySystemComponent* AAgentPlayerState::GetAbilitySystemComponent() const
+UAgentAbilitySystemComponent* AAgentPlayerState::GetAbilitySystemComponent() const
 {
 	return ASC;
 }

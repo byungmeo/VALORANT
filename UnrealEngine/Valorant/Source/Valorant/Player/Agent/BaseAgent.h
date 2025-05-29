@@ -112,6 +112,9 @@ struct FAgentVisibilityInfo
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FOnAgentDamaged, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge, const bool, bLowState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAgentDie, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSwitchEquipment, const EInteractorType, equipmentState);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
@@ -548,6 +551,9 @@ private:
 public:
 	FOnAgentDamaged OnAgentDamaged;
 	FOnAgentDie OnAgentDie;
+
+	FOnSwitchEquipment OnSwitchEquipment;
+	
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
