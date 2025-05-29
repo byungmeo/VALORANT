@@ -13,6 +13,10 @@
 #include "GameplayTagAssetInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "ValorantObject/BaseInteractor.h"
+#include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystem.h"
+#include "Sound/SoundBase.h"
+#include "NiagaraFunctionLibrary.h"
 
 UBaseGameplayAbility::UBaseGameplayAbility()
 {
@@ -20,7 +24,8 @@ UBaseGameplayAbility::UBaseGameplayAbility()
 	bReplicateInputDirectly = true;
 
 	// 기본 태그 설정
-	ActivationBlockedTags.AddTag(FValorantGameplayTags::Get().Block_Ability_Activation);
+	//ActivationBlockedTags.AddTag(FValorantGameplayTags::Get().Block_Ability_Activation);
+	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("State.Debuff.Suppressed")));
 }
 
 void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
@@ -610,4 +615,36 @@ int32 UBaseGameplayAbility::GetAbilityStack() const
 		}
 	}
 	return 0;
+}
+
+void UBaseGameplayAbility::PlayCommonEffects(UNiagaraSystem* NiagaraEffect, USoundBase* SoundEffect, FVector Location)
+{
+	if (!HasAuthority(&CurrentActivationInfo))
+	{
+		return;
+	}
+
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (!Character)
+	{
+		return;
+	}
+
+	// 위치가 제공되지 않으면 캐릭터 위치 사용
+	if (Location.IsZero())
+	{
+		Location = Character->GetActorLocation();
+	}
+
+	// 나이아가라 이펙트 재생
+	if (NiagaraEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), NiagaraEffect, Location);
+	}
+
+	// 사운드 효과 재생
+	if (SoundEffect)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), SoundEffect, Location);
+	}
 }

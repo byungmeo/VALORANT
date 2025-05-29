@@ -2,6 +2,7 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "AgentAbility/KayO/Flashbang.h"
 #include "GameFramework/Character.h"
+#include "Kismet/GameplayStatics.h"
 
 UKAYO_Q_FLASHDRIVE::UKAYO_Q_FLASHDRIVE(): UBaseGameplayAbility()
 {
@@ -13,6 +14,19 @@ UKAYO_Q_FLASHDRIVE::UKAYO_Q_FLASHDRIVE(): UBaseGameplayAbility()
 	// FLASH/drive는 준비 후 좌클릭/우클릭으로 던지기 방식 선택
 	ActivationType = EAbilityActivationType::WithPrepare;
 	FollowUpInputType = EFollowUpInputType::LeftOrRight;
+}
+
+void UKAYO_Q_FLASHDRIVE::PrepareAbility()
+{
+	Super::PrepareAbility();
+	
+	// 준비 효과 재생
+	if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+	{
+		PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("KAYO Q - FLASH/drive 준비 중"));
 }
 
 bool UKAYO_Q_FLASHDRIVE::OnLeftClickInput()
@@ -42,8 +56,8 @@ bool UKAYO_Q_FLASHDRIVE::ThrowFlashbang(bool bAltFire)
 		return false;
 	}
 
-	// 플래시뱅 스폰
-	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f;
+	// 플래시뱅 스폰 위치 계산
+	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f + FVector(0, 0, 50.0f);
 	FRotator SpawnRotation = Character->GetControlRotation();
 
 	FActorSpawnParameters SpawnParams;
@@ -59,8 +73,14 @@ bool UKAYO_Q_FLASHDRIVE::ThrowFlashbang(bool bAltFire)
 		Flashbang->ActiveProjectileMovement(bAltFire);
 		SpawnedProjectile = Flashbang;
 		
+		// 발사 효과 재생
+		PlayCommonEffects(ProjectileLaunchEffect, ProjectileLaunchSound, SpawnLocation);
+		
+		// 실행 효과 재생 (필요한 경우)
+		PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
+		
 		UE_LOG(LogTemp, Warning, TEXT("KAYO Q - 플래시뱅 생성 성공 (AltFire: %s)"), 
-			bAltFire ? TEXT("true") : TEXT("false"));
+			bAltFire ? TEXT("true - 포물선") : TEXT("false - 직선"));
 		return true;
 	}
 	else

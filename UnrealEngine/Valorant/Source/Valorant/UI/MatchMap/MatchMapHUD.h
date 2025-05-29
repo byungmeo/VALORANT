@@ -225,6 +225,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnLowState(bool bCond);
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSwitchWeapon(EInteractorType interactorType);
 
 	UFUNCTION()
 	void OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& KillFeedInfo);

@@ -22,7 +22,7 @@ protected:
 
     // 섬광 폭발 처리
     UFUNCTION(BlueprintCallable, Category = "Flash")
-    void ExplodeFlash();
+    virtual void ExplodeFlash();
 
     // 플레이어가 섬광 범위에 있는지 체크 (거리 기반)
     bool IsPlayerInFlashRange(ABaseAgent* Player, float& OutBlindDuration);

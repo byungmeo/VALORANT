@@ -153,8 +153,6 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	}
 	Super::ServerRPC_PickUp_Implementation(Agent);
 	
-	Agent->AcquireInteractor(this);
-	
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Carried;
 
@@ -180,6 +178,7 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	
 	// 스파이크 Mesh 숨기기
 	SetActive(false);
+	Agent->AcquireInteractor(this);
 }
 
 void ASpike::ServerRPC_Drop_Implementation()
@@ -189,10 +188,8 @@ void ASpike::ServerRPC_Drop_Implementation()
 		return;
 	}
 	OwnerAgent->ResetOwnSpike();
+	
 	Super::ServerRPC_Drop_Implementation();
-
-	// 스파이크 Mesh 보이기
-	SetActive(true);
 
 	// 스파이크 상태 업데이트
 	SpikeState = ESpikeState::Dropped;

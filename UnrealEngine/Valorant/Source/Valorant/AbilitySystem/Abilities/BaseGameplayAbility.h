@@ -4,6 +4,7 @@
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "ResourceManager/ValorantGameType.h"
+#include "NiagaraSystem.h"
 #include "BaseGameplayAbility.generated.h"
 
 class ABaseProjectile;
@@ -83,6 +84,28 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Projectile")
 	TSubclassOf<class ABaseProjectile> ProjectileClass;
 
+	// === 공통 효과 ===
+	// 투사체 발사 효과
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Projectile")
+	class UNiagaraSystem* ProjectileLaunchEffect = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Projectile")
+	class USoundBase* ProjectileLaunchSound = nullptr;
+
+	// 어빌리티 준비 효과
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Prepare")
+	class UNiagaraSystem* PrepareEffect = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Prepare")
+	class USoundBase* PrepareSound = nullptr;
+
+	// 어빌리티 실행 효과
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Execute")
+	class UNiagaraSystem* ExecuteEffect = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Execute")
+	class USoundBase* ExecuteSound = nullptr;
+
 	// === 델리게이트 ===
 	UPROPERTY(BlueprintAssignable)
 	FOnAbilityPhaseChanged OnPhaseChanged;
@@ -159,6 +182,10 @@ protected:
 	// === 유틸리티 ===
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Ability")
 	bool SpawnProjectile(FVector LocationOffset = FVector::ZeroVector, FRotator RotationOffset = FRotator::ZeroRotator);
+
+	// 공통 효과 재생
+	UFUNCTION(BlueprintCallable, Category = "Effects")
+	void PlayCommonEffects(class UNiagaraSystem* NiagaraEffect, class USoundBase* SoundEffect, FVector Location = FVector::ZeroVector);
 
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	void SetAbilityPhase(FGameplayTag NewPhase);
