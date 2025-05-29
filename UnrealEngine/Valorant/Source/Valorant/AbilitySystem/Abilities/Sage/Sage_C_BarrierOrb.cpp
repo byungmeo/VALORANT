@@ -28,14 +28,18 @@ void USage_C_BarrierOrb::WaitAbility()
 	// 장벽 오브 생성
 	SpawnBarrierOrb();
 	
-	// 미리보기 장벽 생성
-	CreatePreviewWall();
-	
-	// 미리보기 업데이트 타이머 시작
-	if (GetWorld())
+	// 로컬 플레이어만 미리보기 장벽 생성
+	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
+	if (OwnerAgent && OwnerAgent->IsLocallyControlled())
 	{
-		GetWorld()->GetTimerManager().SetTimer(PreviewUpdateTimer, this, 
-			&USage_C_BarrierOrb::UpdateBarrierPreview, 0.01f, true);
+		CreatePreviewWall();
+		
+		// 미리보기 업데이트 타이머 시작
+		if (GetWorld())
+		{
+			GetWorld()->GetTimerManager().SetTimer(PreviewUpdateTimer, this, 
+				&USage_C_BarrierOrb::UpdateBarrierPreview, 0.01f, true);
+		}
 	}
 }
 
@@ -45,10 +49,13 @@ bool USage_C_BarrierOrb::OnLeftClickInput()
 	FVector PlaceLocation = GetBarrierPlaceLocation();
 	FRotator PlaceRotation = FRotator(0.f, CurrentRotation, 0.f);
 
-	// 실제 장벽 스폰
-	SpawnBarrierWall(PlaceLocation, PlaceRotation);
+	// 실제 장벽 스폰 (서버에서만)
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		SpawnBarrierWall(PlaceLocation, PlaceRotation);
+	}
 	
-	// 설치 이펙트 및 사운드
+	// 로컬에서 이펙트 및 사운드 재생
 	if (PlaceEffect)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), PlaceEffect, PlaceLocation);
@@ -157,6 +164,11 @@ void USage_C_BarrierOrb::DestroyBarrierOrb()
 
 void USage_C_BarrierOrb::UpdateBarrierPreview()
 {
+	// 로컬 플레이어만 미리보기 업데이트
+	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
+	if (!OwnerAgent || !OwnerAgent->IsLocallyControlled())
+		return;
+		
 	FVector PlaceLocation = GetBarrierPlaceLocation();
 	FRotator PlaceRotation = FRotator(0.f, CurrentRotation, 0.f);
 	
@@ -175,14 +187,18 @@ void USage_C_BarrierOrb::RotateBarrier()
 	// 0-360도 범위로 정규화
 	CurrentRotation = FMath::Fmod(CurrentRotation, 360.f);
 	
-	// 회전 사운드 재생
-	if (RotateSound)
+	// 회전 사운드 재생 (로컬에서만)
+	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
+	if (OwnerAgent && OwnerAgent->IsLocallyControlled())
 	{
-		UGameplayStatics::PlaySound2D(GetWorld(), RotateSound);
+		if (RotateSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), RotateSound);
+		}
+		
+		// 즉시 미리보기 업데이트
+		UpdateBarrierPreview();
 	}
-	
-	// 즉시 미리보기 업데이트
-	UpdateBarrierPreview();
 }
 
 FVector USage_C_BarrierOrb::GetBarrierPlaceLocation()
@@ -273,9 +289,14 @@ void USage_C_BarrierOrb::CreatePreviewWall()
 	if (!GetWorld() || !BarrierWallClass)
 		return;
 	
-	// BarrierWallActor를 미리보기 모드로 생성
+	// 로컬 플레이어만 미리보기 생성
+	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
+	if (!OwnerAgent || !OwnerAgent->IsLocallyControlled())
+		return;
+	
+	// BarrierWallActor를 미리보기 모드로 생성 (로컬에서만)
 	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = CachedActorInfo.AvatarActor.Get();
+	SpawnParams.Owner = OwnerAgent;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
 	PreviewBarrierWall = GetWorld()->SpawnActor<ABarrierWallActor>(
@@ -283,6 +304,9 @@ void USage_C_BarrierOrb::CreatePreviewWall()
 	
 	if (PreviewBarrierWall)
 	{
+		// 복제 비활성화 (로컬에서만 보이도록)
+		PreviewBarrierWall->SetReplicates(false);
+		
 		// 미리보기 모드 설정
 		PreviewBarrierWall->SetPreviewMode(true);
 		
@@ -291,11 +315,15 @@ void USage_C_BarrierOrb::CreatePreviewWall()
 		
 		// 충돌 비활성화
 		PreviewBarrierWall->SetActorEnableCollision(false);
+		
+		// Owner만 볼 수 있도록 설정
+		PreviewBarrierWall->SetOnlyOwnerSee(true);
 	}
 }
 
 void USage_C_BarrierOrb::DestroyPreviewWall()
 {
+	// 로컬에서만 미리보기 정리
 	if (PreviewBarrierWall)
 	{
 		PreviewBarrierWall->Destroy();
@@ -306,15 +334,21 @@ void USage_C_BarrierOrb::DestroyPreviewWall()
 void USage_C_BarrierOrb::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
                                     const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	// 타이머 정리
-	if (GetWorld())
+	// 타이머 정리 (로컬에서만)
+	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
+	if (OwnerAgent && OwnerAgent->IsLocallyControlled())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(PreviewUpdateTimer);
+		if (GetWorld())
+		{
+			GetWorld()->GetTimerManager().ClearTimer(PreviewUpdateTimer);
+		}
+		
+		// 미리보기 정리
+		DestroyPreviewWall();
 	}
 	
-	// 오브 및 미리보기 정리
+	// 오브 정리
 	DestroyBarrierOrb();
-	DestroyPreviewWall();
 	
 	// 상태 초기화
 	CurrentRotation = 0.f;

@@ -33,7 +33,8 @@ public:
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, 
                             class AController* EventInstigator, AActor* DamageCauser) override;
 
-    void StartBuild(){StartBuildAnimation();};
+    void StartBuild(){StartBuildAnimation();}
+    void SetOnlyOwnerSee(bool bCond);;
 
 protected:
     virtual void BeginPlay() override;
