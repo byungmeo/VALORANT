@@ -156,7 +156,7 @@ void APhoenix_C_BlazeWall::ApplyGameEffect()
         }
         else
         {
-            // 적에게 데미지 적용
+            // 다른 사람들에게 데미지 적용
             if (GameplayEffect)
             {
                 Agent->ServerApplyHealthGE(GameplayEffect, DamagePerTick);
@@ -177,16 +177,7 @@ bool APhoenix_C_BlazeWall::IsPhoenixOrAlly(AActor* Actor) const
     {
         return true;
     }
-    
-    // 2. 같은 팀인지 확인
-    if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
-    {
-        if (ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator()))
-        {
-            return InstigatorAgent->IsBlueTeam() == Agent->IsBlueTeam();
-        }
-    }
-    
+            
     return false;
 }
 
