@@ -47,6 +47,14 @@ void ABaseInteractor::OnRep_OwnerAgent()
 		SetOwner(OwnerAgent);
 		OnDetect(false);
 		Mesh->SetOnlyOwnerSee(true);
+		// if (const auto* MyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
+		// {
+		// 	if (const auto* MyPS = MyPC->GetPlayerState<AAgentPlayerState>())
+		// 	{
+		// 		bool bSameTeam = MyPS->bIsBlueTeam == OwnerAgent->IsBlueTeam();
+		// 		Mesh->SetRenderCustomDepth(bSameTeam);
+		// 	}
+		// }
 		Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		auto* Agent = Cast<ABaseAgent>(GetWorld()->GetFirstPlayerController()->GetCharacter());
 		if (Agent && Agent->GetFindInteractorActor() == this)
@@ -60,6 +68,7 @@ void ABaseInteractor::OnRep_OwnerAgent()
 		SetOwner(nullptr);
 		OnDetect(false);
 		Mesh->SetOnlyOwnerSee(false);
+		// Mesh->SetRenderCustomDepth(false);
 		Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		if (ThirdPersonInteractor)
 		{
