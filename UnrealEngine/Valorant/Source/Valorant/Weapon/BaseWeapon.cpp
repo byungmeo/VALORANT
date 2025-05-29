@@ -322,8 +322,9 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 
 		// 벽이든 캐릭터든 항상 임팩트 이펙트/사운드 호출
 		Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
-		Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
+		//Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
 	}
+	Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
 }
 
 void ABaseWeapon::EndFire()
