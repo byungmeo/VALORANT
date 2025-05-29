@@ -399,6 +399,9 @@ public:
     
 	UFUNCTION(BlueprintCallable, Category = "Flash")
 	void CreateFlashWidget();
+
+	UFUNCTION(Client, Reliable)
+	void AdjustFlashEffectDirect(float BlindDuration, float RecoveryDuration);
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
