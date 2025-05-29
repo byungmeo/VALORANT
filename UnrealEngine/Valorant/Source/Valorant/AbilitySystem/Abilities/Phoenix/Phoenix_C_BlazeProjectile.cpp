@@ -1,95 +1,129 @@
 ﻿#include "Phoenix_C_BlazeProjectile.h"
-#include "Phoenix_C_BlazeWall.h"
-#include "Components/BoxComponent.h"
-#include "GameFramework/ProjectileMovementComponent.h"
+#include "Phoenix_C_BlazeSplineWall.h"
 #include "Components/SphereComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 APhoenix_C_BlazeProjectile::APhoenix_C_BlazeProjectile()
 {
     PrimaryActorTick.bCanEverTick = true;
     
-    // 충돌체는 작게 (보이지 않는 투사체)
     Sphere->SetSphereRadius(5.0f);
     Sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Sphere->SetVisibility(false);
     
-    // 투사체 이동 설정
     ProjectileMovement->InitialSpeed = StraightSpeed;
     ProjectileMovement->MaxSpeed = StraightSpeed;
-    ProjectileMovement->ProjectileGravityScale = 0.0f;  // 중력 없음
+    ProjectileMovement->ProjectileGravityScale = 0.0f;
     ProjectileMovement->bRotationFollowsVelocity = true;
     ProjectileMovement->bShouldBounce = false;
+}
+
+void APhoenix_C_BlazeProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     
-    // 투사체는 보이지 않음
-    Sphere->SetVisibility(false);
+    DOREPLIFETIME(APhoenix_C_BlazeProjectile, MovementType);
+    DOREPLIFETIME(APhoenix_C_BlazeProjectile, bIsActive);
 }
 
 void APhoenix_C_BlazeProjectile::BeginPlay()
 {
     Super::BeginPlay();
     
-    StartLocation = GetActorLocation();
-    LastWallSpawnLocation = StartLocation;
-    
-    // 첫 벽 세그먼트 즉시 생성
-    SpawnWallSegment();
-    
-    // 타이머로 주기적으로 벽 생성
-    GetWorld()->GetTimerManager().SetTimer(WallSpawnTimer, this, 
-        &APhoenix_C_BlazeProjectile::SpawnWallSegment, SegmentSpawnInterval, true);
+    if (HasAuthority())
+    {
+        // 스플라인 벽 생성
+        if (SplineWallClass)
+        {
+            FActorSpawnParameters SpawnParams;
+            SpawnParams.Owner = GetOwner();
+            SpawnParams.Instigator = GetInstigator();
+            SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+            
+            FVector SpawnLocation = GetActorLocation();
+            FRotator SpawnRotation = FRotator::ZeroRotator;
+            
+            SplineWall = GetWorld()->SpawnActor<APhoenix_C_BlazeSplineWall>(
+                SplineWallClass, SpawnLocation, SpawnRotation, SpawnParams);
+            
+            if (SplineWall)
+            {
+                // 첫 번째 포인트 추가
+                SplineWall->AddSplinePoint(GetActorLocation());
+                
+                // 주기적으로 스플라인 포인트 추가
+                GetWorld()->GetTimerManager().SetTimer(SplineUpdateTimer, this, 
+                    &APhoenix_C_BlazeProjectile::UpdateSplinePoint, SegmentSpawnInterval, true);
+            }
+        }
+    }
 }
 
 void APhoenix_C_BlazeProjectile::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    // 커브 이동 처리
-    if (MovementType == EBlazeMovementType::Curved)
+    if (!bIsActive)
     {
-        ApplyCurveMovement(DeltaTime);
+        return;
     }
     
-    // 이동 거리 계산
-    FVector CurrentLocation = GetActorLocation();
-    if (LastWallSpawnLocation != FVector::ZeroVector)
+    if (HasAuthority())
     {
-        float DistanceFromStart = FVector::Dist(CurrentLocation, GetActorLocation());
+        if (MovementType == EBlazeMovementType::Curved)
+        {
+            ApplyCurveMovement(DeltaTime);
+        }
+        
         TotalDistanceTraveled += ProjectileMovement->Velocity.Size() * DeltaTime;
-    }
-    
-    // 최대 거리 도달 시 중지
-    if (TotalDistanceTraveled >= MaxWallLength || CurrentSegmentCount >= MaxSegments)
-    {
-        StopProjectile();
+        
+        if (TotalDistanceTraveled >= MaxWallLength)
+        {
+            StopProjectile();
+        }
     }
 }
 
 void APhoenix_C_BlazeProjectile::SetMovementType(EBlazeMovementType Type)
 {
+    if (!HasAuthority())
+    {
+        return;
+    }
+    
     MovementType = Type;
     
-    // 이동 타입에 따라 속도 조정
     float NewSpeed = (Type == EBlazeMovementType::Straight) ? StraightSpeed : CurvedSpeed;
     ProjectileMovement->InitialSpeed = NewSpeed;
     ProjectileMovement->MaxSpeed = NewSpeed;
     ProjectileMovement->Velocity = GetActorForwardVector() * NewSpeed;
+    
+    Multicast_SetMovementType(Type);
 }
 
-void APhoenix_C_BlazeProjectile::SpawnWallSegment()
+void APhoenix_C_BlazeProjectile::Multicast_SetMovementType_Implementation(EBlazeMovementType Type)
 {
-    if (!WallSegmentClass || CurrentSegmentCount >= MaxSegments)
+    if (!HasAuthority())
     {
-        StopProjectile();
+        MovementType = Type;
+    }
+}
+
+void APhoenix_C_BlazeProjectile::UpdateSplinePoint()
+{
+    if (!HasAuthority() || !bIsActive || !SplineWall)
+    {
         return;
     }
     
-    FVector SpawnLocation = GetActorLocation();
-    FRotator SpawnRotation = GetActorRotation();
+    FVector CurrentLocation = GetActorLocation();
     
     // 지면에 맞춰 위치 조정
     FHitResult HitResult;
-    FVector TraceStart = SpawnLocation + FVector(0, 0, 100);
-    FVector TraceEnd = SpawnLocation - FVector(0, 0, 500);
+    FVector TraceStart = CurrentLocation + FVector(0, 0, 100);
+    FVector TraceEnd = CurrentLocation - FVector(0, 0, 500);
     
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
@@ -98,53 +132,11 @@ void APhoenix_C_BlazeProjectile::SpawnWallSegment()
     if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, 
         ECollisionChannel::ECC_WorldStatic, QueryParams))
     {
-        SpawnLocation = HitResult.Location;
-        
-        // 지면의 법선에 맞춰 회전 조정
-        FVector GroundNormal = HitResult.Normal;
-        FVector ForwardVector = SpawnRotation.Vector();
-        FVector RightVector = FVector::CrossProduct(GroundNormal, ForwardVector).GetSafeNormal();
-        ForwardVector = FVector::CrossProduct(RightVector, GroundNormal).GetSafeNormal();
-        SpawnRotation = FRotationMatrix::MakeFromXZ(ForwardVector, GroundNormal).Rotator();
+        CurrentLocation = HitResult.Location;
     }
     
-    // 벽 세그먼트 생성
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Owner = GetOwner();
-    SpawnParams.Instigator = GetInstigator();
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-    
-    APhoenix_C_BlazeWall* NewWall = GetWorld()->SpawnActor<APhoenix_C_BlazeWall>(
-        WallSegmentClass, SpawnLocation, SpawnRotation, SpawnParams);
-        
-    if (NewWall)
-    {
-        // 벽 세그먼트 크기 조정 (연속성을 위해)
-        if (NewWall->WallCollision)
-        {
-            float AdjustedLength = SegmentLength * 1.5f;  // 약간 겹치게 설정
-            //NewWall->WallCollision->SetBoxExtent(FVector(NewWall->WallWidth / 2.0f, AdjustedLength / 2.0f, NewWall->WallHeight / 2.0f));
-            NewWall->WallCollision->SetBoxExtent(FVector(AdjustedLength / 2.0f, NewWall->WallWidth / 2.0f, NewWall->WallHeight / 2.0f));
-            
-            // 메시도 같이 조정
-            if (NewWall->GroundMesh)
-            {
-                //NewWall->GroundMesh->SetRelativeScale3D(FVector(NewWall->WallWidth / 100.0f, AdjustedLength / 100.0f, NewWall->WallHeight / 100.0f));
-                NewWall->GroundMesh->SetRelativeScale3D(FVector(AdjustedLength / 100.0f,NewWall->WallWidth / 100.0f, NewWall->WallHeight / 100.0f));
-                //NewWall->GroundMesh->SetRelativeScale3D(FVector(AdjustedLength / 100.0f, AdjustedLength / 100.0f, AdjustedLength / 100.0f));
-            }
-        }
-        
-        SpawnedWalls.Add(NewWall);
-        CurrentSegmentCount++;
-        LastWallSpawnLocation = SpawnLocation;
-        
-        // 최대 거리 체크
-        if (TotalDistanceTraveled >= MaxWallLength)
-        {
-            StopProjectile();
-        }
-    }
+    // 스플라인 포인트 추가
+    SplineWall->AddSplinePoint(CurrentLocation);
 }
 
 void APhoenix_C_BlazeProjectile::ApplyCurveMovement(float DeltaTime)
@@ -154,41 +146,45 @@ void APhoenix_C_BlazeProjectile::ApplyCurveMovement(float DeltaTime)
         return;
     }
     
-    // 시간에 따라 커브 각도 증가
-    CurveAngle += DeltaTime * 30.0f;  // 초당 30도 회전
+    CurrentCurveAngle += DeltaTime * CurveRate;
+    CurrentCurveAngle = FMath::Clamp(CurrentCurveAngle, 0.0f, 90.0f);
     
-    // 최대 커브 각도 제한 (90도)
-    CurveAngle = FMath::Clamp(CurveAngle, 0.0f, 90.0f);
-    
-    // 현재 속도 방향
     FVector CurrentVelocity = ProjectileMovement->Velocity;
     float CurrentSpeed = CurrentVelocity.Size();
     
-    // 커브 방향 계산 (오른쪽으로 커브)
-    FQuat RotationQuat = FQuat(FVector::UpVector, FMath::DegreesToRadians(CurveAngle * DeltaTime));
+    FQuat RotationQuat = FQuat(FVector::UpVector, FMath::DegreesToRadians(CurveRate * DeltaTime));
     FVector NewDirection = RotationQuat.RotateVector(CurrentVelocity.GetSafeNormal());
     
-    // 새로운 속도 설정
     ProjectileMovement->Velocity = NewDirection * CurrentSpeed;
-    
-    // 회전도 업데이트
     SetActorRotation(NewDirection.Rotation());
 }
 
 void APhoenix_C_BlazeProjectile::OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
 {
-    // 벽에 부딪히면 중지
-    StopProjectile();
+    if (HasAuthority())
+    {
+        StopProjectile();
+    }
 }
 
 void APhoenix_C_BlazeProjectile::StopProjectile()
 {
-    // 타이머 정리
-    GetWorld()->GetTimerManager().ClearTimer(WallSpawnTimer);
+    if (!HasAuthority() || !bIsActive)
+    {
+        return;
+    }
     
-    // 투사체 정지
+    bIsActive = false;
+    
+    GetWorld()->GetTimerManager().ClearTimer(SplineUpdateTimer);
     ProjectileMovement->StopMovementImmediately();
     
+    // 벽 완성
+    if (SplineWall)
+    {
+        SplineWall->FinalizeWall();
+    }
+    
     // 투사체 제거
-    Destroy();
+    SetLifeSpan(0.1f);
 }
