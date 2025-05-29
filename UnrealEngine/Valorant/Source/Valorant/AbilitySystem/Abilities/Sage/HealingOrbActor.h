@@ -31,6 +31,9 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	// Owner가 복제될 때 호출
+	virtual void OnRep_Owner() override;
 
 	// 오브 메시
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -79,8 +82,12 @@ private:
 	UFUNCTION()
 	void OnRep_IsHighlighted();
 	
-	// 오브 타입
+	// 오브 타입 (복제됨)
+	UPROPERTY(ReplicatedUsing = OnRep_OrbViewType)
 	EOrbViewType OrbViewType = EOrbViewType::ThirdPerson;
+	
+	UFUNCTION()
+	void OnRep_OrbViewType();
 	
 	float CurrentPulseTime = 0.0f;
 	FVector BaseScale;
@@ -93,4 +100,7 @@ private:
 	
 	// 가시성 설정
 	void UpdateVisibilitySettings();
+	
+	// 가시성 초기화 완료 플래그
+	bool bVisibilityInitialized = false;
 };

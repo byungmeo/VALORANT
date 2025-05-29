@@ -92,7 +92,7 @@ void USage_E_HealingOrb::SpawnHealingOrb()
 		
 		if (SpawnedHealingOrb)
 		{
-			// 3인칭 오브로 설정
+			// 3인칭 오브로 설정 (복제되도록)
 			SpawnedHealingOrb->SetOrbViewType(EOrbViewType::ThirdPerson);
 			
 			// 3인칭 메쉬에 부착
@@ -117,8 +117,11 @@ void USage_E_HealingOrb::SpawnHealingOrb()
 		
 		if (SpawnedHealingOrb1P)
 		{
-			// 1인칭 오브로 설정
+			// 1인칭 오브로 설정 (복제 안 됨)
 			SpawnedHealingOrb1P->SetOrbViewType(EOrbViewType::FirstPerson);
+			
+			// 복제 비활성화
+			SpawnedHealingOrb1P->SetReplicates(false);
 			
 			// 1인칭 메쉬에 부착
 			SpawnedHealingOrb1P->AttachToComponent(OwnerAgent->GetMesh1P(), 
@@ -361,12 +364,14 @@ void USage_E_HealingOrb::UpdateHealingOrbPosition()
 	// 1인칭 오브 업데이트 (로컬에서만)
 	if (SpawnedHealingOrb1P)
 	{
+		// 1인칭 오브는 로컬에서 직접 업데이트 (복제 안 됨)
 		SpawnedHealingOrb1P->SetTargetHighlight(bShouldHighlight);
 	}
 	
-	// 3인칭 오브 업데이트 (서버에서만, 자동으로 클라이언트에 복제됨)
+	// 3인칭 오브 업데이트 (서버에서만)
 	if (HasAuthority(&CurrentActivationInfo) && SpawnedHealingOrb)
 	{
+		// 서버에서 설정하면 자동으로 클라이언트에 복제됨
 		SpawnedHealingOrb->SetTargetHighlight(bShouldHighlight);
 	}
 }

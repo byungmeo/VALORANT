@@ -8,11 +8,13 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Pawn.h"
+#include "Engine/Engine.h"
 
 AHealingOrbActor::AHealingOrbActor()
 {
     PrimaryActorTick.bCanEverTick = true;
     bReplicates = true;
+    SetReplicateMovement(true);
     
     // 루트 컴포넌트
     USceneComponent* Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
@@ -22,6 +24,7 @@ AHealingOrbActor::AHealingOrbActor()
     OrbMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("OrbMesh"));
     OrbMesh->SetupAttachment(GetRootComponent());
     OrbMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    OrbMesh->SetIsReplicated(true);
     
     // 기본 구체 메시 설정
     static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMesh(TEXT("/Engine/BasicShapes/Sphere"));
@@ -35,11 +38,13 @@ AHealingOrbActor::AHealingOrbActor()
     OrbEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("OrbEffect"));
     OrbEffect->SetupAttachment(OrbMesh);
     OrbEffect->bAutoActivate = true;
+    OrbEffect->SetIsReplicated(true);
     
     // 하이라이트 이펙트
     HighlightEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("HighlightEffect"));
     HighlightEffect->SetupAttachment(OrbMesh);
     HighlightEffect->bAutoActivate = false;
+    HighlightEffect->SetIsReplicated(true);
     
     // 포인트 라이트
     OrbLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("OrbLight"));
@@ -55,6 +60,7 @@ void AHealingOrbActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     
     DOREPLIFETIME(AHealingOrbActor, bIsHighlighted);
+    DOREPLIFETIME(AHealingOrbActor, OrbViewType);
 }
 
 void AHealingOrbActor::BeginPlay()
@@ -74,30 +80,34 @@ void AHealingOrbActor::BeginPlay()
         }
     }
     
-    // 아이들 사운드 재생 (로컬에서만)
-    if (OrbIdleSound && GetOwner())
+    // Owner가 이미 설정되어 있으면 가시성 업데이트
+    if (GetOwner())
     {
-        APawn* OwnerPawn = Cast<APawn>(GetOwner());
-        if ((OrbViewType == EOrbViewType::FirstPerson && OwnerPawn && OwnerPawn->IsLocallyControlled()) ||
-            (OrbViewType == EOrbViewType::ThirdPerson))
-        {
-            IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
-                OrbIdleSound, 
-                OrbMesh, 
-                NAME_None, 
-                FVector::ZeroVector, 
-                EAttachLocation::KeepRelativeOffset, 
-                true
-            );
-        }
+        UpdateVisibilitySettings();
     }
+}
+
+void AHealingOrbActor::OnRep_Owner()
+{
+    Super::OnRep_Owner();
     
-    // 가시성 설정은 SetOrbViewType이 호출된 후에 처리됨
+    // Owner가 변경되면 가시성 설정 업데이트
+    UpdateVisibilitySettings();
 }
 
 void AHealingOrbActor::SetOrbViewType(EOrbViewType ViewType)
 {
     OrbViewType = ViewType;
+    
+    // 서버에서 타입 변경
+    if (HasAuthority())
+    {
+        OnRep_OrbViewType();
+    }
+}
+
+void AHealingOrbActor::OnRep_OrbViewType()
+{
     UpdateVisibilitySettings();
 }
 
@@ -110,30 +120,80 @@ void AHealingOrbActor::UpdateVisibilitySettings()
     if (!OwnerPawn)
         return;
     
+    // 로컬 플레이어 컨트롤러 가져오기
+    APlayerController* LocalPC = GEngine ? GEngine->GetFirstLocalPlayerController(GetWorld()) : nullptr;
+    bool bIsLocalOwner = LocalPC && LocalPC->GetPawn() == OwnerPawn;
+    
     if (OrbViewType == EOrbViewType::FirstPerson)
     {
         // 1인칭 오브 - 오직 오너만 볼 수 있음
-        OrbMesh->SetOnlyOwnerSee(true);
-        OrbEffect->SetOnlyOwnerSee(true);
-        HighlightEffect->SetOnlyOwnerSee(true);
-        OrbLight->SetVisibility(true);
-        
-        // 복제 비활성화
-        SetReplicates(false);
+        if (bIsLocalOwner)
+        {
+            // 로컬 오너인 경우 - 보이게 설정
+            OrbMesh->SetVisibility(true, true);
+            OrbEffect->SetVisibility(true, true);
+            HighlightEffect->SetVisibility(true, true);
+            OrbLight->SetVisibility(true);
+            
+            // Owner만 보기 설정
+            OrbMesh->SetOnlyOwnerSee(true);
+            OrbEffect->SetOnlyOwnerSee(true);
+            HighlightEffect->SetOnlyOwnerSee(true);
+        }
+        else
+        {
+            // 로컬 오너가 아닌 경우 - 숨김
+            OrbMesh->SetVisibility(false, true);
+            OrbEffect->SetVisibility(false, true);
+            HighlightEffect->SetVisibility(false, true);
+            OrbLight->SetVisibility(false);
+        }
     }
     else  // ThirdPerson
     {
         // 3인칭 오브 - 오너는 볼 수 없음
-        OrbMesh->SetOwnerNoSee(true);
-        OrbEffect->SetOwnerNoSee(true);
-        HighlightEffect->SetOwnerNoSee(true);
+        if (bIsLocalOwner)
+        {
+            // 로컬 오너인 경우 - 숨김
+            OrbMesh->SetVisibility(false, true);
+            OrbEffect->SetVisibility(false, true);
+            HighlightEffect->SetVisibility(false, true);
+            OrbLight->SetVisibility(false);
+        }
+        else
+        {
+            // 로컬 오너가 아닌 경우 - 보이게 설정
+            OrbMesh->SetVisibility(true, true);
+            OrbEffect->SetVisibility(true, true);
+            HighlightEffect->SetVisibility(true, true);
+            OrbLight->SetVisibility(true);
+            
+            // Owner는 못보게 설정
+            OrbMesh->SetOwnerNoSee(true);
+            OrbEffect->SetOwnerNoSee(true);
+            HighlightEffect->SetOwnerNoSee(true);
+        }
+    }
+    
+    // 사운드 처리 (처음 한 번만)
+    if (!bVisibilityInitialized && OrbIdleSound)
+    {
+        bool bShouldPlaySound = (OrbViewType == EOrbViewType::FirstPerson && bIsLocalOwner) ||
+                               (OrbViewType == EOrbViewType::ThirdPerson && !bIsLocalOwner);
         
-        // 라이트는 로컬 플레이어가 오너가 아닐 때만 표시
-        bool bIsLocalOwner = OwnerPawn->IsLocallyControlled();
-        OrbLight->SetVisibility(!bIsLocalOwner);
+        if (bShouldPlaySound)
+        {
+            IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
+                OrbIdleSound, 
+                OrbMesh, 
+                NAME_None, 
+                FVector::ZeroVector, 
+                EAttachLocation::KeepRelativeOffset, 
+                true
+            );
+        }
         
-        // 복제 활성화
-        SetReplicates(true);
+        bVisibilityInitialized = true;
     }
 }
 
@@ -141,44 +201,55 @@ void AHealingOrbActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    // 오브 회전
-    FRotator CurrentRotation = OrbMesh->GetRelativeRotation();
-    CurrentRotation.Yaw += OrbRotationSpeed * DeltaTime;
-    OrbMesh->SetRelativeRotation(CurrentRotation);
-    
-    // 오브 펄스 효과
-    CurrentPulseTime += DeltaTime * OrbPulseSpeed;
-    float PulseValue = FMath::Sin(CurrentPulseTime) * OrbPulseScale + 1.0f;
-    OrbMesh->SetRelativeScale3D(BaseScale * PulseValue);
-    
-    // 라이트 강도 펄스 (가시성 체크)
-    if (OrbLight && OrbLight->IsVisible())
+    // 가시성이 설정되지 않았으면 재시도
+    if (!bVisibilityInitialized && GetOwner())
     {
-        float LightIntensity = bIsHighlighted ? 1000.0f : 500.0f;
-        LightIntensity *= PulseValue;
-        OrbLight->SetIntensity(LightIntensity);
+        UpdateVisibilitySettings();
+    }
+    
+    // 오브가 보이는 경우에만 애니메이션 적용
+    if (OrbMesh && OrbMesh->IsVisible())
+    {
+        // 오브 회전
+        FRotator CurrentRotation = OrbMesh->GetRelativeRotation();
+        CurrentRotation.Yaw += OrbRotationSpeed * DeltaTime;
+        OrbMesh->SetRelativeRotation(CurrentRotation);
+        
+        // 오브 펄스 효과
+        CurrentPulseTime += DeltaTime * OrbPulseSpeed;
+        float PulseValue = FMath::Sin(CurrentPulseTime) * OrbPulseScale + 1.0f;
+        OrbMesh->SetRelativeScale3D(BaseScale * PulseValue);
+        
+        // 라이트 강도 펄스
+        if (OrbLight && OrbLight->IsVisible())
+        {
+            float LightIntensity = bIsHighlighted ? 1000.0f : 500.0f;
+            LightIntensity *= PulseValue;
+            OrbLight->SetIntensity(LightIntensity);
+        }
     }
 }
 
 void AHealingOrbActor::SetTargetHighlight(bool bHighlight)
 {
-    if (bIsHighlighted == bHighlight)
-        return;
-    
-    bIsHighlighted = bHighlight;
-    
-    // 로컬에서 즉시 업데이트
-    UpdateHighlightVisuals();
+    if (HasAuthority())
+    {
+        bIsHighlighted = bHighlight;
+        OnRep_IsHighlighted();
+    }
 }
 
 void AHealingOrbActor::OnRep_IsHighlighted()
 {
-    // 복제된 값이 변경되었을 때 비주얼 업데이트
     UpdateHighlightVisuals();
 }
 
 void AHealingOrbActor::UpdateHighlightVisuals()
 {
+    // 보이는 경우에만 하이라이트 업데이트
+    if (!OrbMesh || !OrbMesh->IsVisible())
+        return;
+    
     // 하이라이트 이펙트 활성화/비활성화
     if (HighlightEffect)
     {
@@ -195,7 +266,7 @@ void AHealingOrbActor::UpdateHighlightVisuals()
     // 색상 변경
     FLinearColor TargetColor = bIsHighlighted ? HighlightColor : NormalColor;
     
-    // 라이트 색상 변경 (가시성 체크)
+    // 라이트 색상 변경
     if (OrbLight && OrbLight->IsVisible())
     {
         OrbLight->SetLightColor(TargetColor);
@@ -211,25 +282,23 @@ void AHealingOrbActor::UpdateHighlightVisuals()
         }
     }
     
-    // 하이라이트 사운드 재생 (로컬에서만, 적절한 경우에만)
+    // 하이라이트 사운드 재생
     if (bIsHighlighted && OrbHighlightSound && IsValid(this))
     {
-        // 1인칭이면 오너가 로컬일 때만, 3인칭이면 항상 재생
-        APawn* OwnerPawn = Cast<APawn>(GetOwner());
-        bool bShouldPlaySound = false;
-        
-        if (OrbViewType == EOrbViewType::FirstPerson)
+        // 로컬 플레이어에게만 재생
+        APlayerController* LocalPC = GEngine ? GEngine->GetFirstLocalPlayerController(GetWorld()) : nullptr;
+        if (LocalPC)
         {
-            bShouldPlaySound = OwnerPawn && OwnerPawn->IsLocallyControlled();
-        }
-        else
-        {
-            bShouldPlaySound = true;
-        }
-        
-        if (bShouldPlaySound)
-        {
-            UGameplayStatics::PlaySoundAtLocation(GetWorld(), OrbHighlightSound, GetActorLocation());
+            APawn* OwnerPawn = Cast<APawn>(GetOwner());
+            bool bIsLocalOwner = LocalPC->GetPawn() == OwnerPawn;
+            
+            bool bShouldPlaySound = (OrbViewType == EOrbViewType::FirstPerson && bIsLocalOwner) ||
+                                   (OrbViewType == EOrbViewType::ThirdPerson && !bIsLocalOwner);
+            
+            if (bShouldPlaySound)
+            {
+                UGameplayStatics::PlaySoundAtLocation(GetWorld(), OrbHighlightSound, GetActorLocation());
+            }
         }
     }
 }
