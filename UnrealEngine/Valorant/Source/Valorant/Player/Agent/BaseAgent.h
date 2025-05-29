@@ -217,6 +217,9 @@ public:
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
 	                          ABaseAgent* DamageInstigator = nullptr, const int WeaponID = 0, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
 
+	UFUNCTION(Server, Reliable)
+	void ServerApplyHealthGE(TSubclassOf<UGameplayEffect> geClass, float Value, ABaseAgent* DamageInstigator = nullptr);
+
 	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
 	UFUNCTION(Server, Reliable)

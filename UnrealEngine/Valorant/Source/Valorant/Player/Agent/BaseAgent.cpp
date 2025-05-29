@@ -2085,3 +2085,24 @@ void ABaseAgent::CheckMinimapVisibility(const float DeltaTime)
 	}
 }
 #pragma endregion "Minimap"
+
+void ABaseAgent::ServerApplyHealthGE_Implementation(TSubclassOf<UGameplayEffect> geClass, float Value, ABaseAgent* DamageInstigator)
+{
+    if (!geClass) return;
+
+    FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+    FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
+
+    if (DamageInstigator)
+    {
+        SetInstigator(DamageInstigator);
+        LastDamagedOrg = DamageInstigator->GetActorLocation();
+    }
+
+    if (SpecHandle.IsValid())
+    {
+        // Data.Health 태그로 고정
+        SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Health")), Value);
+        ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+    }
+}

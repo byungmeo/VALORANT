@@ -50,6 +50,13 @@ void ABarrierWallActor::SetPlacementValid(bool bValid)
     // 인터페이스 호환성을 위해 함수는 유지
 }
 
+void ABarrierWallActor::SetOnlyOwnerSee(bool bCond)
+{
+    SegmentMesh1->SetOnlyOwnerSee(true);
+    SegmentMesh2->SetOnlyOwnerSee(true);
+    SegmentMesh3->SetOnlyOwnerSee(true);
+}
+
 void ABarrierWallActor::BeginPlay()
 {
     Super::BeginPlay();
