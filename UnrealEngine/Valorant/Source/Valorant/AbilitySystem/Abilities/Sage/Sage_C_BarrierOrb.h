@@ -37,24 +37,14 @@ protected:
     float BarrierBuildTime = 2.0f;  // 장벽 건설 시간
     
     UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
-    float RotationStep = 15.f;  // 회전 각도 단위
+    float RotationStep = 30.f;  // 회전 각도 
     
     UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
     FVector BarrierSegmentSize = FVector(300.f, 30.f, 300.f);  // 세그먼트 크기
     
-    // 미리보기 머티리얼
-    UPROPERTY(EditDefaultsOnly, Category = "Preview")
-    UMaterialInterface* ValidPreviewMaterial;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Preview")
-    UMaterialInterface* InvalidPreviewMaterial;
-    
     // 이펙트
     UPROPERTY(EditDefaultsOnly, Category = "Effects")
     UNiagaraSystem* PlaceEffect;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Effects")
-    UNiagaraSystem* BuildEffect;
     
     UPROPERTY(EditDefaultsOnly, Category = "Effects")
     USoundBase* PlaceSound;
@@ -69,51 +59,32 @@ protected:
     virtual void WaitAbility() override;
     virtual bool OnLeftClickInput() override;
     virtual bool OnRightClickInput() override;
-    virtual bool OnRepeatInput() override;  // 스크롤 입력 처리
     virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
                            const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+private:
     // 장벽 관련 함수들
-    UFUNCTION()
     void SpawnBarrierOrb();
-    
-    UFUNCTION()
     void DestroyBarrierOrb();
-    
-    UFUNCTION()
     void UpdateBarrierPreview();
-    
-    UFUNCTION()
-    void RotateBarrier(bool bClockwise);
-    
-    UFUNCTION(BlueprintCallable)
-    bool IsValidPlacement(FVector Location, FRotator Rotation);
-    
-    UFUNCTION(BlueprintCallable)
+    void RotateBarrier();
     FVector GetBarrierPlaceLocation();
     void SpawnBarrierWall(FVector Location, FRotator Rotation);
+    void CreatePreviewWall();
+    void DestroyPreviewWall();
 
-    UFUNCTION()
-    void CreatePreviewActors();
-    
-    UFUNCTION()
-    void DestroyPreviewActors();
-    
-    UFUNCTION()
-    void UpdatePreviewMaterial(bool bValid);
-
-private:
+    // 멤버 변수
+    // 3인칭용 (다른 플레이어가 봄)
     UPROPERTY()
     ABarrierOrbActor* SpawnedBarrierOrb;
+    
+    // 1인칭용 (자신만 봄)
+    UPROPERTY()
+    ABarrierOrbActor* SpawnedBarrierOrb1P;
     
     UPROPERTY()
     ABarrierWallActor* PreviewBarrierWall;
     
-    UPROPERTY()
     float CurrentRotation = 0.f;
-    
-    UPROPERTY()
-    bool bIsValidPlacement = false;
-    
     FTimerHandle PreviewUpdateTimer;
 };

@@ -4,16 +4,11 @@
 #include "BarrierWallActor.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "TimerManager.h"
 #include "Player/Agent/BaseAgent.h"
 #include "NiagaraFunctionLibrary.h"
-#include "Components/StaticMeshComponent.h"
-#include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/World.h"
-#include "DrawDebugHelpers.h"
 #include "CollisionQueryParams.h"
 
 USage_C_BarrierOrb::USage_C_BarrierOrb()
@@ -24,8 +19,8 @@ USage_C_BarrierOrb::USage_C_BarrierOrb()
 	
 	m_AbilityID = 1001;
 	ActivationType = EAbilityActivationType::WithPrepare;
-	FollowUpInputType = EFollowUpInputType::Any;  // 좌클릭, 우클릭, 스크롤 모두 사용
-	FollowUpTime = 30.0f;  // 30초 동안 대기
+	FollowUpInputType = EFollowUpInputType::LeftOrRight;
+	FollowUpTime = 30.0f;
 }
 
 void USage_C_BarrierOrb::WaitAbility()
@@ -33,8 +28,8 @@ void USage_C_BarrierOrb::WaitAbility()
 	// 장벽 오브 생성
 	SpawnBarrierOrb();
 	
-	// 미리보기 액터 생성
-	CreatePreviewActors();
+	// 미리보기 장벽 생성
+	CreatePreviewWall();
 	
 	// 미리보기 업데이트 타이머 시작
 	if (GetWorld())
@@ -46,10 +41,6 @@ void USage_C_BarrierOrb::WaitAbility()
 
 bool USage_C_BarrierOrb::OnLeftClickInput()
 {
-	// 현재 위치가 유효한지 확인
-	if (!bIsValidPlacement)
-		return false;
-	
 	// 장벽 설치
 	FVector PlaceLocation = GetBarrierPlaceLocation();
 	FRotator PlaceRotation = FRotator(0.f, CurrentRotation, 0.f);
@@ -73,53 +64,94 @@ bool USage_C_BarrierOrb::OnLeftClickInput()
 
 bool USage_C_BarrierOrb::OnRightClickInput()
 {
-	// 시계 방향으로 회전
-	RotateBarrier(true);
-	return false;  // 어빌리티를 종료하지 않음
-}
-
-bool USage_C_BarrierOrb::OnRepeatInput()
-{
-	// 반시계 방향으로 회전 (스크롤 입력)
-	RotateBarrier(false);
+	// 90도 회전
+	RotateBarrier();
 	return false;  // 어빌리티를 종료하지 않음
 }
 
 void USage_C_BarrierOrb::SpawnBarrierOrb()
 {
-	if (!HasAuthority(&CurrentActivationInfo) || !BarrierOrbClass)
+	if (!BarrierOrbClass)
 		return;
 	
 	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
 	if (!OwnerAgent)
 		return;
 	
-	// 오브 스폰 위치 계산 (손 위치)
-	FVector HandLocation = OwnerAgent->GetMesh()->GetSocketLocation(FName("hand_r"));
-	FRotator HandRotation = OwnerAgent->GetControlRotation();
-	
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = OwnerAgent;
-	SpawnParams.Instigator = OwnerAgent;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	
-	SpawnedBarrierOrb = GetWorld()->SpawnActor<ABarrierOrbActor>(
-		BarrierOrbClass, HandLocation, HandRotation, SpawnParams);
-	
-	if (SpawnedBarrierOrb)
+	// 서버에서 3인칭 오브 생성 (모든 클라이언트에 자동 복제)
+	if (HasAuthority(&CurrentActivationInfo))
 	{
-		// 오브를 손에 부착
-		SpawnedBarrierOrb->AttachToComponent(OwnerAgent->GetMesh(), 
-			FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("hand_r"));
+		FVector HandLocation3P = OwnerAgent->GetMesh()->GetSocketLocation(FName("R_Hand"));
+		FRotator HandRotation = OwnerAgent->GetControlRotation();
+		
+		FActorSpawnParameters SpawnParams3P;
+		SpawnParams3P.Owner = OwnerAgent;
+		SpawnParams3P.Instigator = OwnerAgent;
+		SpawnParams3P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
+		SpawnedBarrierOrb = GetWorld()->SpawnActor<ABarrierOrbActor>(
+			BarrierOrbClass, HandLocation3P, HandRotation, SpawnParams3P);
+		
+		if (SpawnedBarrierOrb)
+		{
+			// 3인칭 오브로 설정 (복제되도록)
+			SpawnedBarrierOrb->SetOrbViewType(EBarrierOrbViewType::ThirdPerson);
+			
+			// 3인칭 메쉬에 부착
+			SpawnedBarrierOrb->AttachToComponent(OwnerAgent->GetMesh(), 
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
+			
+			// 항상 설치 가능 상태로 설정
+			SpawnedBarrierOrb->SetPlacementValid(true);
+		}
+	}
+	
+	// 로컬 플레이어인 경우에만 1인칭 오브 생성
+	if (OwnerAgent->IsLocallyControlled())
+	{
+		FVector HandLocation1P = OwnerAgent->GetMesh1P()->GetSocketLocation(FName("R_Hand"));
+		FRotator HandRotation = OwnerAgent->GetControlRotation();
+		
+		FActorSpawnParameters SpawnParams1P;
+		SpawnParams1P.Owner = OwnerAgent;
+		SpawnParams1P.Instigator = OwnerAgent;
+		SpawnParams1P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
+		SpawnedBarrierOrb1P = GetWorld()->SpawnActor<ABarrierOrbActor>(
+			BarrierOrbClass, HandLocation1P, HandRotation, SpawnParams1P);
+		
+		if (SpawnedBarrierOrb1P)
+		{
+			// 1인칭 오브로 설정 (복제 안 됨)
+			SpawnedBarrierOrb1P->SetOrbViewType(EBarrierOrbViewType::FirstPerson);
+			
+			// 복제 비활성화
+			SpawnedBarrierOrb1P->SetReplicates(false);
+			
+			// 1인칭 메쉬에 부착
+			SpawnedBarrierOrb1P->AttachToComponent(OwnerAgent->GetMesh1P(), 
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
+			
+			// 항상 설치 가능 상태로 설정
+			SpawnedBarrierOrb1P->SetPlacementValid(true);
+		}
 	}
 }
 
 void USage_C_BarrierOrb::DestroyBarrierOrb()
 {
-	if (SpawnedBarrierOrb)
+	// 3인칭 오브 제거 (서버에서만)
+	if (HasAuthority(&CurrentActivationInfo) && SpawnedBarrierOrb)
 	{
 		SpawnedBarrierOrb->Destroy();
 		SpawnedBarrierOrb = nullptr;
+	}
+	
+	// 1인칭 오브 제거 (로컬에서만)
+	if (SpawnedBarrierOrb1P)
+	{
+		SpawnedBarrierOrb1P->Destroy();
+		SpawnedBarrierOrb1P = nullptr;
 	}
 }
 
@@ -128,20 +160,6 @@ void USage_C_BarrierOrb::UpdateBarrierPreview()
 	FVector PlaceLocation = GetBarrierPlaceLocation();
 	FRotator PlaceRotation = FRotator(0.f, CurrentRotation, 0.f);
 	
-	// 설치 가능 여부 확인
-	bool bValid = IsValidPlacement(PlaceLocation, PlaceRotation);
-	if (bValid != bIsValidPlacement)
-	{
-		bIsValidPlacement = bValid;
-		UpdatePreviewMaterial(bValid);
-		
-		// 오브 상태 업데이트
-		if (SpawnedBarrierOrb)
-		{
-			SpawnedBarrierOrb->SetPlacementValid(bValid);
-		}
-	}
-	
 	// 미리보기 장벽 위치 업데이트
 	if (PreviewBarrierWall)
 	{
@@ -149,13 +167,13 @@ void USage_C_BarrierOrb::UpdateBarrierPreview()
 	}
 }
 
-void USage_C_BarrierOrb::RotateBarrier(bool bClockwise)
+void USage_C_BarrierOrb::RotateBarrier()
 {
-	float RotationDelta = bClockwise ? RotationStep : -RotationStep;
-	CurrentRotation += RotationDelta;
+	// 30도씩 회전
+	CurrentRotation += RotationStep;
 	
 	// 0-360도 범위로 정규화
-	CurrentRotation = FMath::Fmod(CurrentRotation + 360.f, 360.f);
+	CurrentRotation = FMath::Fmod(CurrentRotation, 360.f);
 	
 	// 회전 사운드 재생
 	if (RotateSound)
@@ -165,70 +183,6 @@ void USage_C_BarrierOrb::RotateBarrier(bool bClockwise)
 	
 	// 즉시 미리보기 업데이트
 	UpdateBarrierPreview();
-}
-
-bool USage_C_BarrierOrb::IsValidPlacement(FVector Location, FRotator Rotation)
-{
-	if (!GetWorld())
-		return false;
-	
-	// 3개의 세그먼트 모두 확인
-	TArray<FVector> SegmentLocations;
-	SegmentLocations.Add(Location);  // 중앙
-	
-	FVector RightOffset = Rotation.RotateVector(FVector(0, BarrierSegmentSize.Y + 10.f, 0));
-	FVector LeftOffset = Rotation.RotateVector(FVector(0, -(BarrierSegmentSize.Y + 10.f), 0));
-	
-	SegmentLocations.Add(Location + RightOffset);  // 오른쪽
-	SegmentLocations.Add(Location + LeftOffset);   // 왼쪽
-	
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(CachedActorInfo.AvatarActor.Get());
-	if (PreviewBarrierWall)
-	{
-		QueryParams.AddIgnoredActor(PreviewBarrierWall);
-	}
-	
-	for (const FVector& SegLoc : SegmentLocations)
-	{
-		// 지면 확인
-		FHitResult GroundHit;
-		FVector TraceStart = SegLoc + FVector(0, 0, 50.f);
-		FVector TraceEnd = SegLoc - FVector(0, 0, 200.f);
-		
-		bool bHitGround = GetWorld()->LineTraceSingleByChannel(
-			GroundHit,
-			TraceStart,
-			TraceEnd,
-			ECC_WorldStatic,
-			QueryParams
-		);
-		
-		if (!bHitGround)
-			return false;
-		
-		// 경사도 확인 (너무 가파른 경사면 불가)
-		float SlopeDot = FVector::DotProduct(GroundHit.Normal, FVector::UpVector);
-		if (SlopeDot < 0.7f)  // ~45도 이상 경사
-			return false;
-		
-		// 장애물 확인
-		FVector BoxExtent = BarrierSegmentSize * 0.5f;
-		FVector BoxLocation = SegLoc + FVector(0, 0, BoxExtent.Z);
-		
-		bool bBlocked = GetWorld()->OverlapAnyTestByChannel(
-			BoxLocation,
-			Rotation.Quaternion(),
-			ECC_WorldStatic,
-			FCollisionShape::MakeBox(BoxExtent),
-			QueryParams
-		);
-		
-		if (bBlocked)
-			return false;
-	}
-	
-	return true;
 }
 
 FVector USage_C_BarrierOrb::GetBarrierPlaceLocation()
@@ -281,7 +235,8 @@ FVector USage_C_BarrierOrb::GetBarrierPlaceLocation()
 		ECC_WorldStatic,
 		QueryParams))
 	{
-		PlaceLocation = GroundHit.Location;
+		// 지면 위에 살짝 띄워서 배치
+		PlaceLocation = GroundHit.Location + FVector(0, 0, 5.f);
 	}
 	
 	return PlaceLocation;
@@ -313,7 +268,7 @@ void USage_C_BarrierOrb::SpawnBarrierWall(FVector Location, FRotator Rotation)
 	}
 }
 
-void USage_C_BarrierOrb::CreatePreviewActors()
+void USage_C_BarrierOrb::CreatePreviewWall()
 {
 	if (!GetWorld() || !BarrierWallClass)
 		return;
@@ -323,33 +278,29 @@ void USage_C_BarrierOrb::CreatePreviewActors()
 	SpawnParams.Owner = CachedActorInfo.AvatarActor.Get();
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
-	PreviewBarrierWall = GetWorld()->SpawnActor<ABarrierWallActor>(BarrierWallClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+	PreviewBarrierWall = GetWorld()->SpawnActor<ABarrierWallActor>(
+		BarrierWallClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 	
 	if (PreviewBarrierWall)
 	{
 		// 미리보기 모드 설정
 		PreviewBarrierWall->SetPreviewMode(true);
 		
+		// 항상 유효한 상태로 표시
+		PreviewBarrierWall->SetPlacementValid(true);
+		
 		// 충돌 비활성화
 		PreviewBarrierWall->SetActorEnableCollision(false);
 	}
 }
 
-void USage_C_BarrierOrb::DestroyPreviewActors()
+void USage_C_BarrierOrb::DestroyPreviewWall()
 {
 	if (PreviewBarrierWall)
 	{
 		PreviewBarrierWall->Destroy();
 		PreviewBarrierWall = nullptr;
 	}
-}
-
-void USage_C_BarrierOrb::UpdatePreviewMaterial(bool bValid)
-{
-	if (!PreviewBarrierWall)
-		return;
-	
-	PreviewBarrierWall->SetPlacementValid(bValid);
 }
 
 void USage_C_BarrierOrb::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
@@ -363,11 +314,10 @@ void USage_C_BarrierOrb::EndAbility(const FGameplayAbilitySpecHandle Handle, con
 	
 	// 오브 및 미리보기 정리
 	DestroyBarrierOrb();
-	DestroyPreviewActors();
+	DestroyPreviewWall();
 	
 	// 상태 초기화
 	CurrentRotation = 0.f;
-	bIsValidPlacement = false;
 	
 	// 부모 클래스 호출
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

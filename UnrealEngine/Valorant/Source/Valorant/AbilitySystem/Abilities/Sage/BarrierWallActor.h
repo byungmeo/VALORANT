@@ -24,7 +24,7 @@ public:
     UFUNCTION(BlueprintPure, Category = "Barrier")
     bool IsPreviewMode() const { return bIsPreviewMode; }
     
-    // 설치 가능 여부 표시
+    // 설치 가능 여부 표시 (인터페이스 호환성 유지)
     UFUNCTION(BlueprintCallable, Category = "Barrier")
     void SetPlacementValid(bool bValid);
 
@@ -53,11 +53,11 @@ protected:
     UFUNCTION()
     void DestroyBarrier();
 
-    // 컴포넌트들 - 블루프린트에서 설정
+    // 컴포넌트들
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     class USceneComponent* RootSceneComponent;
     
-    // 3개의 세그먼트 - 블루프린트에서 메시 설정
+    // 3개의 세그먼트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
     class UStaticMeshComponent* SegmentMesh1;
     
@@ -105,10 +105,7 @@ protected:
     UMaterialInterface* BarrierDamagedMaterial;
     
     UPROPERTY(EditDefaultsOnly, Category = "Materials")
-    UMaterialInterface* ValidPreviewMaterial;
-    
-    UPROPERTY(EditDefaultsOnly, Category = "Materials")
-    UMaterialInterface* InvalidPreviewMaterial;
+    UMaterialInterface* PreviewMaterial;  // 미리보기용 반투명 머티리얼
 
     // 이펙트
     UPROPERTY(EditDefaultsOnly, Category = "Effects")
