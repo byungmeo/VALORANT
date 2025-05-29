@@ -8,6 +8,7 @@
 #include "Component/ShopComponent.h"
 #include "AgentPlayerController.generated.h"
 
+struct FKillFeedInfo;
 class UFlashWidget;
 class UBaseAttributeSet;
 class UAgentAbilitySystemComponent;
@@ -15,6 +16,7 @@ class UMatchMapHUD;
 class UMiniMapWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnDamaged_PC, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnKillEvent_PC, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged_PC, float, newHealth, bool, bIsDamage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor);
@@ -35,6 +37,8 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnDamaged_PC OnDamaged_PC;
+	UPROPERTY(BlueprintAssignable)
+	FOnKillEvent_PC OnKillEvent_PC;
 	UPROPERTY(BlueprintAssignable)
 	FOnHealthChanged_PC OnHealthChanged_PC;
 	UPROPERTY(BlueprintAssignable)
@@ -117,6 +121,15 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_ReceivePurchaseResult(bool bSuccess, int32 ItemID, EShopItemType ItemType, const FString& FailureReason);
+	
+	UFUNCTION()
+	void OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& Info);
+	
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	void DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType);
+	
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	void HideFollowUpInputUI();
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

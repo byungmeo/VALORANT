@@ -19,18 +19,9 @@ AMatchPlayerController::AMatchPlayerController()
 void AMatchPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	if (IsLocalPlayerController())
-	{
-		const FString& DisplayName = USubsystemSteamManager::GetDisplayName(GetWorld());
-		ServerRPC_NotifyBeginPlay(DisplayName);
 
-		const TSubclassOf<AActor> ActorClass = ACharSelectCamera::StaticClass();
-		if (auto* CharSelectCamera = Cast<ACharSelectCamera>(UGameplayStatics::GetActorOfClass(GetWorld(), ActorClass)))
-		{
-			const FViewTargetTransitionParams Params;
-			ClientSetViewTarget(CharSelectCamera, Params);
-		}
-	}
+	const FString& DisplayName = USubsystemSteamManager::GetDisplayName(GetWorld());
+	ServerRPC_NotifyBeginPlay(DisplayName);
 }
 
 void AMatchPlayerController::OnPossess(APawn* InPawn)
@@ -88,7 +79,7 @@ void AMatchPlayerController::ClientRPC_OnAgentSelected_Implementation(const FStr
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, SelectUIWidget is nullptr"), __FUNCTION__);
 		return;
 	}
-
+	
 	if (const auto* PS = GetPlayerState<AMatchPlayerState>())
 	{
 		if (PS->DisplayName == DisplayName)
@@ -96,8 +87,6 @@ void AMatchPlayerController::ClientRPC_OnAgentSelected_Implementation(const FStr
 			const TSubclassOf<AActor> ActorClass = ACharSelectCamera::StaticClass();
 			if (auto* CharSelectCamera = Cast<ACharSelectCamera>(UGameplayStatics::GetActorOfClass(GetWorld(), ActorClass)))
 			{
-				const FViewTargetTransitionParams Params;
-				ClientSetViewTarget(CharSelectCamera, Params);
 				CharSelectCamera->OnSelectedAgent(SelectedAgentID);
 			}
 		}
@@ -178,4 +167,14 @@ void AMatchPlayerController::ServerRPC_LockIn_Implementation(int SelectedAgentID
 void AMatchPlayerController::ServerRPC_OnAgentSelectButtonClicked_Implementation(int SelectedAgentID)
 {
 	GameMode->OnAgentSelected(this, SelectedAgentID);
+}
+
+void AMatchPlayerController::ClientRPC_SetViewTargetOnAgentSelectCamera_Implementation()
+{
+	const TSubclassOf<AActor> ActorClass = ACharSelectCamera::StaticClass();
+	if (auto* CharSelectCamera = Cast<ACharSelectCamera>(UGameplayStatics::GetActorOfClass(GetWorld(), ActorClass)))
+	{
+		NET_LOG(LogTemp, Warning, TEXT("CharSelectCamera Location: %s"), *CharSelectCamera->GetActorLocation().ToString());
+		SetViewTarget(CharSelectCamera);
+	}
 }

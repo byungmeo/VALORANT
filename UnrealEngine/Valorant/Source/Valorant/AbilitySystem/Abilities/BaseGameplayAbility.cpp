@@ -10,6 +10,7 @@
 #include "Player/AgentPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
+#include "GameplayTagAssetInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "ValorantObject/BaseInteractor.h"
 
@@ -20,6 +21,17 @@ UBaseGameplayAbility::UBaseGameplayAbility()
 
 	// 기본 태그 설정
 	ActivationBlockedTags.AddTag(FValorantGameplayTags::Get().Block_Ability_Activation);
+}
+
+void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnAvatarSet(ActorInfo, Spec);
+	ABaseAgent* Agent = Cast<ABaseAgent>(ActorInfo->AvatarActor.Get());
+	if (Agent)
+	{
+		OnPrepareAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityPrepare);
+		OnEndAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityEnd);
+	}
 }
 
 bool UBaseGameplayAbility::CanBeCanceled() const
@@ -230,6 +242,21 @@ void UBaseGameplayAbility::HandleExecutePhase()
 
 void UBaseGameplayAbility::PrepareAbility()
 {
+	FGameplayTagContainer OwnedTags = AbilityTags;
+	
+	const FGameplayTag skillTaglRoot = FGameplayTag::RequestGameplayTag(TEXT("Input.Skill"));
+
+	FGameplayTag inputTag;
+	for (const FGameplayTag& Tag : OwnedTags)
+	{
+		if (Tag.MatchesTag(skillTaglRoot))
+		{
+			inputTag = Tag;
+			break;
+		}
+	}
+	
+	OnPrepareAbility.Broadcast(inputTag, FollowUpInputType);
 }
 
 void UBaseGameplayAbility::WaitAbility()
@@ -553,6 +580,9 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 			PreviousEquipmentState = EInteractorType::None;
 		}
 	}
+
+	NET_LOG(LogTemp,Warning,TEXT("어빌리티 종료 브로드캐스트"));
+	OnEndAbility.Broadcast();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

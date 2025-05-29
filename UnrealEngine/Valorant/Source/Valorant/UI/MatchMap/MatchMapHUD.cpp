@@ -3,19 +3,19 @@
 
 #include "MatchMapHUD.h"
 
-#include "OnlineSubsystemUtils.h"
 #include "Valorant.h"
+#include "AbilitySystem/Abilities/BaseGameplayAbility.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
 #include "Components/Image.h"
 #include "Components/Overlay.h"
-#include "Components/OverlaySlot.h"
 #include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
 #include "GameManager/ValorantGameInstance.h"
+#include "Player/Agent/BaseAgent.h"
 
 void UMatchMapHUD::SetTrueVo()
 {
@@ -246,6 +246,7 @@ void UMatchMapHUD::OnDamaged(const FVector& HitOrg, const EAgentDamagedPart Dama
 void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPlayerController* pc)
 {
 	pc->OnDamaged_PC.AddDynamic(this, &UMatchMapHUD::OnDamaged);
+	pc->OnKillEvent_PC.AddDynamic(this, &UMatchMapHUD::OnKillEvent);
 	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
 	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);
@@ -690,6 +691,133 @@ FHUDAbilityInfo UMatchMapHUD::GetAbilityInfoBySlot(EAbilitySlotType SlotType) co
 	
 	// 기본 빈 정보 반환
 	return FHUDAbilityInfo();
+}
+
+void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& KillFeedInfo)
+{
+	auto* GI = GetWorld()->GetGameInstance<UValorantGameInstance>();
+	if (nullptr == GI)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, GameInstance is nullptr"), __FUNCTION__);
+		return;
+	}
+	
+	const auto* MyController = GetWorld()->GetFirstPlayerController<AAgentPlayerController>();
+	if (nullptr == MyController)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyController is nullptr"), __FUNCTION__);
+		return;
+	}
+
+	const auto* MyPS = MyController->GetPlayerState<AAgentPlayerState>();
+	if (nullptr == MyPS)
+	{
+		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyPS is nullptr"), __FUNCTION__);
+		return;
+	}
+
+	FString InstigatorName = "";
+	bool bInstigatorIsMyTeam = false;
+	const UTexture2D* InstigatorIcon = nullptr;
+	if (InstigatorAgent)
+	{
+		InstigatorName = InstigatorAgent->GetPlayerNickname();
+		bInstigatorIsMyTeam = InstigatorAgent->IsBlueTeam() == MyPS->bIsBlueTeam;
+		if (const FAgentData* InstigatorData = GI->GetAgentData(InstigatorAgent->GetAgentID()))
+		{
+			InstigatorIcon = InstigatorData->KillFeedIcon;
+		}
+	}
+
+	FString VictimName = "";
+	bool bVictimIsMyTeam = false;
+	const UTexture2D* VictimIcon = nullptr;
+	if (VictimAgent)
+	{
+		VictimName = VictimAgent->GetPlayerNickname();
+		bVictimIsMyTeam = VictimAgent->IsBlueTeam() == MyPS->bIsBlueTeam;
+		if (const FAgentData* VictimData = GI->GetAgentData(VictimAgent->GetAgentID()))
+		{
+			VictimIcon = VictimData->KillFeedIcon;
+		}
+	}
+	
+	const UTexture2D* ReasonIcon = nullptr;
+	const int WeaponID = KillFeedInfo.WeaponID;
+	if (const auto* Data = GI->GetWeaponData(WeaponID))
+	{
+		ReasonIcon = Data->WeaponIcon;
+	}
+	
+	DisplayKillFeed(InstigatorIcon, InstigatorName, bInstigatorIsMyTeam, VictimIcon, VictimName, bVictimIsMyTeam, KillFeedInfo, ReasonIcon);
+}
+
+void UMatchMapHUD::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType)
+{
+	if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")))
+	{
+		if (inputType == EFollowUpInputType::LeftClick)
+		{
+			DisplayedFollowUpInputUI_Overlay = Left_E;
+			Left_E->SetVisibility(ESlateVisibility::Visible);
+		}
+		else if (inputType == EFollowUpInputType::LeftOrRight)
+		{
+			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_E;
+			LeftOrRight_E->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+	else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.Q")))
+	{
+		if (inputType == EFollowUpInputType::LeftClick)
+		{
+			DisplayedFollowUpInputUI_Overlay = Left_Q;
+			Left_Q->SetVisibility(ESlateVisibility::Visible);
+		}
+		else if (inputType == EFollowUpInputType::LeftOrRight)
+		{
+			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_Q;
+			LeftOrRight_Q->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+	else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.C")))
+	{
+		if (inputType == EFollowUpInputType::LeftClick)
+		{
+			DisplayedFollowUpInputUI_Overlay = Left_C;
+			Left_C->SetVisibility(ESlateVisibility::Visible);
+		}
+		else if (inputType == EFollowUpInputType::LeftOrRight)
+		{
+			DisplayedFollowUpInputUI_Horizontal = LeftOrRight_C;
+			LeftOrRight_C->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+	// else if (slotTag == FGameplayTag::RequestGameplayTag(FName("Input.Skill.X")))
+	// {
+	// 	if (inputType == EFollowUpInputType::LeftClick)
+	// 	{
+	// 		Left_X->SetVisibility(ESlateVisibility::Visible);
+	// 	}
+	// 	else if (inputType == EFollowUpInputType::LeftOrRight)
+	// 	{
+	// 		LeftOrRight_X->SetVisibility(ESlateVisibility::Visible);
+	// 	}
+	// }
+}
+
+void UMatchMapHUD::HideFollowUpInputUI()
+{
+	if (DisplayedFollowUpInputUI_Overlay)
+	{
+		DisplayedFollowUpInputUI_Overlay->SetVisibility(ESlateVisibility::Hidden);
+		DisplayedFollowUpInputUI_Overlay = nullptr;
+	}
+	if (DisplayedFollowUpInputUI_Horizontal)
+	{
+		DisplayedFollowUpInputUI_Horizontal->SetVisibility(ESlateVisibility::Hidden);
+		DisplayedFollowUpInputUI_Horizontal = nullptr;
+	}
 }
 
 int32 UMatchMapHUD::GetAbilityStack(int32 AbilityID) const

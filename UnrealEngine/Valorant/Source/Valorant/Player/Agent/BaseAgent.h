@@ -8,6 +8,9 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "BaseAgent.generated.h"
 
+struct FKillFeedInfo;
+enum class EKillFeedReason : uint8;
+enum class EKillFeedSubReason : uint8;
 class UFlashWidget;
 class UAgentAnimInstance;
 class ABaseWeapon;
@@ -53,6 +56,40 @@ enum class EAgentDamagedDirection : uint8
 	Right
 };
 
+UENUM(BlueprintType)
+enum class EKillFeedReason : uint8
+{
+	EKPR_None,
+	EKPR_Weapon,
+	EKPR_Ability,
+	EKPR_Spike,
+	EKPR_Fall
+};
+
+UENUM(BlueprintType)
+enum class EKillFeedSubReason : uint8
+{
+	EKPSR_None,
+	EKPSR_Headshot,
+	EKPSR_ThroughWalls,
+	EKPSR_Spike
+};
+
+USTRUCT(BlueprintType)
+struct FKillFeedInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	EKillFeedReason Reason = EKillFeedReason::EKPR_None;
+	UPROPERTY(BlueprintReadOnly)
+	EKillFeedSubReason SubReason = EKillFeedSubReason::EKPSR_None;
+	UPROPERTY(BlueprintReadOnly)
+	int WeaponID = 0;
+	UPROPERTY(BlueprintReadOnly)
+	int AbilityID = 0;
+};
+
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 //             CYT             ♣
 //ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -74,6 +111,7 @@ struct FAgentVisibilityInfo
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnAgentDamaged, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAgentDie, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
@@ -139,7 +177,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UCurveVector* DieCameraCurve;
-	
+
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -158,6 +196,8 @@ public:
 	UAgentAnimInstance* GetABP_1P() const { return ABP_1P; }
 	UAgentAnimInstance* GetABP_3P() const { return ABP_3P; }
 	USkeletalMeshComponent* GetMesh1P() const { return FirstPersonMesh; }
+	FAgentData* GetAgentData() const { return m_AgentData; }
+	FString GetPlayerNickname() const;
 	
 	bool IsDead() const { return bIsDead; }
 	bool CanMove() const { return bCanMove; }
@@ -175,7 +215,7 @@ public:
 	void ServerApplyGE(TSubclassOf<UGameplayEffect> geClass, ABaseAgent* DamageInstigator);
 	UFUNCTION(Server, Reliable)
 	void ServerApplyHitScanGE(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
-	                          ABaseAgent* DamageInstigator = nullptr, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
+	                          ABaseAgent* DamageInstigator = nullptr, const int WeaponID = 0, const EAgentDamagedPart DamagedPart = EAgentDamagedPart::Body, const EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front);
 
 	UFUNCTION(BlueprintCallable)
 	void SetIsRun(const bool _bIsRun);
@@ -344,6 +384,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	bool IsSuppressed() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Debuff_Suppressed); }
 
+	// 어빌리티 관련 함수
+	UFUNCTION()
+	void OnAbilityPrepare(FGameplayTag slotTag, EFollowUpInputType inputType);
+	UFUNCTION()
+	void OnAbilityEnd();
+
 	// 섬광 관련 함수들
 	UFUNCTION(BlueprintCallable, Category = "Flash")
 	void OnFlashIntensityChanged(float NewIntensity);
@@ -363,7 +409,7 @@ protected:
 
 	TWeakObjectPtr<UAgentAbilitySystemComponent> ASC;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
 	int32 m_AgentID = 0;
 
 	FAgentData* m_AgentData = nullptr;
@@ -429,9 +475,11 @@ protected:
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
 
+public:
+	FKillFeedInfo LastKillFeedInfo;
 	FVector LastDamagedOrg = FVector::ZeroVector;
 	EAgentDamagedPart LastDamagedPart;
-	EAgentDamagedDirection LastDamagedDirection;;
+	EAgentDamagedDirection LastDamagedDirection;
 
 protected:
 	virtual void PossessedBy(AController* NewController) override;
@@ -472,7 +520,7 @@ protected:
 	void OnDieCameraFinished();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void Net_Die();
+	void MulticastRPC_Die(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& Info);
 
 	UFUNCTION()
 	void UpdateHealth(float newHealth, bool bIsDamage);
@@ -496,6 +544,7 @@ private:
 
 public:
 	FOnAgentDamaged OnAgentDamaged;
+	FOnAgentDie OnAgentDie;
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;

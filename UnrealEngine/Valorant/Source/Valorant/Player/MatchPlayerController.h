@@ -59,4 +59,6 @@ public:
 	void ClientRPC_OnLockIn(const FString& DisplayName, const int AgentId);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_CleanUpSession();
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_SetViewTargetOnAgentSelectCamera();
 };

@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
 #include "Valorant.h"
+#include "AbilitySystem/Abilities/BaseGameplayAbility.h"
 #include "AbilitySystem/Attributes/BaseAttributeSet.h"
 #include "AbilitySystem/Context/HitScanGameplayEffectContext.h"
 #include "Camera/CameraComponent.h"
@@ -30,6 +31,7 @@
 #include "Player/Component/FlashComponent.h"
 #include "Player/Component/FlashPostProcessComponent.h"
 #include "UI/FlashWidget.h"
+#include "UI/MatchMap/MatchMapHUD.h"
 #include "Weapon/BaseWeapon.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
@@ -425,6 +427,15 @@ void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	AgentInputComponent->BindInput(PlayerInputComponent);
+}
+
+FString ABaseAgent::GetPlayerNickname() const
+{
+	if (const AAgentPlayerState* PS = GetPlayerState<AAgentPlayerState>())
+	{
+		return PS->DisplayName;
+	}
+	return FString(TEXT("INVALID_NAME"));
 }
 
 void ABaseAgent::SetHighlight(bool bEnable, bool bIsEnemy)
@@ -1015,8 +1026,9 @@ void ABaseAgent::Die()
 		SubWeapon->ServerRPC_Drop();
 	}
 	if (MeleeKnife) MeleeKnife->Destroy();
-	
-	Net_Die();
+
+	ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator());
+	MulticastRPC_Die(InstigatorAgent, this, LastKillFeedInfo);
 	// 킬러 플레이어 컨트롤러 찾기
 	AMatchPlayerController* KillerPC = nullptr;
 
@@ -1083,7 +1095,7 @@ void ABaseAgent::OnDieCameraFinished()
 	}
 }
 
-void ABaseAgent::Net_Die_Implementation()
+void ABaseAgent::MulticastRPC_Die_Implementation(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& Info)
 {
 	if (IsLocallyControlled())
 	{
@@ -1096,7 +1108,13 @@ void ABaseAgent::Net_Die_Implementation()
 
 		TL_DieCamera->PlayFromStart();
 	}
-	
+
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, InstigatorAgentName: %s"), __FUNCTION__, *InstigatorAgent->GetName());
+	OnAgentDie.Broadcast(InstigatorAgent, VictimAgent, Info);
+	if (auto* LocalController = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
+	{
+		LocalController->OnKillEvent(InstigatorAgent, VictimAgent, Info);
+	}
 	bIsDead = true;
 }
 
@@ -1124,7 +1142,7 @@ void ABaseAgent::ServerApplyGE_Implementation(TSubclassOf<UGameplayEffect> geCla
 }
 
 void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect> GEClass, const int Damage,
-	ABaseAgent* DamageInstigator, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection)
+	ABaseAgent* DamageInstigator, const int WeaponID, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection)
 {
 	if (!GEClass)
 	{
@@ -1144,6 +1162,11 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 		LastDamagedOrg = DamageInstigator->GetActorLocation();
 		LastDamagedPart = DamagedPart;
 		LastDamagedDirection = DamagedDirection;
+		FKillFeedInfo KillFeedInfo;
+		KillFeedInfo.Reason = EKillFeedReason::EKPR_Weapon;
+		KillFeedInfo.SubReason = (LastDamagedPart == EAgentDamagedPart::Head) ? EKillFeedSubReason::EKPSR_Headshot : EKillFeedSubReason::EKPSR_None;
+		KillFeedInfo.WeaponID = WeaponID;
+		LastKillFeedInfo = KillFeedInfo;
 
 		// 디버깅 로그
 		NET_LOG(LogTemp, Warning, TEXT("데미지 적용: %s가 %s에게 %d 데미지를 입혔습니다."),
@@ -1268,6 +1291,7 @@ void ABaseAgent::UpdateEquipSpeedMultiplier()
 void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABaseAgent, m_AgentID);
 	DOREPLIFETIME(ABaseAgent, VisibilityStateArray);
 	DOREPLIFETIME(ABaseAgent, bIsRun);
 	DOREPLIFETIME(ABaseAgent, bIsDead);
@@ -1422,14 +1446,6 @@ void ABaseAgent::OnSpikeStartDefuse()
 	bCanMove = false;
 	OnSpikeDeactive.Broadcast();
 }
-
-// void ABaseAgent::OnSpikeCancelDefuse()
-// {
-// 	DefusalMesh->SetVisibility(false);
-// 	
-// 	bCanMove = true;
-// 	OnSpikeCancel.Broadcast();
-// }
 
 void ABaseAgent::OnSpikeFinishDefuse()
 {
@@ -1625,6 +1641,32 @@ bool ABaseAgent::HasGameplayTag(const FGameplayTag& TagToCheck) const
 		return ASC->HasMatchingGameplayTag(TagToCheck);
 	}
 	return false;
+}
+
+void ABaseAgent::OnAbilityPrepare(FGameplayTag slotTag, EFollowUpInputType inputType)
+{
+	auto* pc = Cast<AMatchPlayerController>(GetController());
+	if (pc)
+	{
+		if (auto* MatchMapHud = Cast<UMatchMapHUD>(pc->GetMatchMapHud()))
+		{
+			MatchMapHud->DisplayFollowUpInputUI(slotTag, inputType);
+		}
+	}
+	// NET_LOG(LogTemp,Display,TEXT("어빌리티 준비"));
+}
+
+void ABaseAgent::OnAbilityEnd()
+{
+	// NET_LOG(LogTemp,Display,TEXT("어빌리티 종료"));
+	auto* pc = Cast<AMatchPlayerController>(GetController());
+	if (pc)
+	{
+		if (auto* MatchMapHud = Cast<UMatchMapHUD>(pc->GetMatchMapHud()))
+		{
+			MatchMapHud->HideFollowUpInputUI();
+		}
+	}
 }
 
 void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)

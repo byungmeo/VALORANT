@@ -27,6 +27,8 @@ enum class EFollowUpInputType : uint8
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityPhaseChanged, FGameplayTag, NewPhase);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPrepareAbility, FGameplayTag, SlotTag, EFollowUpInputType, InputType);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndAbility);
 
 UCLASS()
 class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
@@ -88,8 +90,16 @@ public:
 	// === 후속 입력 처리 ===
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	void HandleFollowUpInput(FGameplayTag InputTag);
+
+	UPROPERTY()
+	FOnPrepareAbility OnPrepareAbility;
+	UPROPERTY()
+	FOnEndAbility OnEndAbility;
+	
 protected:
 	// === GameplayAbility 오버라이드 ===
+	virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+	
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	                             const FGameplayAbilityActorInfo* ActorInfo,
 	                             const FGameplayAbilityActivationInfo ActivationInfo,
