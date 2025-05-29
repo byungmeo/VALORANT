@@ -17,6 +17,7 @@ class VALORANT_API AThirdPersonInteractor : public AActor
 
 public:
 	AThirdPersonInteractor();
+	void SetXraySetting() const;
 
 public:
 	UPROPERTY()

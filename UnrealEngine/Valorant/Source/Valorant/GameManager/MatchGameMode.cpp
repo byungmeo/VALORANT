@@ -157,7 +157,8 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 		RedTeamPlayerNameArray.Add(Nickname);
 	}
 
-	if (auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>())
+	auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>();
+	if (PlayerState)
 	{
 		PlayerState->bIsBlueTeam = PlayerInfo.bIsBlueTeam;
 		PlayerState->bIsAttacker = PlayerInfo.bIsBlueTeam;
@@ -165,6 +166,8 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	}
 	MatchPlayers.Add(PlayerInfo);
 	++LoggedInPlayerNum;
+
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Nickname: %s, bIsBlueTeam: %hs"), __FUNCTION__, *Nickname, PlayerState->bIsBlueTeam?"True":"False");
 }
 
 void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)

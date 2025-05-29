@@ -11,6 +11,7 @@ class VALORANT_API UKAYO_Q_FLASHDRIVE : public UBaseGameplayAbility
 
 public:
 	UKAYO_Q_FLASHDRIVE();
+	void PrepareAbility();
 
 protected:
 	// 후속 입력 처리 (좌클릭: 직선, 우클릭: 포물선)

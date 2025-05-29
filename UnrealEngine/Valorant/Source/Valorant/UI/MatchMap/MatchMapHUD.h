@@ -146,7 +146,7 @@ protected:
 	void UpdateAmmo(bool bDisplayWidget, int MagazineAmmo, int SpareAmmo);
 
 	UFUNCTION()
-	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge);
+	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge, const bool bLowState);
 
 	// 어빌리티 스택 관련 함수들
 	UFUNCTION()
@@ -218,11 +218,17 @@ public:
 	void OnMatchEnd(bool bWin);
 
 	UFUNCTION(BlueprintImplementableEvent)
+	void SpikePlanted();
+	
+	UFUNCTION(BlueprintImplementableEvent)
 	void OnDisplayIndicator(const FVector& HitOrg);
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void SpikePlanted();
+	void OnLowState(bool bCond);
 	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSwitchWeapon(EInteractorType interactorType);
+
 	UFUNCTION()
 	void OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& KillFeedInfo);
 	UFUNCTION(BlueprintImplementableEvent)

@@ -9,6 +9,9 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "ValorantObject/Spike/Spike.h"
 #include "BaseWeapon.h"
+#include "Player/AgentPlayerController.h"
+#include "Player/AgentPlayerState.h"
+#include "Player/Agent/BaseAgent.h"
 
 AThirdPersonInteractor::AThirdPersonInteractor()
 {
@@ -23,11 +26,30 @@ AThirdPersonInteractor::AThirdPersonInteractor()
 	Mesh->SetOwnerNoSee(true);
 }
 
+void AThirdPersonInteractor::SetXraySetting() const
+{
+	if (const auto* OwnerAgent = Cast<ABaseAgent>(OwnerInteractor->GetOwnerAgent()))
+	{
+		if (const auto* MyPC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
+		{
+			if (const auto* MyPS = MyPC->GetPlayerState<AAgentPlayerState>())
+			{
+				if (const auto* OwnerPS = OwnerAgent->GetPlayerState<AAgentPlayerState>())
+				{
+					const bool bSameTeam = MyPS != OwnerPS && MyPS->bIsBlueTeam == OwnerAgent->IsBlueTeam();
+					Mesh->SetRenderCustomDepth(bSameTeam);
+				}
+			}
+		}
+	}
+}
+
 void AThirdPersonInteractor::MulticastRPC_InitSpike_Implementation(ASpike* Spike)
 {
 	OwnerInteractor = Spike;
 	Mesh->SetSkeletalMeshAsset(Spike->GetMesh()->GetSkeletalMeshAsset());
 	Mesh->SetRelativeScale3D(FVector(0.34f));
+	SetXraySetting();
 }
 
 void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(ABaseWeapon* Weapon, const int WeaponId)
@@ -66,4 +88,6 @@ void AThirdPersonInteractor::MulticastRPC_InitWeapon_Implementation(ABaseWeapon*
 	{
 		Mesh->SetAnimInstanceClass(WeaponData->GunABPClass);
 	}
+	
+	SetXraySetting();
 }

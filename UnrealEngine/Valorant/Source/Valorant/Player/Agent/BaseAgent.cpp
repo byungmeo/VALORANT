@@ -448,6 +448,7 @@ void ABaseAgent::SetHighlight(bool bEnable, bool bIsEnemy)
 		}
 		else
 		{
+			GetMesh()->SetRenderCustomDepth(true);
 			GetMesh()->SetOverlayMaterial(TeamOverlayMaterial);
 		}
 	}
@@ -1025,7 +1026,14 @@ void ABaseAgent::Die()
 	{
 		SubWeapon->ServerRPC_Drop();
 	}
-	if (MeleeKnife) MeleeKnife->Destroy();
+	if (MeleeKnife)
+	{
+		MeleeKnife->Destroy();
+	}
+	if (Spike)
+	{
+		Spike->ServerRPC_Drop();
+	}
 
 	ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator());
 	MulticastRPC_Die(InstigatorAgent, this, LastKillFeedInfo);
@@ -1200,7 +1208,14 @@ void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 	{
 		if (HasAuthority())
 		{
-			MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false);
+			if (newHealth < 34.0f)
+			{
+				MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false, true);
+			}
+			else
+			{
+				MulticastRPC_OnDamaged(LastDamagedOrg, LastDamagedPart, LastDamagedDirection, false, false);
+			}
 		}
 	}
 	
@@ -1229,11 +1244,11 @@ void ABaseAgent::UpdateEffectSpeed(float newSpeed)
 }
 
 void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const FVector& HitOrg, const EAgentDamagedPart DamagedPart,
-	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge)
+	const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge, const bool bLowState)
 {
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
 		// __FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
-	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge);
+	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge, bLowState);
 }
 
 // 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
@@ -1489,6 +1504,7 @@ bool ABaseAgent::IsBlueTeam() const
 	{
 		return PS->bIsBlueTeam;
 	}
+	NET_LOG(LogTemp, Error, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
 	return false;
 }
 
@@ -1498,6 +1514,7 @@ bool ABaseAgent::IsAttacker() const
 	{
 		return PS->bIsAttacker;
 	}
+	NET_LOG(LogTemp, Error, TEXT("%hs Called, PS is nullptr"), __FUNCTION__);
 	return false;
 }
 
@@ -2068,3 +2085,24 @@ void ABaseAgent::CheckMinimapVisibility(const float DeltaTime)
 	}
 }
 #pragma endregion "Minimap"
+
+void ABaseAgent::ServerApplyHealthGE_Implementation(TSubclassOf<UGameplayEffect> geClass, float Value, ABaseAgent* DamageInstigator)
+{
+    if (!geClass) return;
+
+    FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+    FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(geClass, 1.f, Context);
+
+    if (DamageInstigator)
+    {
+        SetInstigator(DamageInstigator);
+        LastDamagedOrg = DamageInstigator->GetActorLocation();
+    }
+
+    if (SpecHandle.IsValid())
+    {
+        // Data.Health 태그로 고정
+        SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Health")), Value);
+        ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+    }
+}
