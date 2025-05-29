@@ -29,10 +29,10 @@ void UKAYO_E_ZEROPOINT::PrepareAbility()
 		// 나이프 장착 애니메이션
 		if (SpawnedProjectile)
 		{
-			if (AKayoKnife* Knife = Cast<AKayoKnife>(SpawnedProjectile))
-			{
-				Knife->OnEquip();
-			}
+			// if (AKayoKnife* Knife = Cast<AKayoKnife>(SpawnedProjectile))
+			// {
+			// 	Knife->OnEquip();
+			// }
 		}
 	}
 	
