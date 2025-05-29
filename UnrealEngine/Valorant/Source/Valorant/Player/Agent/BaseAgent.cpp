@@ -1026,7 +1026,14 @@ void ABaseAgent::Die()
 	{
 		SubWeapon->ServerRPC_Drop();
 	}
-	if (MeleeKnife) MeleeKnife->Destroy();
+	if (MeleeKnife)
+	{
+		MeleeKnife->Destroy();
+	}
+	if (Spike)
+	{
+		Spike->ServerRPC_Drop();
+	}
 
 	ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator());
 	MulticastRPC_Die(InstigatorAgent, this, LastKillFeedInfo);
