@@ -34,7 +34,7 @@ public:
                             class AController* EventInstigator, AActor* DamageCauser) override;
 
     void StartBuild(){StartBuildAnimation();}
-    void SetOnlyOwnerSee(bool bCond);;
+    void SetOnlyOwnerSee(bool bCond);
 
 protected:
     virtual void BeginPlay() override;
@@ -58,7 +58,7 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     class USceneComponent* RootSceneComponent;
     
-    // 3개의 세그먼트
+    // 4개의 세그먼트 (왼쪽부터 오른쪽으로)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
     class UStaticMeshComponent* SegmentMesh1;
     
@@ -67,6 +67,9 @@ protected:
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
     class UStaticMeshComponent* SegmentMesh3;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UStaticMeshComponent* SegmentMesh4;
     
     // 충돌 박스들
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -77,6 +80,9 @@ protected:
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
     class UBoxComponent* SegmentCollision3;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    class UBoxComponent* SegmentCollision4;
 
     // 세그먼트 체력
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Barrier State")
@@ -96,7 +102,13 @@ protected:
     float DefaultBuildTime = 2.0f;
     
     UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
-    float SegmentSpacing = 310.f;  // 세그먼트 간격
+    float SegmentWidth = 400.f;  // 각 세그먼트 너비
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
+    float SegmentHeight = 400.f;  // 세그먼트 높이
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
+    float SegmentThickness = 30.f;  // 세그먼트 두께
 
     // 머티리얼들
     UPROPERTY(EditDefaultsOnly, Category = "Materials")
