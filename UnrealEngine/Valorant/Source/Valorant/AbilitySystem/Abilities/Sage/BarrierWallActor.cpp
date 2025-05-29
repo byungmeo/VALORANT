@@ -46,22 +46,8 @@ ABarrierWallActor::ABarrierWallActor()
 
 void ABarrierWallActor::SetPlacementValid(bool bValid)
 {
-    if (!bIsPreviewMode)
-        return;
-    
-    // 유효/무효에 따른 머티리얼 변경
-    UMaterialInterface* MaterialToUse = bValid ? ValidPreviewMaterial : InvalidPreviewMaterial;
-    
-    if (MaterialToUse)
-    {
-        for (UStaticMeshComponent* Mesh : SegmentMeshes)
-        {
-            if (Mesh)
-            {
-                Mesh->SetMaterial(0, MaterialToUse);
-            }
-        }
-    }
+    // 미리보기 모드에서는 항상 유효하게 표시
+    // 인터페이스 호환성을 위해 함수는 유지
 }
 
 void ABarrierWallActor::BeginPlay()
@@ -81,23 +67,43 @@ void ABarrierWallActor::BeginPlay()
     SegmentHealthArray.Init(DefaultSegmentHealth, 3);
     SegmentDestroyedArray.Init(false, 3);
     
-    // 충돌 설정
-    for (UBoxComponent* Collision : SegmentCollisions)
+    // 미리보기 모드가 아닐 때만 충돌 활성화 및 건설 시작
+    if (!bIsPreviewMode)
     {
-        if (Collision)
+        // 충돌 설정
+        for (UBoxComponent* Collision : SegmentCollisions)
         {
-            Collision->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-            Collision->SetCollisionResponseToAllChannels(ECR_Block);
+            if (Collision)
+            {
+                Collision->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+                Collision->SetCollisionResponseToAllChannels(ECR_Block);
+                // 발로란트처럼 플레이어는 통과 가능
+                Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+            }
+        }
+        
+        // 건설 애니메이션 시작
+        StartBuildAnimation();
+        
+        // 건설 사운드
+        if (BuildSound)
+        {
+            UGameplayStatics::PlaySoundAtLocation(GetWorld(), BuildSound, GetActorLocation());
         }
     }
-    
-    // 기본적으로 건설 애니메이션 시작
-    StartBuildAnimation();
-    
-    // 건설 사운드
-    if (BuildSound)
+    else
     {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), BuildSound, GetActorLocation());
+        // 미리보기 모드에서는 반투명 머티리얼 적용
+        if (PreviewMaterial)
+        {
+            for (UStaticMeshComponent* Mesh : SegmentMeshes)
+            {
+                if (Mesh)
+                {
+                    Mesh->SetMaterial(0, PreviewMaterial);
+                }
+            }
+        }
     }
 }
 

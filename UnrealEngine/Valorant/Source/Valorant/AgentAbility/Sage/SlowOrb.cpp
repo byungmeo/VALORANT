@@ -1,11 +1,10 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "SlowOrb.h"
+﻿#include "SlowOrb.h"
 
 #include "AgentAbility/BaseGround.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
@@ -25,35 +24,76 @@ ASlowOrb::ASlowOrb()
 		Mesh->SetMaterial(0, FireballMaterial.Object);
 	}
 	
+	// Update projectile properties to match Valorant Sage Q
 	ProjectileMovement->InitialSpeed = Speed;
 	ProjectileMovement->MaxSpeed = Speed;
 	ProjectileMovement->ProjectileGravityScale = Gravity;
 	ProjectileMovement->bShouldBounce = bShouldBounce;
-	ProjectileMovement->Bounciness = Bounciness;
-	ProjectileMovement->Friction = Friction;
+	ProjectileMovement->Bounciness = 0.0f;
+	ProjectileMovement->Friction = 0.0f;
 }
 
 // Called when the game starts or when spawned
 void ASlowOrb::BeginPlay()
 {
 	Super::BeginPlay();
-	GetWorld()->GetTimerManager().SetTimer(AirTimeHandle, this, &ASlowOrb::OnElapsedMaxAirTime, MaximumAirTime, false);
+	
+	// Set up collision to trigger on hit
+	Sphere->OnComponentHit.AddDynamic(this, &ASlowOrb::OnHit);
 }
 
-void ASlowOrb::OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
+void ASlowOrb::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	Super::OnProjectileBounced(ImpactResult, ImpactVelocity);
-	if (ImpactResult.ImpactNormal.Z > 0.5f)
+	// Spawn slow field on any surface hit
+	SpawnSlowField(Hit);
+	
+	// Destroy the projectile
+	Destroy();
+}
+
+void ASlowOrb::SpawnSlowField(const FHitResult& ImpactResult)
+{
+	if (!BaseGroundClass)
 	{
-		FActorSpawnParameters SpawnParameters;
-		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		SpawnParameters.Instigator = this->GetInstigator();
-		GetWorld()->SpawnActor<ABaseGround>(BaseGroundClass, ImpactResult.ImpactPoint, FRotator::ZeroRotator, SpawnParameters);
-		Destroy();
+		UE_LOG(LogTemp, Warning, TEXT("BaseGroundClass is not set!"));
+		return;
 	}
-}
-
-void ASlowOrb::OnElapsedMaxAirTime()
-{
-	ProjectileMovement->Velocity = FVector(0, 0, -Speed);
+	
+	// Calculate spawn location
+	FVector SpawnLocation = ImpactResult.ImpactPoint;
+	
+	// Check if we hit a floor surface (normal pointing up)
+	if (ImpactResult.ImpactNormal.Z > 0.7f) // Floor surface
+	{
+		// Spawn directly at impact point for floor
+		SpawnLocation = ImpactResult.ImpactPoint;
+	}
+	else // Wall or ceiling surface
+	{
+		// Trace down to find floor
+		FHitResult FloorHit;
+		FVector TraceStart = ImpactResult.ImpactPoint;
+		FVector TraceEnd = TraceStart - FVector(0, 0, 10000.0f); // Trace 100m down
+		
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
+		QueryParams.AddIgnoredActor(GetInstigator());
+		
+		if (GetWorld()->LineTraceSingleByChannel(FloorHit, TraceStart, TraceEnd, ECC_WorldStatic, QueryParams))
+		{
+			SpawnLocation = FloorHit.ImpactPoint;
+		}
+		else
+		{
+			// If no floor found, spawn at a reasonable distance below
+			SpawnLocation = ImpactResult.ImpactPoint - FVector(0, 0, 300.0f);
+		}
+	}
+	
+	// Spawn the slow field
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParameters.Instigator = this->GetInstigator();
+	
+	GetWorld()->SpawnActor<ABaseGround>(BaseGroundClass, SpawnLocation, FRotator::ZeroRotator, SpawnParameters);
 }

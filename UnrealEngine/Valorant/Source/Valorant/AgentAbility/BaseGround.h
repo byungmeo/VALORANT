@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -42,8 +40,14 @@ protected:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UGameplayEffect> GameplayEffect = nullptr;
 
-private:
-	const float Radius = 450;
-	const float Duration = 4;
-	const float DamageRate = 0.0167f;
+protected:
+	// Configurable parameters for different ground effects
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Settings", meta = (DisplayName = "Ground Radius"))
+	float Radius = 450.0f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Settings", meta = (DisplayName = "Duration"))
+	float Duration = 4.0f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ground Settings", meta = (DisplayName = "Effect Apply Rate"))
+	float DamageRate = 0.0167f;   // Apply effect ~60 times per second
 };

@@ -4,6 +4,13 @@
 #include "GameFramework/Actor.h"
 #include "HealingOrbActor.generated.h"
 
+UENUM(BlueprintType)
+enum class EOrbViewType : uint8
+{
+    FirstPerson,
+    ThirdPerson
+};
+
 UCLASS()
 class VALORANT_API AHealingOrbActor : public AActor
 {
@@ -12,34 +19,21 @@ class VALORANT_API AHealingOrbActor : public AActor
 public:
 	AHealingOrbActor();
 
-	// 네트워크 복제 설정
-	UFUNCTION(BlueprintCallable, Category = "Network")
-	void SetIsReplicated(bool bShouldReplicate);
-
 	// 대상 하이라이트 설정
 	UFUNCTION(BlueprintCallable, Category = "Healing Orb")
 	void SetTargetHighlight(bool bHighlight);
 
-	// 오직 오너만 볼 수 있도록 설정
-	UFUNCTION(BlueprintCallable, Category = "Visibility")
-	void SetOnlyOwnerSee(bool bNewOnlyOwnerSee);
-	
-	// 오너는 볼 수 없도록 설정
-	UFUNCTION(BlueprintCallable, Category = "Visibility")
-	void SetOwnerNoSee(bool bNewOwnerNoSee);
-
-	// 3인칭 오브 전용 - 오너만 제외하고 표시
-	UFUNCTION(BlueprintCallable, Category = "Visibility")
-	void SetIsOwnerOnly(bool bIsOwnerOnly);
-
-	// 네트워크 상에서 하이라이트 상태 업데이트
-	UFUNCTION(NetMulticast, Reliable)
-	void UpdateHighlightState(bool bHighlight);
+	// 오브 타입 설정 (1인칭/3인칭)
+	UFUNCTION(BlueprintCallable, Category = "Healing Orb")
+	void SetOrbViewType(EOrbViewType ViewType);
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	// Owner가 복제될 때 호출
+	virtual void OnRep_Owner() override;
 
 	// 오브 메시
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -81,16 +75,32 @@ protected:
 	class USoundBase* OrbHighlightSound;
 
 private:
-	UPROPERTY(Replicated)
+	// 하이라이트 상태 (복제됨)
+	UPROPERTY(ReplicatedUsing = OnRep_IsHighlighted)
 	bool bIsHighlighted = false;
+	
+	UFUNCTION()
+	void OnRep_IsHighlighted();
+	
+	// 오브 타입 (복제됨)
+	UPROPERTY(ReplicatedUsing = OnRep_OrbViewType)
+	EOrbViewType OrbViewType = EOrbViewType::ThirdPerson;
+	
+	UFUNCTION()
+	void OnRep_OrbViewType();
 	
 	float CurrentPulseTime = 0.0f;
 	FVector BaseScale;
-	bool IsOwnerOnly = false;
 
 	UPROPERTY()
 	class UAudioComponent* IdleAudioComponent;
-
-	// 가시성 업데이트
-	void UpdateVisibility();
+	
+	// 내부 하이라이트 업데이트 함수
+	void UpdateHighlightVisuals();
+	
+	// 가시성 설정
+	void UpdateVisibilitySettings();
+	
+	// 가시성 초기화 완료 플래그
+	bool bVisibilityInitialized = false;
 };
