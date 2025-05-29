@@ -620,7 +620,7 @@ public:
 
 	// 특정 관찰자에게 현재 에이전트가 어떻게 보이는지 상태를 반환
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
-	EVisibilityState GetVisibilityStateForAgent(ABaseAgent* Observer);
+	EVisibilityState GetVisibilityStateForAgent(const ABaseAgent* Observer) const;
 
 	// 서버에서 실행되어 시야 상태를 업데이트
 	UFUNCTION(Server, Reliable, WithValidation)
