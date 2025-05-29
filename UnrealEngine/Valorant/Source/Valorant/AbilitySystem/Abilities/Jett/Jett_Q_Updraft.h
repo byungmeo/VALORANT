@@ -14,9 +14,9 @@ public:
     virtual void ExecuteAbility() override;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-    float UpdraftStrength = 5000.0f;
+    float UpdraftStrength = 950.0f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-    float BrakingDecelerationFalling = 6000.0f;
+    float BrakingDecelerationFalling = 800.0f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-    float GravityScale = 6.f;
+    float GravityScale = 0.75f;
 }; 
