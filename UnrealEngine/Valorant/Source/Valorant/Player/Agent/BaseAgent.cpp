@@ -1794,7 +1794,7 @@ void ABaseAgent::InitMinimap()
             AAgentPlayerController* PC = Cast<AAgentPlayerController>(It->Get());
         	if (IsValid(PC) && PC->IsLocalController() && PC->GetMinimapWidget())
             {
-        		PC->GetMinimapWidget()->AddAgentToMinimap(this);
+        		PC->GetMinimapWidget()->AddPlayerToMinimap(GetPlayerState<AAgentPlayerState>());
                 UE_LOG(LogTemp, Warning, TEXT("에이전트(%s)가 자신을 미니맵에 등록함"), *GetName());
             }
         }
@@ -1807,7 +1807,7 @@ void ABaseAgent::SetMinimapIcon(UTexture2D* NewIcon)
 }
 
 // 가시성 상태 조회 함수 - TMap 대신 TArray에서 검색하도록 수정
-EVisibilityState ABaseAgent::GetVisibilityStateForAgent(ABaseAgent* Observer)
+EVisibilityState ABaseAgent::GetVisibilityStateForAgent(const ABaseAgent* Observer) const
 {
 	// 자기 자신은 항상 보임
 	if (Observer == this)
