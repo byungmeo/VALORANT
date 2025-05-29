@@ -31,15 +31,8 @@ void AKayoSuppressionZone::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 경고(대기) 이펙트 재생
-	if (ActivationEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ActivationEffect, GetActorLocation());
-	}
-	if (ActivationSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ActivationSound, GetActorLocation());
-	}
+	// 경고(대기) 이펙트 재생 (모든 클라)
+	MulticastPlayActivationEffects(GetActorLocation());
 
 	// 1초 후 억제 효과 적용
 	GetWorld()->GetTimerManager().SetTimer(SuppressionDelayHandle, this, &AKayoSuppressionZone::ApplySuppressionToAllAgents, 1.0f, false);
@@ -68,15 +61,8 @@ void AKayoSuppressionZone::ApplySuppressionToAllAgents()
 		}
 	}
 
-	// 억제 이펙트/사운드 재생 (중앙)
-	if (PulseEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), PulseEffect, GetActorLocation());
-	}
-	if (PulseSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), PulseSound, GetActorLocation());
-	}
+	// 억제 이펙트/사운드 재생 (중앙, 모든 클라)
+	MulticastPlayPulseEffects(GetActorLocation());
 
 	UE_LOG(LogTemp, Warning, TEXT("KAYO Suppression - All agents in range suppressed!"));
 }
@@ -90,7 +76,39 @@ void AKayoSuppressionZone::ApplySuppression(ABaseAgent* Agent)
 
 	Agent->ServerApplyGE(SuppressionEffect, Cast<ABaseAgent>(Owner));
 
-	// 억제 적용 효과 재생
+	// 억제 적용 효과 재생 (모든 클라)
+	MulticastPlaySuppressionAppliedEffects(Agent);
+
+	UE_LOG(LogTemp, Warning, TEXT("KAYO Suppression - Applied suppression to %s"), *Agent->GetName());
+}
+
+void AKayoSuppressionZone::MulticastPlayActivationEffects_Implementation(const FVector& Location)
+{
+	if (ActivationEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ActivationEffect, Location);
+	}
+	if (ActivationSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ActivationSound, Location);
+	}
+}
+
+void AKayoSuppressionZone::MulticastPlayPulseEffects_Implementation(const FVector& Location)
+{
+	if (PulseEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), PulseEffect, Location);
+	}
+	if (PulseSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), PulseSound, Location);
+	}
+}
+
+void AKayoSuppressionZone::MulticastPlaySuppressionAppliedEffects_Implementation(ABaseAgent* Agent)
+{
+	if (!Agent) return;
 	if (SuppressionAppliedEffect)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAttached(SuppressionAppliedEffect, Agent->GetRootComponent(),
@@ -104,14 +122,11 @@ void AKayoSuppressionZone::ApplySuppression(ABaseAgent* Agent)
 													 true // Auto Activate
 		);
 	}
-
 	if (SuppressionAppliedSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), SuppressionAppliedSound,
 											  Agent->GetActorLocation());
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("KAYO Suppression - Applied suppression to %s"), *Agent->GetName());
 }
 
 void AKayoSuppressionZone::UpdateRangeIndicator()

@@ -2106,3 +2106,8 @@ void ABaseAgent::ServerApplyHealthGE_Implementation(TSubclassOf<UGameplayEffect>
         ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
     }
 }
+
+void ABaseAgent::AdjustFlashEffectDirect_Implementation(float BlindDuration, float RecoveryDuration)
+{
+	FlashComponent->FlashEffect(BlindDuration, RecoveryDuration);
+}

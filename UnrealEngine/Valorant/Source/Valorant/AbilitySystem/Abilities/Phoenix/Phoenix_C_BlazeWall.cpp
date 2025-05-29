@@ -45,6 +45,8 @@ APhoenix_C_BlazeWall::APhoenix_C_BlazeWall()
     // 충돌 이벤트는 WallCollision에서 처리
     bReplicates = true;
     SetReplicateMovement(true);
+    
+    CalculateTickValues();
 }
 
 void APhoenix_C_BlazeWall::BeginPlay()
@@ -90,8 +92,9 @@ void APhoenix_C_BlazeWall::OnBeginOverlap(UPrimitiveComponent* OverlappedCompone
             // 첫 번째 에이전트가 들어왔을 때 타이머 시작
             if (OverlappedAgents.Num() == 1 && !GetWorld()->GetTimerManager().IsTimerActive(DamageTimerHandle))
             {
+                // 초당 4번 효과 적용 (0.25초마다)
                 GetWorld()->GetTimerManager().SetTimer(DamageTimerHandle, this, 
-                    &APhoenix_C_BlazeWall::ApplyGameEffect, EffectApplicationRate, true);
+                    &APhoenix_C_BlazeWall::ApplyGameEffect, EffectApplicationInterval, true);
                 
                 // 즉시 첫 효과 적용
                 ApplyGameEffect();
@@ -137,58 +140,32 @@ void APhoenix_C_BlazeWall::ApplyGameEffect()
             OverlappedAgents.Remove(Agent);
             continue;
         }
+
+        Agent->AdjustFlashEffectDirect(0.25f,0.25f);
         
         // Phoenix인지 확인
-        if (IsPhoenix(Agent))
+        bool bIsPhoenix = IsPhoenixOrAlly(Agent);
+            
+        if (bIsPhoenix)
         {
             // Phoenix에게 힐 적용
-            if (HealGameplayEffect)
+            if (GameplayEffect)
             {
-                FGameplayEffectContextHandle ContextHandle = Agent->GetASC()->MakeEffectContext();
-                ContextHandle.AddSourceObject(this);
-                ContextHandle.AddInstigator(GetInstigator(), this);
-                
-                FGameplayEffectSpecHandle SpecHandle = Agent->GetASC()->MakeOutgoingSpec(
-                    HealGameplayEffect, 1.0f, ContextHandle);
-                    
-                if (SpecHandle.IsValid())
-                {
-                    // 힐량 설정 (초당 힐 / 60)
-                    SpecHandle.Data.Get()->SetSetByCallerMagnitude(
-                        FGameplayTag::RequestGameplayTag(FName("Data.Damage")), 
-                        -(HealPerSecond / 60.0f));  // 음수로 설정하여 힐 효과
-                    
-                    Agent->GetASC()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-                }
+                Agent->ServerApplyHealthGE(GameplayEffect, HealPerTick);
             }
         }
         else
         {
-            // 적에게 데미지 적용
+            // 다른 사람들에게 데미지 적용
             if (GameplayEffect)
             {
-                FGameplayEffectContextHandle ContextHandle = Agent->GetASC()->MakeEffectContext();
-                ContextHandle.AddSourceObject(this);
-                ContextHandle.AddInstigator(GetInstigator(), this);
-                
-                FGameplayEffectSpecHandle SpecHandle = Agent->GetASC()->MakeOutgoingSpec(
-                    GameplayEffect, 1.0f, ContextHandle);
-                    
-                if (SpecHandle.IsValid())
-                {
-                    // 데미지량 설정 (초당 데미지 / 60)
-                    SpecHandle.Data.Get()->SetSetByCallerMagnitude(
-                        FGameplayTag::RequestGameplayTag(FName("Data.Damage")), 
-                        DamagePerSecond / 60.0f);
-                    
-                    Agent->GetASC()->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-                }
+                Agent->ServerApplyHealthGE(GameplayEffect, DamagePerTick);
             }
         }
     }
 }
 
-bool APhoenix_C_BlazeWall::IsPhoenix(AActor* Actor) const
+bool APhoenix_C_BlazeWall::IsPhoenixOrAlly(AActor* Actor) const
 {
     if (!Actor)
     {
@@ -200,44 +177,17 @@ bool APhoenix_C_BlazeWall::IsPhoenix(AActor* Actor) const
     {
         return true;
     }
-    
-    // 2. 같은 팀인지 확인 (PlayerState 비교)
-    if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
-    {
-        if (ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator()))
-        {
-            APlayerState* AgentPS = Agent->GetPlayerState();
-            APlayerState* InstigatorPS = InstigatorAgent->GetPlayerState();
             
-            if (AgentPS && InstigatorPS)
-            {
-                // 팀 ID 비교 (팀 시스템이 구현되어 있다면)
-                // return AgentPS->GetTeamID() == InstigatorPS->GetTeamID();
-                
-                // 임시: 플레이어 ID 비교
-                return AgentPS->GetPlayerId() == InstigatorPS->GetPlayerId();
-            }
-        }
-    }
-    
-    // 3. Phoenix 클래스 타입 확인
-    if (PhoenixAgentClass && Actor->IsA(PhoenixAgentClass))
-    {
-        // 추가로 같은 팀인지 확인 필요
-        return true;
-    }
-    
-    // 4. 태그로 확인 (Phoenix 태그가 있는 경우)
-    if (Actor->ActorHasTag(FName("Phoenix")))
-    {
-        return true;
-    }
-    
     return false;
 }
 
 void APhoenix_C_BlazeWall::OnElapsedDuration()
 {
+    if (!HasAuthority())
+    {
+        return;
+    }
+    
     // 타이머 정리
     GetWorld()->GetTimerManager().ClearTimer(DamageTimerHandle);
     GetWorld()->GetTimerManager().ClearTimer(DurationTimerHandle);

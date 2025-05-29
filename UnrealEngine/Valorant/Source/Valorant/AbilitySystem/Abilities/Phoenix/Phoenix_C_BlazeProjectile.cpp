@@ -44,7 +44,7 @@ void APhoenix_C_BlazeProjectile::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
     
     // 커브 이동 처리
-    if (MovementType == EBlazeMovement2Type::Curved)
+    if (MovementType == EBlazeMovementType::Curved)
     {
         ApplyCurveMovement(DeltaTime);
     }
@@ -64,12 +64,12 @@ void APhoenix_C_BlazeProjectile::Tick(float DeltaTime)
     }
 }
 
-void APhoenix_C_BlazeProjectile::SetMovementType(EBlazeMovement2Type Type)
+void APhoenix_C_BlazeProjectile::SetMovementType(EBlazeMovementType Type)
 {
     MovementType = Type;
     
     // 이동 타입에 따라 속도 조정
-    float NewSpeed = (Type == EBlazeMovement2Type::Straight) ? StraightSpeed : CurvedSpeed;
+    float NewSpeed = (Type == EBlazeMovementType::Straight) ? StraightSpeed : CurvedSpeed;
     ProjectileMovement->InitialSpeed = NewSpeed;
     ProjectileMovement->MaxSpeed = NewSpeed;
     ProjectileMovement->Velocity = GetActorForwardVector() * NewSpeed;

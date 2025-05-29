@@ -38,6 +38,13 @@ private:
 	void ApplySuppressionToAllAgents(); // 1초 후 범위 내 Agent에 억제 적용
 	void UpdateRangeIndicator();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayActivationEffects(const FVector& Location);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayPulseEffects(const FVector& Location);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlaySuppressionAppliedEffects(ABaseAgent* Agent);
+
 public:
 	// 억제 효과
 	UPROPERTY(EditDefaultsOnly, Category = "Suppression")

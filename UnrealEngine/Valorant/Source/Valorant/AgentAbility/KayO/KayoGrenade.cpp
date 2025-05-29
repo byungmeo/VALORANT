@@ -84,16 +84,8 @@ void AKayoGrenade::StartExplosion()
 	ProjectileMovement->StopMovementImmediately();
 	ProjectileMovement->SetActive(false);
 	
-	// 경고 효과 재생
-	if (WarningEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WarningEffect, ExplosionCenter);
-	}
-	
-	if (WarningSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), WarningSound, ExplosionCenter);
-	}
+	// 경고 효과 재생 (모든 클라)
+	MulticastPlayWarningEffects(ExplosionCenter);
 	
 	// 첫 폭발은 ActiveTime 후에 시작
 	GetWorld()->GetTimerManager().SetTimer(DeterrentTimerHandle, this, &AKayoGrenade::ActiveDeterrent, 
@@ -112,16 +104,8 @@ void AKayoGrenade::ActiveDeterrent()
 	--DeterrentCount;
 	UE_LOG(LogTemp, Warning, TEXT("KAYO Grenade - Pulse explosion %d/4"), 4 - DeterrentCount);
 	
-	// 폭발 효과 재생
-	if (ExplosionEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ExplosionEffect, ExplosionCenter);
-	}
-	
-	if (ExplosionSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, ExplosionCenter);
-	}
+	// 폭발 효과 재생 (모든 클라)
+	MulticastPlayExplosionEffects(ExplosionCenter);
 	
 	// 데미지 적용
 	ApplyExplosionDamage();
@@ -134,6 +118,30 @@ void AKayoGrenade::ActiveDeterrent()
 	{
 		GetWorld()->GetTimerManager().ClearTimer(DeterrentTimerHandle);
 		Destroy();
+	}
+}
+
+void AKayoGrenade::MulticastPlayWarningEffects_Implementation(FVector Location)
+{
+	if (WarningEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WarningEffect, Location);
+	}
+	if (WarningSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), WarningSound, Location);
+	}
+}
+
+void AKayoGrenade::MulticastPlayExplosionEffects_Implementation(FVector Location)
+{
+	if (ExplosionEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ExplosionEffect, Location);
+	}
+	if (ExplosionSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, Location);
 	}
 }
 
