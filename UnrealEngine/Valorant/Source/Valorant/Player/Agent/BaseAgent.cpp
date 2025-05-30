@@ -1449,12 +1449,13 @@ void ABaseAgent::Multicast_OnSpikeOwnChanged_Implementation(bool bOwnSpike)
 void ABaseAgent::OnSpikeFinishPlant()
 {
 	bCanMove = true;
+	OnSpikeOwnChanged.Broadcast(false);
 	
 	if (CurrentInteractor == Spike)
 	{
 		CurrentInteractor = nullptr;
 	}
-	
+
 	Spike = nullptr;
 	
 	if (MainWeapon)

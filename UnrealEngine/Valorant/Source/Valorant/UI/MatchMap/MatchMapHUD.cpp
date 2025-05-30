@@ -207,6 +207,7 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 	
 	OnLowState(false);
 	HideFollowUpInputUI();
+	OnSpikeOwnChanged(false);
 	
 	GetWorld()->GetTimerManager().SetTimer(AnnouncementTimerHandle, this, &UMatchMapHUD::HideAnnouncement, DisplayTime, false);
 	bIsPreRound = true;
