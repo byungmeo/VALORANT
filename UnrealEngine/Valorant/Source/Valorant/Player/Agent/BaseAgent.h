@@ -115,6 +115,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAgentDie, ABaseAgent*, Instiga
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentHealed, const bool, bHighState);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSwitchEquipment, const EInteractorType, equipmentState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikeOwnChanged, const bool, bOwnSpike);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
@@ -560,6 +561,7 @@ public:
 	FOnAgentHealed OnAgentHealed;
 
 	FOnSwitchEquipment OnSwitchEquipment;
+	FOnSpikeOwnChanged OnSpikeOwnChanged;
 	
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
@@ -585,6 +587,9 @@ public:
 	// void OnSpikeCancelDefuse();
 	
 	void OnSpikeCancelInteract();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_OnSpikeOwnChanged(bool bOwnSpike);
 	
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;

@@ -24,6 +24,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged_PC, float, newSpeed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnServerPurchaseResult, bool, bSuccess, int32, ItemID, EShopItemType, ItemType, const FString&, FailureReason);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnChangedAmmo, bool, bDisplayWidget, int, MagazineAmmo, int, SpareAmmo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikeOwnChanged_PC, const bool, bHighState);
 
 UCLASS()
 class VALORANT_API AAgentPlayerController : public AMatchPlayerController
@@ -204,4 +205,10 @@ public:
 	
 	UFUNCTION()
 	void OnSpikePlanted(AMatchPlayerController* Planter);
+
+	UFUNCTION()
+	void OnSwitchWeapon(const EInteractorType EquipmentState);
+
+	UFUNCTION()
+	void OnSpikeOwnChanged(const bool bOwnSpike);
 };

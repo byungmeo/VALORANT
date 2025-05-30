@@ -186,6 +186,7 @@ void ABaseAgent::OnRep_CurrentInteractorState()
 	if (CurrentInteractor && CurrentEquipmentState != EInteractorType::None)
 	{
 		CurrentInteractor->PlayEquipAnimation();
+		OnSwitchEquipment.Broadcast(CurrentEquipmentState);
 	}
 }
 
@@ -671,6 +672,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	if (spike)
 	{
 		Spike = spike;
+		Multicast_OnSpikeOwnChanged(true);
 		return;
 	}
 
@@ -1437,6 +1439,11 @@ void ABaseAgent::OnSpikeCancelInteract()
 	{
 		EquipInteractor(MeleeKnife);
 	}
+}
+
+void ABaseAgent::Multicast_OnSpikeOwnChanged_Implementation(bool bOwnSpike)
+{
+	OnSpikeOwnChanged.Broadcast(bOwnSpike);
 }
 
 void ABaseAgent::OnSpikeFinishPlant()
