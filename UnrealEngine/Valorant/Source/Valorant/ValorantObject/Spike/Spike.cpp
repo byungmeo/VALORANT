@@ -203,6 +203,7 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 		return;
 	}
 
+	const auto* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>();
 	auto* PS = InteractAgent->GetPlayerState<AAgentPlayerState>();
 	if (!PS)
 	{
@@ -214,7 +215,7 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 	{
 	case ESpikeState::Dropped:
 		// 떨어진 스파이크 - 공격팀만 주울 수 있음
-		if (AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		if (GameMode->IsAttacker(PS->bIsBlueTeam))
 		{
 			// 스파이크 줍기
 			ServerRPC_PickUp_Implementation(InteractAgent);
@@ -224,7 +225,7 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 	case ESpikeState::Carried:
 		// 이미 소지 중인 스파이크 - 공격팀은 설치 가능
 		// 현재 라운드가 InRound 상태인지 확인
-		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && 
+		if (OwnerAgent == InteractAgent && GameMode->IsAttacker(PS->bIsBlueTeam) && 
 			IsInPlantZone() && IsGameStateInRound())
 		{
 			// 스파이크 설치 시작
@@ -235,7 +236,7 @@ void ASpike::ServerRPC_Interact_Implementation(ABaseAgent* InteractAgent)
 	case ESpikeState::Planted:
 		// NET_LOG(LogTemp, Warning, TEXT("스파이크 플랜트 상태"));
 		// 설치된 스파이크 - 수비팀만 해제 가능
-		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		if (!GameMode->IsAttacker(PS->bIsBlueTeam))
 		{
 			// 스파이크 해제 시작
 			ServerRPC_StartDefusing(InteractAgent);
@@ -254,6 +255,7 @@ void ASpike::ServerRPC_Cancel_Implementation(ABaseAgent* InteractAgent)
 		return;
 	}
 
+	const auto* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>();
 	auto* PS = InteractAgent->GetPlayerState<AAgentPlayerState>();
 	if (!PS)
 	{
@@ -265,7 +267,7 @@ void ASpike::ServerRPC_Cancel_Implementation(ABaseAgent* InteractAgent)
 	{
 	case ESpikeState::Planting:
 		// 이미 설치 중인 스파이크
-		if (OwnerAgent == InteractAgent && AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone())
+		if (OwnerAgent == InteractAgent && GameMode->IsAttacker(PS->bIsBlueTeam) && IsInPlantZone())
 		{
 			// 스파이크 설치 취소
 			ServerRPC_CancelPlanting();
@@ -274,7 +276,7 @@ void ASpike::ServerRPC_Cancel_Implementation(ABaseAgent* InteractAgent)
 
 	case ESpikeState::Defusing:
 		// 해제 중인 스파이크
-		if (!AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+		if (!GameMode->IsAttacker(PS->bIsBlueTeam))
 		{
 			// 스파이크 해제 취소
 			ServerRPC_CancelDefusing();
@@ -397,8 +399,9 @@ void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
 	}
 
 	// 수비팀만 해제 가능
+	const auto* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>();
 	auto* PS = Agent->GetPlayerState<AAgentPlayerState>();
-	if (!PS || AMatchGameMode::IsAttacker(PS->bIsBlueTeam))
+	if (!PS || GameMode->IsAttacker(PS->bIsBlueTeam))
 	{
 		return;
 	}
@@ -524,7 +527,11 @@ bool ASpike::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 	}
 
 	// 공격팀만 스파이크를 주울 수 있음
-	return AMatchGameMode::IsAttacker(PS->bIsBlueTeam);
+	if (const auto* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>())
+	{
+		return GameMode->IsAttacker(PS->bIsBlueTeam);
+	}
+	return false;
 }
 
 bool ASpike::ServerOnly_CanDrop() const
@@ -549,7 +556,10 @@ bool ASpike::ServerOnly_CanInteract() const
 	// 공격팀이고 플랜트 영역에 있고 게임 상태가 InRound일 때만 설치 가능
 	if (SpikeState == ESpikeState::Carried)
 	{
-		return AMatchGameMode::IsAttacker(PS->bIsBlueTeam) && IsInPlantZone() && IsGameStateInRound();
+		if (const auto* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>())
+		{
+			return GameMode->IsAttacker(PS->bIsBlueTeam) && IsInPlantZone() && IsGameStateInRound();
+		}
 	}
 	
 	return false;
