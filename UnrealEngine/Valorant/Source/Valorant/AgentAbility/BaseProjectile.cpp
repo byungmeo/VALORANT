@@ -3,8 +3,10 @@
 
 #include "BaseProjectile.h"
 
+#include "NiagaraFunctionLibrary.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
@@ -51,4 +53,28 @@ void ABaseProjectile::Tick(float DeltaTime)
 void ABaseProjectile::OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
 {
 	//
+}
+
+void ABaseProjectile::NetMulti_WarningEffects_Implementation(FVector Location)
+{
+	if (WarningVFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WarningVFX, Location);
+	}
+	if (WarningSFX)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), WarningSFX, Location);
+	}
+}
+
+void ABaseProjectile::NetMulti_ExplosionEffects_Implementation(FVector Location)
+{
+	if (ExplosionVFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ExplosionVFX, Location);
+	}
+	if (ExplosionSFX)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSFX, Location);
+	}
 }

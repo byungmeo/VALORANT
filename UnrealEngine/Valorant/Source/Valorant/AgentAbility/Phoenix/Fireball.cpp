@@ -48,6 +48,7 @@ void AFireball::OnProjectileBounced(const FHitResult& ImpactResult, const FVecto
 		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		SpawnParameters.Instigator = this->GetInstigator();
 		GetWorld()->SpawnActor<ABaseGround>(FireGroundClass, ImpactResult.ImpactPoint, FRotator::ZeroRotator, SpawnParameters);
+		NetMulti_ExplosionEffects(ImpactResult.ImpactPoint);
 		Destroy();
 	}
 }

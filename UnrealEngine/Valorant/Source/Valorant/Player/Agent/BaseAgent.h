@@ -6,6 +6,9 @@
 #include "Player/Component/FlashComponent.h"
 #include "Player/Component/FlashPostProcessComponent.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "BaseAgent.generated.h"
 
 struct FKillFeedInfo;
@@ -658,4 +661,7 @@ public:
 
 	void CheckMinimapVisibility(float DeltaTime);
 #pragma endregion "Minimap"
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayNiagaraEffectAttached(AActor* AttachTarget, UNiagaraSystem* NiagaraEffect, float Duration);
 };

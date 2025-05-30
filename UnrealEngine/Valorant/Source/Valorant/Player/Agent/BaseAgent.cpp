@@ -33,6 +33,7 @@
 #include "UI/FlashWidget.h"
 #include "UI/MatchMap/MatchMapHUD.h"
 #include "Weapon/BaseWeapon.h"
+#include "NiagaraFunctionLibrary.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
@@ -738,6 +739,11 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 		if (IsAbilityExecuting())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("어빌리티 실행 중에는 무기를 전환할 수 없습니다."));
+			return;
+		}
+		// ToDO : 수정
+		else if (IsAbilityPreparing())
+		{
 			return;
 		}
 		// 어빌리티가 준비 / 대기 페이즈면 취소
@@ -2132,4 +2138,37 @@ void ABaseAgent::ServerApplyHealthGE_Implementation(TSubclassOf<UGameplayEffect>
 void ABaseAgent::AdjustFlashEffectDirect_Implementation(float BlindDuration, float RecoveryDuration)
 {
 	FlashComponent->FlashEffect(BlindDuration, RecoveryDuration);
+}
+
+void ABaseAgent::Multicast_PlayNiagaraEffectAttached_Implementation(AActor* AttachTarget, UNiagaraSystem* NiagaraEffect, float Duration)
+{
+	if (!AttachTarget || !NiagaraEffect)
+	{	
+		return;
+	}
+
+	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
+		NiagaraEffect,
+		AttachTarget->GetRootComponent(),
+		NAME_None,
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		EAttachLocation::KeepRelativeOffset,
+		true,
+		true, // Auto Destroy
+		ENCPoolMethod::AutoRelease,
+		true // Auto Activate
+	);
+
+	if (NiagaraComp && Duration > 0.f)
+	{
+		FTimerHandle TimerHandle;
+		// 타이머 람다에서 NiagaraComp를 안전하게 파괴
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [NiagaraComp]() {
+			if (IsValid(NiagaraComp))
+			{
+				NiagaraComp->DestroyComponent();
+			}
+		}, Duration, false);
+	}
 }

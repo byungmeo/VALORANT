@@ -103,7 +103,7 @@ void USage_C_BarrierOrb::SpawnBarrierOrb()
 		if (SpawnedBarrierOrb)
 		{
 			// 3인칭 오브로 설정 (복제되도록)
-			SpawnedBarrierOrb->SetOrbViewType(EBarrierOrbViewType::ThirdPerson);
+			SpawnedBarrierOrb->SetOrbViewType(EOrbViewType::ThirdPerson);
 			
 			// 3인칭 메쉬에 부착
 			SpawnedBarrierOrb->AttachToComponent(OwnerAgent->GetMesh(), 
@@ -131,7 +131,7 @@ void USage_C_BarrierOrb::SpawnBarrierOrb()
 		if (SpawnedBarrierOrb1P)
 		{
 			// 1인칭 오브로 설정 (복제 안 됨)
-			SpawnedBarrierOrb1P->SetOrbViewType(EBarrierOrbViewType::FirstPerson);
+			SpawnedBarrierOrb1P->SetOrbViewType(EOrbViewType::FirstPerson);
 			
 			// 복제 비활성화
 			SpawnedBarrierOrb1P->SetReplicates(false);

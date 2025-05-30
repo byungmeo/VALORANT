@@ -88,6 +88,7 @@ void ASlowOrb::SpawnSlowField(const FHitResult& ImpactResult)
 			// If no floor found, spawn at a reasonable distance below
 			SpawnLocation = ImpactResult.ImpactPoint - FVector(0, 0, 300.0f);
 		}
+		NetMulti_ExplosionEffects(ImpactResult.ImpactPoint);
 	}
 	
 	// Spawn the slow field

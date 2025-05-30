@@ -26,4 +26,23 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 	UFUNCTION()
 	virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulti_ExplosionEffects(FVector Location);
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulti_WarningEffects(FVector Location);
+
+	// 효과
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	class UNiagaraSystem* ExplosionVFX = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	class USoundBase* ExplosionSFX = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	class UNiagaraSystem* WarningVFX = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	class USoundBase* WarningSFX = nullptr;
+	
 };

@@ -1,18 +1,11 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "ValorantObject/HandChargeActor/BaseOrbActor.h"
 #include "HealingOrbActor.generated.h"
 
-UENUM(BlueprintType)
-enum class EOrbViewType : uint8
-{
-    FirstPerson,
-    ThirdPerson
-};
-
 UCLASS()
-class VALORANT_API AHealingOrbActor : public AActor
+class VALORANT_API AHealingOrbActor : public ABaseOrbActor
 {
 	GENERATED_BODY()
 
@@ -23,54 +16,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Healing Orb")
 	void SetTargetHighlight(bool bHighlight);
 
-	// 오브 타입 설정 (1인칭/3인칭)
-	UFUNCTION(BlueprintCallable, Category = "Healing Orb")
-	void SetOrbViewType(EOrbViewType ViewType);
-
 protected:
 	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	// Owner가 복제될 때 호출
-	virtual void OnRep_Owner() override;
-
-	// 오브 메시
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UStaticMeshComponent* OrbMesh;
-
-	// 오브 이펙트
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UNiagaraComponent* OrbEffect;
 
 	// 하이라이트 이펙트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UNiagaraComponent* HighlightEffect;
 
-	// 포인트 라이트
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UPointLightComponent* OrbLight;
-
-	// 오브 설정
-	UPROPERTY(EditDefaultsOnly, Category = "Orb Settings")
-	float OrbRotationSpeed = 90.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Orb Settings")
-	float OrbPulseSpeed = 2.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Orb Settings")
-	float OrbPulseScale = 0.1f;
-
+	// 색상 설정
 	UPROPERTY(EditDefaultsOnly, Category = "Orb Settings")
 	FLinearColor NormalColor = FLinearColor(0.0f, 1.0f, 0.5f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Orb Settings")
 	FLinearColor HighlightColor = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f);
 
-	// 사운드
-	UPROPERTY(EditDefaultsOnly, Category = "Sounds")
-	class USoundBase* OrbIdleSound;
-
+	// 하이라이트 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "Sounds")
 	class USoundBase* OrbHighlightSound;
 
@@ -78,29 +39,10 @@ private:
 	// 하이라이트 상태 (복제됨)
 	UPROPERTY(ReplicatedUsing = OnRep_IsHighlighted)
 	bool bIsHighlighted = false;
-	
+    
 	UFUNCTION()
 	void OnRep_IsHighlighted();
-	
-	// 오브 타입 (복제됨)
-	UPROPERTY(ReplicatedUsing = OnRep_OrbViewType)
-	EOrbViewType OrbViewType = EOrbViewType::ThirdPerson;
-	
-	UFUNCTION()
-	void OnRep_OrbViewType();
-	
-	float CurrentPulseTime = 0.0f;
-	FVector BaseScale;
-
-	UPROPERTY()
-	class UAudioComponent* IdleAudioComponent;
-	
+    
 	// 내부 하이라이트 업데이트 함수
 	void UpdateHighlightVisuals();
-	
-	// 가시성 설정
-	void UpdateVisibilitySettings();
-	
-	// 가시성 초기화 완료 플래그
-	bool bVisibilityInitialized = false;
 };
