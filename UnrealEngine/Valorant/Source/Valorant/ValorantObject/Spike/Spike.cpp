@@ -188,6 +188,7 @@ void ASpike::ServerRPC_Drop_Implementation()
 		return;
 	}
 	OwnerAgent->ResetOwnSpike();
+	OwnerAgent->Multicast_OnSpikeOwnChanged(false);
 	
 	Super::ServerRPC_Drop_Implementation();
 
