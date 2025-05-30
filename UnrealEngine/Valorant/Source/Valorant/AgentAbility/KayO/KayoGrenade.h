@@ -82,4 +82,9 @@ protected:
 	
 	// 디버그 표시
 	void DrawDebugExplosion() const;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayExplosionEffects(FVector Location);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayWarningEffects(FVector Location);
 };

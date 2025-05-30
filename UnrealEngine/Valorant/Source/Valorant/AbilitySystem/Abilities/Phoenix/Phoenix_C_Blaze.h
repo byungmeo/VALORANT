@@ -37,5 +37,5 @@ protected:
     
 private:
     // 벽 투사체 생성
-    bool SpawnBlazeProjectile(EBlazeMovement2Type MovementType);
+    bool SpawnBlazeProjectile(EBlazeMovementType MovementType);
 };

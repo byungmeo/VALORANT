@@ -91,16 +91,8 @@ void AKayoKnife::OnProjectileBounced(const FHitResult& ImpactResult, const FVect
 	ProjectileMovement->StopMovementImmediately();
 	ProjectileMovement->SetActive(false);
 	
-	// 충돌 효과 재생
-	if (ImpactEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ImpactEffect, ImpactLocation, ImpactNormal.Rotation());
-	}
-	
-	if (ImpactSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, ImpactLocation);
-	}
+	// 충돌 효과 재생 (모든 클라)
+	MulticastPlayImpactEffects(ImpactLocation, ImpactNormal.Rotation());
 	
 	// 활성화 타이머 시작
 	if (HasAuthority() && !GetWorld()->GetTimerManager().IsTimerActive(ActiveTimerHandle))
@@ -119,22 +111,38 @@ void AKayoKnife::ActiveSuppressionZone()
 		return;
 	}
 	
-	// 활성화 효과 재생
-	if (ActivationEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ActivationEffect, GetActorLocation());
-	}
-	
-	if (ActivationSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ActivationSound, GetActorLocation());
-	}
+	// 활성화 효과 재생 (모든 클라)
+	MulticastPlayActivationEffects(GetActorLocation());
 	
 	// 억제 영역 생성
 	CreateSuppressionZone();
 	
 	// 나이프 파괴
 	Destroy();
+}
+
+void AKayoKnife::MulticastPlayImpactEffects_Implementation(const FVector& Location, const FRotator& Rotation)
+{
+	if (ImpactEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ImpactEffect, Location, Rotation);
+	}
+	if (ImpactSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, Location);
+	}
+}
+
+void AKayoKnife::MulticastPlayActivationEffects_Implementation(const FVector& Location)
+{
+	if (ActivationEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ActivationEffect, Location);
+	}
+	if (ActivationSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ActivationSound, Location);
+	}
 }
 
 void AKayoKnife::CreateSuppressionZone()

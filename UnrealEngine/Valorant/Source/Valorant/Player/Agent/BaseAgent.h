@@ -112,6 +112,9 @@ struct FAgentVisibilityInfo
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FOnAgentDamaged, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge, const bool, bLowState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAgentDie, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSwitchEquipment, const EInteractorType, equipmentState);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentFire);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAgentReload);
@@ -399,6 +402,9 @@ public:
     
 	UFUNCTION(BlueprintCallable, Category = "Flash")
 	void CreateFlashWidget();
+
+	UFUNCTION(Client, Reliable)
+	void AdjustFlashEffectDirect(float BlindDuration, float RecoveryDuration);
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -548,6 +554,9 @@ private:
 public:
 	FOnAgentDamaged OnAgentDamaged;
 	FOnAgentDie OnAgentDie;
+
+	FOnSwitchEquipment OnSwitchEquipment;
+	
 	FOnAgentEquip OnAgentEquip;
 	FOnAgentEquip OnAgentFire;
 	FOnAgentEquip OnAgentReload;
@@ -620,7 +629,7 @@ public:
 
 	// 특정 관찰자에게 현재 에이전트가 어떻게 보이는지 상태를 반환
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
-	EVisibilityState GetVisibilityStateForAgent(ABaseAgent* Observer);
+	EVisibilityState GetVisibilityStateForAgent(const ABaseAgent* Observer) const;
 
 	// 서버에서 실행되어 시야 상태를 업데이트
 	UFUNCTION(Server, Reliable, WithValidation)

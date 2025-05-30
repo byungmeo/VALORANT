@@ -83,6 +83,11 @@ protected:
 	// 활성화 타이머 콜백
 	void ActiveSuppressionZone();
 
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastPlayImpactEffects(const FVector& Location, const FRotator& Rotation);
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastPlayActivationEffects(const FVector& Location);
+
 public:
 	void OnEquip() const;
 	void OnThrow();

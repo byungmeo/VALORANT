@@ -35,14 +35,6 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
     float HealPerSecond = 12.5f;    // 초당 힐 (Phoenix 자신에게)
     
-    // 힐 GameplayEffect
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
-    TSubclassOf<UGameplayEffect> HealGameplayEffect = nullptr;
-    
-    // Phoenix Agent 클래스 (Phoenix 판별용)
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
-    TSubclassOf<class ABaseAgent> PhoenixAgentClass = nullptr;
-    
     // 벽 충돌체
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
     TObjectPtr<UBoxComponent> WallCollision = nullptr;
@@ -62,9 +54,20 @@ protected:
     virtual void OnElapsedDuration() override;
     
     // Phoenix인지 확인
-    bool IsPhoenix(AActor* Actor) const;
-    
+    bool IsPhoenixOrAlly(AActor* Actor) const;
+
 private:
-    // 데미지/힐 적용 주기 (초당 60틱 기준)
-    const float EffectApplicationRate = 1.0f / 60.0f;
+    // 효과 적용 주기 (초당 4번 = 0.25초마다)
+    const float EffectApplicationInterval = 0.25f;
+
+    // 틱당 데미지/힐 (초당 값 / 4)
+    float DamagePerTick = -7.5f;
+    float HealPerTick = 1.5625f;
+
+    // 생성자에서 틱당 값 계산
+    void CalculateTickValues()
+    {
+        DamagePerTick = DamagePerSecond * EffectApplicationInterval;
+        HealPerTick = HealPerSecond * EffectApplicationInterval;
+    }
 };

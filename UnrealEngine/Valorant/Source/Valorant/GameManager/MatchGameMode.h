@@ -172,7 +172,7 @@ public:
 	void ClearObjects();
 	void RespawnAll();
 	void RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform);
-	void ResetAgentAtrributeData(AAgentPlayerState* AgentPS);
+	void ResetAgentGAS(AAgentPlayerState* AgentPS);
 	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
 	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
 	void OnSpikePlanted(AMatchPlayerController* Planter);

@@ -4,7 +4,7 @@
 #include "Phoenix_C_BlazeProjectile.generated.h"
 
 UENUM(BlueprintType)
-enum class EBlazeMovement2Type : uint8
+enum class EBlazeMovementType : uint8
 {
     Straight,   // 직선 이동
     Curved      // 커브 이동
@@ -45,7 +45,7 @@ public:
     float CurveStrength = 300.0f;   // 커브 강도
 
     // 이동 타입 설정
-    void SetMovementType(EBlazeMovement2Type Type);
+    void SetMovementType(EBlazeMovementType Type);
 
 protected:
     virtual void BeginPlay() override;
@@ -54,7 +54,7 @@ protected:
 
 private:
     UPROPERTY()
-    EBlazeMovement2Type MovementType = EBlazeMovement2Type::Straight;
+    EBlazeMovementType MovementType = EBlazeMovementType::Straight;
     
     UPROPERTY()
     TArray<APhoenix_C_BlazeWall*> SpawnedWalls;
