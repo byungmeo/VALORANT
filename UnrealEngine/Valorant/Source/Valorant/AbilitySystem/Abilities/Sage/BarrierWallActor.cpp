@@ -15,29 +15,33 @@ ABarrierWallActor::ABarrierWallActor()
     RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootSceneComponent"));
     SetRootComponent(RootSceneComponent);
     
-    // 세그먼트 1 (중앙)
+    // 세그먼트 1 (왼쪽에서 첫 번째)
     SegmentMesh1 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SegmentMesh1"));
     SegmentMesh1->SetupAttachment(RootSceneComponent);
-    SegmentMesh1->SetRelativeLocation(FVector(0, 0, 0));
     
     SegmentCollision1 = CreateDefaultSubobject<UBoxComponent>(TEXT("SegmentCollision1"));
     SegmentCollision1->SetupAttachment(SegmentMesh1);
     
-    // 세그먼트 2 (오른쪽)
+    // 세그먼트 2 (왼쪽에서 두 번째)
     SegmentMesh2 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SegmentMesh2"));
     SegmentMesh2->SetupAttachment(RootSceneComponent);
-    SegmentMesh2->SetRelativeLocation(FVector(0, SegmentSpacing, 0));
     
     SegmentCollision2 = CreateDefaultSubobject<UBoxComponent>(TEXT("SegmentCollision2"));
     SegmentCollision2->SetupAttachment(SegmentMesh2);
     
-    // 세그먼트 3 (왼쪽)
+    // 세그먼트 3 (왼쪽에서 세 번째)
     SegmentMesh3 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SegmentMesh3"));
     SegmentMesh3->SetupAttachment(RootSceneComponent);
-    SegmentMesh3->SetRelativeLocation(FVector(0, -SegmentSpacing, 0));
     
     SegmentCollision3 = CreateDefaultSubobject<UBoxComponent>(TEXT("SegmentCollision3"));
     SegmentCollision3->SetupAttachment(SegmentMesh3);
+    
+    // 세그먼트 4 (가장 오른쪽)
+    SegmentMesh4 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SegmentMesh4"));
+    SegmentMesh4->SetupAttachment(RootSceneComponent);
+    
+    SegmentCollision4 = CreateDefaultSubobject<UBoxComponent>(TEXT("SegmentCollision4"));
+    SegmentCollision4->SetupAttachment(SegmentMesh4);
     
     // 네트워크 설정
     bReplicates = true;
@@ -52,9 +56,10 @@ void ABarrierWallActor::SetPlacementValid(bool bValid)
 
 void ABarrierWallActor::SetOnlyOwnerSee(bool bCond)
 {
-    SegmentMesh1->SetOnlyOwnerSee(true);
-    SegmentMesh2->SetOnlyOwnerSee(true);
-    SegmentMesh3->SetOnlyOwnerSee(true);
+    SegmentMesh1->SetOnlyOwnerSee(bCond);
+    SegmentMesh2->SetOnlyOwnerSee(bCond);
+    SegmentMesh3->SetOnlyOwnerSee(bCond);
+    SegmentMesh4->SetOnlyOwnerSee(bCond);
 }
 
 void ABarrierWallActor::BeginPlay()
@@ -65,14 +70,34 @@ void ABarrierWallActor::BeginPlay()
     SegmentMeshes.Add(SegmentMesh1);
     SegmentMeshes.Add(SegmentMesh2);
     SegmentMeshes.Add(SegmentMesh3);
+    SegmentMeshes.Add(SegmentMesh4);
     
     SegmentCollisions.Add(SegmentCollision1);
     SegmentCollisions.Add(SegmentCollision2);
     SegmentCollisions.Add(SegmentCollision3);
+    SegmentCollisions.Add(SegmentCollision4);
     
     // 체력 배열 초기화
-    SegmentHealthArray.Init(DefaultSegmentHealth, 3);
-    SegmentDestroyedArray.Init(false, 3);
+    SegmentHealthArray.Init(DefaultSegmentHealth, 4);
+    SegmentDestroyedArray.Init(false, 4);
+    
+    // 메쉬 크기만 설정 (위치는 나중에 설정)
+    for (int32 i = 0; i < SegmentMeshes.Num(); i++)
+    {
+        if (SegmentMeshes[i] && SegmentMeshes[i]->GetStaticMesh())
+        {
+            FVector MeshBounds = SegmentMeshes[i]->GetStaticMesh()->GetBounds().BoxExtent * 2;
+            FVector TargetSize(SegmentWidth, SegmentThickness, SegmentHeight);
+            FVector Scale = TargetSize / MeshBounds;
+            SegmentMeshes[i]->SetRelativeScale3D(Scale);
+        }
+        
+        // 충돌 박스 크기 설정
+        if (SegmentCollisions[i])
+        {
+            SegmentCollisions[i]->SetBoxExtent(FVector(SegmentWidth / 2, SegmentThickness / 2, SegmentHeight / 2));
+        }
+    }
     
     // 미리보기 모드가 아닐 때만 충돌 활성화 및 건설 시작
     if (!bIsPreviewMode)
@@ -91,16 +116,10 @@ void ABarrierWallActor::BeginPlay()
         
         // 건설 애니메이션 시작
         StartBuildAnimation();
-        
-        // 건설 사운드
-        if (BuildSound)
-        {
-            UGameplayStatics::PlaySoundAtLocation(GetWorld(), BuildSound, GetActorLocation());
-        }
     }
     else
     {
-        // 미리보기 모드에서는 반투명 머티리얼 적용
+        // 미리보기 모드에서는 반투명 머티리얼 적용하고 최종 위치에 배치
         if (PreviewMaterial)
         {
             for (UStaticMeshComponent* Mesh : SegmentMeshes)
@@ -111,6 +130,9 @@ void ABarrierWallActor::BeginPlay()
                 }
             }
         }
+        
+        // 미리보기는 최종 위치에 바로 표시
+        SetSegmentsFinalPosition();
     }
 }
 
@@ -122,14 +144,29 @@ void ABarrierWallActor::Tick(float DeltaTime)
     {
         BuildProgress = FMath::Min(BuildProgress + DeltaTime / BuildDuration, 1.0f);
         
-        // 건설 애니메이션 - Z축 스케일 조정
-        for (UStaticMeshComponent* Mesh : SegmentMeshes)
+        // 건설 애니메이션 - 아래에서 위로 올라오는 효과
+        for (int32 i = 0; i < SegmentMeshes.Num(); i++)
         {
-            if (Mesh)
+            if (SegmentMeshes[i])
             {
-                FVector CurrentScale = Mesh->GetRelativeScale3D();
-                CurrentScale.Z = BuildProgress;
-                Mesh->SetRelativeScale3D(CurrentScale);
+                // 각 세그먼트를 약간의 지연을 두고 올라오게 함
+                float SegmentDelay = 0.1f * i;
+                float SegmentProgress = FMath::Clamp((BuildProgress - SegmentDelay) / (1.0f - SegmentDelay * 3), 0.0f, 1.0f);
+                
+                // 위치 애니메이션 (아래에서 위로)
+                float ZOffset = SegmentHeight / 2 * SegmentProgress;
+                float XPos = GetSegmentXPosition(i);
+                SegmentMeshes[i]->SetRelativeLocation(FVector(XPos, 0, ZOffset));
+                
+                // 스케일 애니메이션 (Z축만)
+                if (SegmentMeshes[i]->GetStaticMesh())
+                {
+                    FVector MeshBounds = SegmentMeshes[i]->GetStaticMesh()->GetBounds().BoxExtent * 2;
+                    FVector TargetSize(SegmentWidth, SegmentThickness, SegmentHeight);
+                    FVector BaseScale = TargetSize / MeshBounds;
+                    BaseScale.Z *= SegmentProgress;
+                    SegmentMeshes[i]->SetRelativeScale3D(BaseScale);
+                }
             }
         }
         
@@ -178,14 +215,23 @@ void ABarrierWallActor::StartBuildAnimation()
     bIsBuilding = true;
     BuildProgress = 0.0f;
     
-    // 초기 스케일 설정 (Z축을 0으로)
-    for (UStaticMeshComponent* Mesh : SegmentMeshes)
+    // 초기 위치 설정 (지면 아래)
+    for (int32 i = 0; i < SegmentMeshes.Num(); i++)
     {
-        if (Mesh)
+        if (SegmentMeshes[i])
         {
-            FVector InitialScale = Mesh->GetRelativeScale3D();
-            InitialScale.Z = 0.01f;
-            Mesh->SetRelativeScale3D(InitialScale);
+            float XPos = GetSegmentXPosition(i);
+            SegmentMeshes[i]->SetRelativeLocation(FVector(XPos, 0, 0));
+            
+            // 초기 스케일 설정 (Z축을 0으로)
+            if (SegmentMeshes[i]->GetStaticMesh())
+            {
+                FVector MeshBounds = SegmentMeshes[i]->GetStaticMesh()->GetBounds().BoxExtent * 2;
+                FVector TargetSize(SegmentWidth, SegmentThickness, SegmentHeight);
+                FVector InitialScale = TargetSize / MeshBounds;
+                InitialScale.Z = 0.01f;
+                SegmentMeshes[i]->SetRelativeScale3D(InitialScale);
+            }
         }
     }
     
@@ -200,7 +246,7 @@ void ABarrierWallActor::StartBuildAnimation()
                     BuildEffect,
                     Mesh,
                     NAME_None,
-                    FVector::ZeroVector,
+                    FVector(0, 0, -SegmentHeight / 2),
                     FRotator::ZeroRotator,
                     EAttachLocation::KeepRelativeOffset,
                     true
@@ -208,11 +254,20 @@ void ABarrierWallActor::StartBuildAnimation()
             }
         }
     }
+    
+    // 건설 사운드 (한 번만 재생)
+    if (BuildSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), BuildSound, GetActorLocation());
+    }
 }
 
 void ABarrierWallActor::CompleteBuild()
 {
     bIsBuilding = false;
+    
+    // 최종 위치 설정
+    SetSegmentsFinalPosition();
     
     // 최종 머티리얼 적용
     if (BarrierMaterial)
@@ -225,6 +280,35 @@ void ABarrierWallActor::CompleteBuild()
             }
         }
     }
+}
+
+void ABarrierWallActor::SetSegmentsFinalPosition()
+{
+    for (int32 i = 0; i < SegmentMeshes.Num(); i++)
+    {
+        if (SegmentMeshes[i])
+        {
+            float XPos = GetSegmentXPosition(i);
+            SegmentMeshes[i]->SetRelativeLocation(FVector(XPos, 0, SegmentHeight / 2));
+            
+            // 최종 스케일 확인
+            if (SegmentMeshes[i]->GetStaticMesh())
+            {
+                FVector MeshBounds = SegmentMeshes[i]->GetStaticMesh()->GetBounds().BoxExtent * 2;
+                FVector TargetSize(SegmentWidth, SegmentThickness, SegmentHeight);
+                FVector FinalScale = TargetSize / MeshBounds;
+                SegmentMeshes[i]->SetRelativeScale3D(FinalScale);
+            }
+        }
+    }
+}
+
+float ABarrierWallActor::GetSegmentXPosition(int32 SegmentIndex) const
+{
+    // 일관된 세그먼트 위치 계산
+    float TotalWidth = SegmentWidth * 4;
+    float StartX = -TotalWidth / 2 + SegmentWidth / 2;
+    return StartX + (SegmentIndex * SegmentWidth);
 }
 
 float ABarrierWallActor::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, 
@@ -290,7 +374,7 @@ float ABarrierWallActor::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 
 void ABarrierWallActor::DestroySegment(int32 SegmentIndex)
 {
-    if (SegmentIndex < 0 || SegmentIndex >= 3 || SegmentDestroyedArray[SegmentIndex])
+    if (SegmentIndex < 0 || SegmentIndex >= 4 || SegmentDestroyedArray[SegmentIndex])
         return;
     
     SegmentDestroyedArray[SegmentIndex] = true;

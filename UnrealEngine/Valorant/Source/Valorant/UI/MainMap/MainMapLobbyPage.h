@@ -32,7 +32,7 @@ public:
 	bool bIsProgressMatchMaking = false;
  	bool bIsFindingSession = false;
 	bool bIsHostingSession = false;
-	
+
 	virtual void NativeConstruct() override;
 	virtual void Init(UMainMapCoreUI* InitCoreUI) override;
 	

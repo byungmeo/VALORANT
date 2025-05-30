@@ -31,8 +31,12 @@ public:
 	FOnOutroEnded OnDeployEnded;
 	UPROPERTY()
 	FOnOutroEnded OnOutroEnded;
+	
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnDeploy();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnOutro();
 
 protected:
 	virtual void NativeBeginPlay() override;

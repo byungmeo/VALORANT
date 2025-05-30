@@ -45,8 +45,9 @@ public:
 	void FindSessions();
 	void JoinSession(const FOnlineSessionSearchResult& SessionResult);
 	void DestroySession();
-	
-	static FString GetDisplayName(const UWorld* Context, int LocalUserNum = 0);
+
+	UFUNCTION(BlueprintPure, Category = "OSS")
+	static FString GetDisplayName(const UObject* WorldContextObj, int LocalUserNum = 0);
 	
 	// SessionName에 해당하는 NamedOnlineSession 반환
 	static FNamedOnlineSession* GetNamedOnlineSession(FName SessionName = NAME_GameSession);
@@ -68,7 +69,10 @@ public:
 	 */
 	FTimerHandle CheckSessionHandle;
 	FTimerHandle MatchStartHandle;
-	
+
+	UPROPERTY(BlueprintReadWrite)
+	bool bAllowCreateSession = true;
+	UPROPERTY(BlueprintReadWrite)
 	int ReqMatchAutoStartPlayerCount = 4;
 
 private:

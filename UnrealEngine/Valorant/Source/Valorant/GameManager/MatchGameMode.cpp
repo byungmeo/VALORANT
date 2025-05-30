@@ -21,9 +21,6 @@
 #include "ValorantObject/Spike/Spike.h"
 #include "Weapon/BaseWeapon.h"
 
-static int CurrentRound = 0;
-static int ShiftRound = 2;
-
 AMatchGameMode::AMatchGameMode()
 {
 #ifdef DEBUGTEST
@@ -40,15 +37,14 @@ AMatchGameMode::AMatchGameMode()
 #endif
 }
 
-/* static */
-bool AMatchGameMode::IsAttacker(const bool bIsBlueTeam)
+bool AMatchGameMode::IsAttacker(const bool bIsBlueTeam) const
 {
 	return bIsBlueTeam ? !IsShifted() : IsShifted();
 }
 
-/* static */
-bool AMatchGameMode::IsShifted()
+bool AMatchGameMode::IsShifted() const
 {
+	// UE_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentRound: %d >= ShiftRound: %d"), __FUNCTION__, CurrentRound, ShiftRound);
 	return CurrentRound >= ShiftRound;
 }
 
