@@ -1191,14 +1191,14 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 {
 	// NET_LOG(LogTemp,Display,TEXT("Char, Health Changed 데미지 여부: %d"), bIsDamage);
-	if (!HasAuthority())
-	{
-		return;
-	}
 	
 	if (!bIsDamage)
 	{
-		MulticastRPC_OnHealed(true);
+		if (HasAuthority())
+		{
+			MulticastRPC_OnHealed(true);
+		}
+		return;
 	}
 	
 	if (newHealth <= 0.f && bIsDead == false)
