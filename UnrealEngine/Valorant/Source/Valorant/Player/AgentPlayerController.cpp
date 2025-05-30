@@ -521,6 +521,7 @@ void AAgentPlayerController::OnRep_Pawn()
 			Agent->OnAgentHealed.AddDynamic(this,&AAgentPlayerController::OnHealed);
 			Agent->OnSwitchEquipment.RemoveDynamic(this,&AAgentPlayerController::OnSwitchWeapon);
 			Agent->OnSwitchEquipment.AddDynamic(this,&AAgentPlayerController::OnSwitchWeapon);
+			Agent->OnSpikeOwnChanged.RemoveDynamic(this,&AAgentPlayerController::OnSpikeOwnChanged);
 			Agent->OnSpikeOwnChanged.AddDynamic(this,&AAgentPlayerController::OnSpikeOwnChanged);
 		}
 	}
