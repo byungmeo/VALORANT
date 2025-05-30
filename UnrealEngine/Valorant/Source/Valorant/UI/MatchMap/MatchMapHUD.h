@@ -147,7 +147,9 @@ protected:
 
 	UFUNCTION()
 	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge, const bool bLowState);
-
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnHealed(const bool bHighState);
+	
 	// 어빌리티 스택 관련 함수들
 	UFUNCTION()
 	void HandleAbilityStackChanged(int32 AbilityID, int32 NewStack);
