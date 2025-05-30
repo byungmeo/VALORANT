@@ -986,16 +986,20 @@ void AMatchGameMode::SpawnDefaultWeapon(ABaseAgent* agent)
 		return;
 	}
 	
+	if (agent->GetSubWeapon() == nullptr) 
+	{
+		ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
+		agent->ServerRPC_Interact(gun);
+	}
+	
 	if (agent->GetMeleeWeapon() == nullptr)
 	{
 		ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
 		agent->ServerRPC_Interact(knife);
 	}
-	
-	if (agent->GetSubWeapon() == nullptr) 
+	else
 	{
-		ABaseWeapon* gun = GetWorld()->SpawnActor<ABaseWeapon>(ClassicAsset);
-		agent->ServerRPC_Interact(gun);
+		agent->SwitchEquipment(EInteractorType::Melee);
 	}
 	
 }
