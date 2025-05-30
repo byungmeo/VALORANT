@@ -494,7 +494,25 @@ void ABaseAgent::StartFire()
 	if (CurrentInteractor == nullptr)
 	{
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
-		return;
+		if (CurrentEquipmentState == EInteractorType::Ability)
+		{
+			if (MainWeapon)
+			{
+				SwitchEquipment(EInteractorType::MainWeapon);
+			}
+			else if (SubWeapon)
+			{
+				SwitchEquipment(EInteractorType::SubWeapon);
+			}
+			else
+			{
+				SwitchEquipment(EInteractorType::Melee);
+			}
+		}
+		else
+		{
+			return;
+		}
 	}
 	
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
