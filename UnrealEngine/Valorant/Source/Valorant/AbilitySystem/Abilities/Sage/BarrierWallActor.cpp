@@ -373,14 +373,14 @@ float ABarrierWallActor::TakeDamage(float DamageAmount, FDamageEvent const& Dama
         // 세그먼트 파괴
         if (SegmentHealthArray[ClosestSegmentIndex] <= 0.f)
         {
-            DestroySegment(ClosestSegmentIndex);
+            NetMulti_DestroySegment(ClosestSegmentIndex);
         }
     }
     
     return DamageAmount;
 }
 
-void ABarrierWallActor::DestroySegment(int32 SegmentIndex)
+void ABarrierWallActor::NetMulti_DestroySegment_Implementation(int32 SegmentIndex)
 {
     if (SegmentIndex < 0 || SegmentIndex >= 4 || SegmentDestroyedArray[SegmentIndex])
         return;
