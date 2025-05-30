@@ -16,6 +16,7 @@
 #include "Net/UnrealNetwork.h"
 #include "UI/DetectWidget.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Engine/DamageEvents.h"
 //#include "NiagaraCommon.h"
 
 ABaseWeapon::ABaseWeapon()
@@ -317,6 +318,12 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 				// 공격자 정보 전달
 				HitAgent->ServerApplyHitScanGE(NewDamageEffectClass, FinalDamage, OwnerAgent, WeaponID, DamagedPart, DamagedDirection);
 			}
+		}
+		else
+		{
+			FPointDamageEvent DamageEvent;
+			DamageEvent.HitInfo = OutHit;
+			OutHit.GetActor()->TakeDamage(WeaponData->BaseDamage,DamageEvent, nullptr,this);
 		}
 		// DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
 

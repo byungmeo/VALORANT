@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "TimerManager.h"
+#include "Engine/DamageEvents.h"
 
 ABarrierWallActor::ABarrierWallActor()
 {
@@ -316,9 +317,16 @@ float ABarrierWallActor::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 {
     if (bIsBuilding || bIsPreviewMode)
         return 0.f;
-    
+
+    FVector HitLocation = FVector(0, 0, 0);
+    if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+    {
+        FPointDamageEvent* const pointDamageEvent = (FPointDamageEvent*)&DamageEvent;
+        HitLocation = pointDamageEvent->HitInfo.Location;
+    }
     // 데미지 위치에서 가장 가까운 세그먼트 찾기
     FVector DamageLocation = DamageCauser ? DamageCauser->GetActorLocation() : GetActorLocation();
+    if (HitLocation != FVector(0, 0, 0)) DamageLocation = HitLocation;
     int32 ClosestSegmentIndex = -1;
     float ClosestDistance = FLT_MAX;
     

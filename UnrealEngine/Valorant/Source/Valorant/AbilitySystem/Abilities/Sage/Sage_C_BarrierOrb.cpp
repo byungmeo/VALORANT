@@ -46,6 +46,7 @@ void USage_C_BarrierOrb::WaitAbility()
 
 bool USage_C_BarrierOrb::OnLeftClickInput()
 {
+	DestroyPreviewWall();
 	// 장벽 설치
 	FVector PlaceLocation = GetBarrierPlaceLocation();
 	FRotator PlaceRotation = FRotator(0.f, CurrentRotation, 0.f);

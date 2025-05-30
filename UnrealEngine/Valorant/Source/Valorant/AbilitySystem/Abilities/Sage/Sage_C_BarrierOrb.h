@@ -28,10 +28,10 @@ protected:
 	float MaxPlaceDistance = 1000.f; // 최대 설치 거리
 
 	UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
-	float BarrierLifespan = 40.f; // 장벽 지속시간
+	float BarrierLifespan = 20.f; //  장벽 지속시간
 
 	UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
-	float BarrierHealth = 800.f; // 세그먼트당 체력
+	float BarrierHealth = 300.f; // 세그먼트당 체력
 
 	UPROPERTY(EditDefaultsOnly, Category = "Barrier Settings")
 	float BarrierBuildTime = 2.0f; // 장벽 건설 시간
