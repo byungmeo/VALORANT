@@ -111,7 +111,7 @@ void AKayoGrenade::ActiveDeterrent()
 	ApplyExplosionDamage();
 	
 	// 디버그 표시
-	DrawDebugExplosion();
+	//DrawDebugExplosion();
 	
 	// 모든 폭발이 끝났으면 파괴
 	if (DeterrentCount <= 0)
