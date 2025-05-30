@@ -1035,6 +1035,9 @@ void ABaseAgent::Die()
 		Spike->ServerRPC_Drop();
 	}
 
+	// 게임모드 죽음 로직(인원수 체크)
+	GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnDie(PC);
+
 	ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator());
 	MulticastRPC_Die(InstigatorAgent, this, LastKillFeedInfo);
 	// 킬러 플레이어 컨트롤러 찾기
