@@ -69,7 +69,10 @@ public:
 	 */
 	FTimerHandle CheckSessionHandle;
 	FTimerHandle MatchStartHandle;
-	
+
+	UPROPERTY(BlueprintReadWrite)
+	bool bAllowCreateSession = true;
+	UPROPERTY(BlueprintReadWrite)
 	int ReqMatchAutoStartPlayerCount = 4;
 
 private:
