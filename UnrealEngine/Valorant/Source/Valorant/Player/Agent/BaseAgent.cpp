@@ -741,7 +741,8 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 			return;
 		}
 		// 어빌리티가 준비 / 대기 페이즈면 취소
-		else if (IsAbilityWaiting() || IsAbilityPreparing())
+		//else if (IsAbilityWaiting() || IsAbilityPreparing())
+		else if (IsAbilityWaiting())
 		{
 			// 활성화된 어빌리티 취소
 			CancelActiveAbilities();
