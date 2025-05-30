@@ -32,9 +32,9 @@ USubsystemSteamManager::USubsystemSteamManager() :
 	return nullptr;
 }
 
-/* static */  FString USubsystemSteamManager::GetDisplayName(const UWorld* Context, int LocalUserNum)
+/* static */  FString USubsystemSteamManager::GetDisplayName(const UObject* WorldContextObj, int LocalUserNum)
 {
-	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(Context);
+	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(WorldContextObj->GetWorld());
 	if (OnlineSubsystem)
 	{
 		const IOnlineIdentityPtr IdentityInterface = OnlineSubsystem->GetIdentityInterface();
