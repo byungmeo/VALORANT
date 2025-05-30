@@ -270,10 +270,14 @@ void UAgentAbilitySystemComponent::ClearFollowUpInputs()
 
 void UAgentAbilitySystemComponent::CleanupAbilityState()
 {
+    //NET_LOG(LogTemp,Warning,TEXT("어빌리티 클린업"));
+    
     // 모든 어빌리티 상태 정리
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Preparing, false);
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, false);
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting, false);
+
+    RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
     
     ClearFollowUpInputs();
 }
