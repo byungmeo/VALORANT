@@ -1,7 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "StimBeacon.h"
+﻿#include "StimBeacon.h"
 
 #include "StimBeaconAnim.h"
 #include "StimBeaconGround.h"
@@ -152,6 +149,6 @@ void AStimBeacon::StartUnequip()
 	if (AnimInstance)
 	{
 		State = EStimBeaconState::ESBS_Outtro;
-		//AnimInstance->OnOutro();
+		AnimInstance->OnOutro();
 	}
 }

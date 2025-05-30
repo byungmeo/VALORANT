@@ -25,20 +25,17 @@ protected:
     
 	// 시각 효과를 위한 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UDecalComponent* FireDecal;
-    
+	class UNiagaraComponent* NiagaraLoop;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UParticleSystemComponent* FireParticle;
-    
+	class UNiagaraComponent* NiagaraExplosion;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UAudioComponent* FireAudio;
 
 private:
-	// Incendiary 설정값
-	const float Radius = 450.0f;
-	const float Duration = 8.0f;
+	// Incendiary 설정값 (발로란트 실제 수치)
+	const float Radius = 350.0f; // 3.5미터
+	const float Duration = 8.0f; // 8초 지속
 	const float DamageRate = 0.25f; // 0.25초마다 데미지 (초당 4틱)
-	const float InitialBurstDamage = 20.0f;
-	
-	TSet<AActor*> DamageApplied;
 };

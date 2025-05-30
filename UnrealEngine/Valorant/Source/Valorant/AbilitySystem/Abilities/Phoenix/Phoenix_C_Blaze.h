@@ -29,7 +29,7 @@ protected:
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
     UAnimMontage* ExecuteCurvedMontage_3P = nullptr;
-
+    
     // 오버라이드 함수들
     virtual bool OnLeftClickInput() override;
     virtual bool OnRightClickInput() override;

@@ -50,7 +50,7 @@ bool UPhoenix_E_Curveball::SpawnFlashProjectile(bool IsRight)
 	ProjectileClass = FlashProjectileClass;
     
 	// 기본 SpawnProjectile 사용
-	bool result = SpawnProjectile(FVector(0,0,100.f));
+	bool result = SpawnProjectile(FVector(50,0,50.f));
 	if (auto flashBang = Cast<APhoenix_E_P_Curveball>(SpawnedProjectile))
 	{
 		flashBang->SetCurveDirection(IsRight);

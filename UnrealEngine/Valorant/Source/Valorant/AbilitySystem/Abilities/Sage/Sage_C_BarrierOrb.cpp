@@ -10,6 +10,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
+#include "DrawDebugHelpers.h"
 
 USage_C_BarrierOrb::USage_C_BarrierOrb()
 {
@@ -181,7 +182,7 @@ void USage_C_BarrierOrb::UpdateBarrierPreview()
 
 void USage_C_BarrierOrb::RotateBarrier()
 {
-	// 30도씩 회전
+	// 30도씩 회전 
 	CurrentRotation += RotationStep;
 	
 	// 0-360도 범위로 정규화
@@ -221,6 +222,7 @@ FVector USage_C_BarrierOrb::GetBarrierPlaceLocation()
 		QueryParams.AddIgnoredActor(PreviewBarrierWall);
 	}
 	
+	// 첫 번째 히트 지점 찾기
 	bool bHit = GetWorld()->LineTraceSingleByChannel(
 		HitResult,
 		CameraLocation,
@@ -229,33 +231,62 @@ FVector USage_C_BarrierOrb::GetBarrierPlaceLocation()
 		QueryParams
 	);
 	
-	FVector PlaceLocation;
+	FVector TargetLocation;
 	if (bHit)
 	{
-		PlaceLocation = HitResult.Location;
+		TargetLocation = HitResult.Location;
 	}
 	else
 	{
-		PlaceLocation = TraceEnd;
+		TargetLocation = TraceEnd;
 	}
 	
-	// 지면에 스냅
-	FHitResult GroundHit;
-	FVector GroundTraceStart = PlaceLocation + FVector(0, 0, 100.f);
-	FVector GroundTraceEnd = PlaceLocation - FVector(0, 0, 500.f);
+	// 지면 찾기 - 더 정확한 스냅을 위해 여러 지점에서 확인
+	FVector FinalLocation = TargetLocation;
+	float LowestZ = TargetLocation.Z;
+	bool bFoundGround = false;
 	
-	if (GetWorld()->LineTraceSingleByChannel(
-		GroundHit,
-		GroundTraceStart,
-		GroundTraceEnd,
-		ECC_WorldStatic,
-		QueryParams))
+	// 중앙과 사방향에서 지면 체크
+	TArray<FVector> CheckOffsets = {
+		FVector::ZeroVector,  // 중앙
+		FVector(200, 0, 0),   // 전방
+		FVector(-200, 0, 0),  // 후방
+		FVector(0, 200, 0),   // 우측
+		FVector(0, -200, 0)   // 좌측
+	};
+	
+	for (const FVector& Offset : CheckOffsets)
 	{
-		// 지면 위에 살짝 띄워서 배치
-		PlaceLocation = GroundHit.Location + FVector(0, 0, 5.f);
+		FVector CheckLocation = TargetLocation + Offset;
+		FHitResult GroundHit;
+		FVector GroundTraceStart = CheckLocation + FVector(0, 0, 500.f);
+		FVector GroundTraceEnd = CheckLocation - FVector(0, 0, 1000.f);
+		
+		if (GetWorld()->LineTraceSingleByChannel(
+			GroundHit,
+			GroundTraceStart,
+			GroundTraceEnd,
+			ECC_WorldStatic,
+			QueryParams))
+		{
+			if (!bFoundGround || GroundHit.Location.Z < LowestZ)
+			{
+				LowestZ = GroundHit.Location.Z;
+				bFoundGround = true;
+			}
+		}
 	}
 	
-	return PlaceLocation;
+	// 가장 낮은 지면에 배치
+	if (bFoundGround)
+	{
+		FinalLocation.Z = LowestZ;
+	}
+	
+	// 약간 지면 위로 띄우기 (겹침 방지)
+	FinalLocation.Z += 5.f;
+	
+	return FinalLocation;
 }
 
 void USage_C_BarrierOrb::SpawnBarrierWall(FVector Location, FRotator Rotation)

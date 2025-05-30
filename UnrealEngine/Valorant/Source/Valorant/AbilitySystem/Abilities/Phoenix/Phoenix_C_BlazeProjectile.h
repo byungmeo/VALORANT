@@ -6,8 +6,8 @@
 UENUM(BlueprintType)
 enum class EBlazeMovementType : uint8
 {
-    Straight,   // 직선 이동
-    Curved      // 커브 이동
+    Straight,
+    Curved
 };
 
 UCLASS()
@@ -18,60 +18,52 @@ class VALORANT_API APhoenix_C_BlazeProjectile : public ABaseProjectile
 public:
     APhoenix_C_BlazeProjectile();
 
-    // 벽 생성 설정
+    // 스플라인 벽 클래스
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Generation")
-    TSubclassOf<class APhoenix_C_BlazeWall> WallSegmentClass;
+    TSubclassOf<class APhoenix_C_BlazeSplineWall> SplineWallClass;
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Generation")
-    float SegmentSpawnInterval = 0.05f;  // 벽 세그먼트 생성 간격 (더 촘촘하게)
+    float SegmentSpawnInterval = 0.05f;
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Generation")
-    float SegmentLength = 100.0f;  // 각 세그먼트의 길이
-    
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Generation")
-    float MaxWallLength = 2000.0f;  // 최대 벽 길이 (20미터)
-    
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Generation")
-    int32 MaxSegments = 40;  // 최대 세그먼트 개수 (더 많이)
+    float MaxWallLength = 2000.0f;
     
     // 이동 설정
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement")
-    float StraightSpeed = 1500.0f;  // 직선 이동 속도
+    float StraightSpeed = 1500.0f;
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement")
-    float CurvedSpeed = 1200.0f;    // 커브 이동 속도
+    float CurvedSpeed = 1200.0f;
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Movement")
-    float CurveStrength = 300.0f;   // 커브 강도
+    float CurveRate = 45.0f;
 
-    // 이동 타입 설정
     void SetMovementType(EBlazeMovementType Type);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_SetMovementType(EBlazeMovementType Type);
 
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity) override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    UPROPERTY(Replicated)
+    EBlazeMovementType MovementType = EBlazeMovementType::Straight;
+    
+    UPROPERTY(Replicated)
+    bool bIsActive = true;
 
 private:
     UPROPERTY()
-    EBlazeMovementType MovementType = EBlazeMovementType::Straight;
+    class APhoenix_C_BlazeSplineWall* SplineWall;
     
-    UPROPERTY()
-    TArray<APhoenix_C_BlazeWall*> SpawnedWalls;
-    
-    FTimerHandle WallSpawnTimer;
-    FVector LastWallSpawnLocation;
-    FVector StartLocation;  // 시작 위치 저장
+    FTimerHandle SplineUpdateTimer;
     float TotalDistanceTraveled = 0.0f;
-    int32 CurrentSegmentCount = 0;
-    float CurveAngle = 0.0f;  // 현재 커브 각도
+    float CurrentCurveAngle = 0.0f;
     
-    // 벽 세그먼트 생성
-    void SpawnWallSegment();
-    
-    // 커브 이동 처리
+    void UpdateSplinePoint();
     void ApplyCurveMovement(float DeltaTime);
-    
-    // 투사체 종료
     void StopProjectile();
 };

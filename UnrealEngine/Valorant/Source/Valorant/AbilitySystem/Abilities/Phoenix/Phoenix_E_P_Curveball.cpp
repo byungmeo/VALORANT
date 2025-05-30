@@ -28,28 +28,27 @@ APhoenix_E_P_Curveball::APhoenix_E_P_Curveball()
 		Sphere->SetSphereRadius(15.0f);
 	}
 
-	// ProjectileMovement 설정
+	// ProjectileMovement 설정 - 발로란트 실제 수치
 	if (ProjectileMovement)
 	{
 		ProjectileMovement->InitialSpeed = InitialSpeed;
-		ProjectileMovement->MaxSpeed = InitialSpeed * 1.5f;  // 곡선을 그릴 때 속도가 증가할 수 있음
-		ProjectileMovement->ProjectileGravityScale = 0.0f;
-		ProjectileMovement->bRotationFollowsVelocity = false;  // 수동으로 회전 제어
+		ProjectileMovement->MaxSpeed = InitialSpeed * 1.2f;  // 약간의 속도 증가 허용
+		ProjectileMovement->ProjectileGravityScale = 0.0f;   // 중력 없음
+		ProjectileMovement->bRotationFollowsVelocity = false; // 수동으로 회전 제어
 		ProjectileMovement->bShouldBounce = true;
-		ProjectileMovement->Bounciness = 0.3f;
+		ProjectileMovement->Bounciness = 0.5f;  // 벽에 부딪힐 때 반발력
 		ProjectileMovement->Friction = 0.0f;
-		//ProjectileMovement->Friction = 0.2f;
 	}
 
-	// 섬광 설정 (FlashProjectile의 기본값 오버라이드)
-	SetLifeSpan(1.2f);
+	// 섬광 설정 - 발로란트 실제 수치
+	SetLifeSpan(0.65f);  // 실제 폭발까지 시간
     
-	// 피닉스 커브볼 전용 섬광 시간 설정
-	MaxBlindDuration = 1.1f;  // 최대 1.1초 완전 실명
-	MinBlindDuration = 0.3f;  // 최소 0.3초 완전 실명
-	RecoveryDuration = 0.7f;  // 0.7초 회복
-	DetonationDelay = 1.0f;   // 0.5초 후 폭발
-	FlashRadius = 3500.F;
+	// 피닉스 커브볼 섬광 시간 설정 
+	MaxBlindDuration = 1.1f;   // 최대 1.1초 완전 실명
+	MinBlindDuration = 0.3f;   // 최소 0.3초 완전 실명
+	RecoveryDuration = 0.6f;   // 0.6초 회복
+	DetonationDelay = 0.5f;    // 0.5초 후 폭발
+	FlashRadius = 3300.0f;     // 33미터 반경
 }
 
 // Called when the game starts or when spawned
@@ -91,10 +90,8 @@ void APhoenix_E_P_Curveball::Tick(float DeltaTime)
 		bHasStartedCurving = true;
 	}
 
-	if (bHasStartedCurving && CurrentCurveTime < MaxCurveTime)
+	if (bHasStartedCurving && TimeSinceSpawn <= MaxCurveTime)
 	{
-		CurrentCurveTime += DeltaTime;
-
 		// 현재 속도 방향
 		FVector CurrentVelocity = ProjectileMovement->Velocity;
 		float CurrentSpeed = CurrentVelocity.Size();
@@ -107,9 +104,10 @@ void APhoenix_E_P_Curveball::Tick(float DeltaTime)
 			RightVector *= -1.0f;
 		}
 
-		// 곡선 강도 계산 (시간에 따라 감소)
-		float CurveRatio = 1.0f - (CurrentCurveTime / MaxCurveTime);
-		float CurrentCurveStrength = CurveStrength * CurveRatio;
+		// 곡선 강도 계산 - 처음엔 강하게, 나중엔 약하게
+		float CurveProgress = (TimeSinceSpawn - CurveDelay) / (MaxCurveTime - CurveDelay);
+		float CurveMultiplier = FMath::Lerp(1.0f, 0.3f, CurveProgress);
+		float CurrentCurveStrength = CurveStrength * CurveMultiplier;
 
 		// 새로운 속도 방향 계산
 		FVector CurveForce = RightVector * CurrentCurveStrength * DeltaTime;
