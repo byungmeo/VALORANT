@@ -1191,8 +1191,13 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 {
 	// NET_LOG(LogTemp,Display,TEXT("Char, Health Changed 데미지 여부: %d"), bIsDamage);
+	
 	if (!bIsDamage)
 	{
+		if (HasAuthority())
+		{
+			MulticastRPC_OnHealed(true);
+		}
 		return;
 	}
 	
@@ -1249,6 +1254,11 @@ void ABaseAgent::MulticastRPC_OnDamaged_Implementation(const FVector& HitOrg, co
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, DamagedPart: %s, DamagedDir: %s, Die: %hs, Large: %hs"),
 		// __FUNCTION__, *EnumToString(DamagedPart), *EnumToString(DamagedDirection), bDie ? "True" : "False", bLarge ? "True" : "False");
 	OnAgentDamaged.Broadcast(HitOrg, DamagedPart, DamagedDirection, bDie, bLarge, bLowState);
+}
+
+void ABaseAgent::MulticastRPC_OnHealed_Implementation(const bool bHighState)
+{
+	OnAgentHealed.Broadcast(bHighState);
 }
 
 // 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트

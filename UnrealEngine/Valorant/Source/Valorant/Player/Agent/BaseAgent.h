@@ -112,6 +112,7 @@ struct FAgentVisibilityInfo
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FOnAgentDamaged, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge, const bool, bLowState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAgentDie, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAgentHealed, const bool, bHighState);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSwitchEquipment, const EInteractorType, equipmentState);
 
@@ -542,6 +543,8 @@ protected:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false, const bool bLowState = false);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_OnHealed(const bool bHighState = false);
 
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
@@ -554,6 +557,7 @@ private:
 public:
 	FOnAgentDamaged OnAgentDamaged;
 	FOnAgentDie OnAgentDie;
+	FOnAgentHealed OnAgentHealed;
 
 	FOnSwitchEquipment OnSwitchEquipment;
 	

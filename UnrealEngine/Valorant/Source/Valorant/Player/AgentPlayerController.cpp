@@ -517,6 +517,9 @@ void AAgentPlayerController::OnRep_Pawn()
 		{
 			Agent->OnAgentDamaged.RemoveDynamic(this, &AAgentPlayerController::OnDamaged);
 			Agent->OnAgentDamaged.AddDynamic(this, &AAgentPlayerController::OnDamaged);
+			Agent->OnAgentHealed.RemoveDynamic(this,&AAgentPlayerController::OnHealed);
+			Agent->OnAgentHealed.AddDynamic(this,&AAgentPlayerController::OnHealed);
+			// Agent->OnSwitchEquipment
 		}
 	}
 }
@@ -551,6 +554,11 @@ void AAgentPlayerController::OnDamaged(const FVector& HitOrg, const EAgentDamage
 	const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond, const bool bLowState)
 {
 	OnDamaged_PC.Broadcast(HitOrg, AgentDamagedPart, AgentDamagedDirection, bArg, bCond, bLowState);
+}
+
+void AAgentPlayerController::OnHealed(const bool bHighState)
+{
+	OnHealed_PC.Broadcast(bHighState);
 }
 
 void AAgentPlayerController::OnSpikePlanted(AMatchPlayerController* Planter)
