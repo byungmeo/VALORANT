@@ -230,6 +230,9 @@ public:
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSwitchWeapon(EInteractorType interactorType);
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSpikeOwnChanged(bool bOwnSpike);
 
 	UFUNCTION()
 	void OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent, const FKillFeedInfo& KillFeedInfo);
