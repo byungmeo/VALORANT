@@ -190,8 +190,8 @@ ABaseAgent* USage_E_HealingOrb::FindHealableAlly()
 
 	// 디버그 표시
 #if ENABLE_DRAW_DEBUG
-	DrawDebugLine(GetWorld(), CameraLocation, TraceEnd, FColor::Green, false, 0.1f, 0, 0.5f);
-	DrawDebugSphere(GetWorld(), TraceEnd, SphereRadius, 12, FColor::Green, false, 0.1f);
+	// DrawDebugLine(GetWorld(), CameraLocation, TraceEnd, FColor::Green, false, 0.1f, 0, 0.5f);
+	// DrawDebugSphere(GetWorld(), TraceEnd, SphereRadius, 12, FColor::Green, false, 0.1f);
 #endif
 
 	// 가장 가까운 힐링 가능한 아군 찾기

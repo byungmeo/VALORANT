@@ -148,13 +148,13 @@ void AKayoSuppressionZone::UpdateRangeIndicator()
 
 #if ENABLE_DRAW_DEBUG
 	// 디버그 표시
-	if (GEngine && GEngine->GetNetMode(GetWorld()) != NM_DedicatedServer)
-	{
-		DrawDebugSphere(GetWorld(), GetActorLocation(), SuppressionRadius, 32, FColor::Purple, false, 1.0f);
-
-		FString DebugText = FString::Printf(TEXT("Suppression Zone - %.1f sec remaining"), RemainingTime);
-		DrawDebugString(GetWorld(), GetActorLocation() + FVector(0, 0, 100), DebugText, nullptr, FColor::Purple,
-		                2.0f);
-	}
+	// if (GEngine && GEngine->GetNetMode(GetWorld()) != NM_DedicatedServer)
+	// {
+	// 	DrawDebugSphere(GetWorld(), GetActorLocation(), SuppressionRadius, 32, FColor::Purple, false, 1.0f);
+	//
+	// 	FString DebugText = FString::Printf(TEXT("Suppression Zone - %.1f sec remaining"), RemainingTime);
+	// 	DrawDebugString(GetWorld(), GetActorLocation() + FVector(0, 0, 100), DebugText, nullptr, FColor::Purple,
+	// 	                2.0f);
+	// }
 #endif
 }
