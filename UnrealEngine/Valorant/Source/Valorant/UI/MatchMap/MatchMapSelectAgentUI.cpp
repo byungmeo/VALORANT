@@ -67,6 +67,7 @@ void UMatchMapSelectAgentUI::OnClickedButtonLockIn()
 		return;
 	}
 	
+	PlayAgentSelectSound(CurrentSelectedAgentID);
 	Controller->ServerRPC_LockIn(CurrentSelectedAgentID);
 }
 

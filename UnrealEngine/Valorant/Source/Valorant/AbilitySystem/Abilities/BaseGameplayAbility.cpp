@@ -580,7 +580,10 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		{
 			if (HasAuthority(&ActivationInfo))
 			{
-				Agent->SwitchEquipment(PreviousEquipmentState);
+				EInteractorType ChangeState = PreviousEquipmentState;
+				PreviousEquipmentState = EInteractorType::None;
+				
+				Agent->SwitchEquipment(ChangeState);
 			}
 			PreviousEquipmentState = EInteractorType::None;
 		}
@@ -595,7 +598,8 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 bool UBaseGameplayAbility::ReduceAbilityStack()
 {
 	// PlayerState에서 차지 소모
-	if (APlayerController* PC = Cast<APlayerController>(GetAvatarActorFromActorInfo()->GetInstigatorController()))
+	// if (const APlayerController* PC = Cast<APlayerController>(GetAvatarActorFromActorInfo()->GetInstigatorController()))
+	if (const APlayerController* PC = Cast<APlayerController>(GetActorInfo().PlayerController.Get()))
 	{
 		if (AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>())
 		{
@@ -607,7 +611,8 @@ bool UBaseGameplayAbility::ReduceAbilityStack()
 
 int32 UBaseGameplayAbility::GetAbilityStack() const
 {
-	if (const APlayerController* PC = Cast<APlayerController>(GetAvatarActorFromActorInfo()->GetInstigatorController()))
+	// if (const APlayerController* PC = Cast<APlayerController>(GetAvatarActorFromActorInfo()->GetInstigatorController()))
+	if (const APlayerController* PC = Cast<APlayerController>(GetActorInfo().PlayerController.Get()))
 	{
 		if (const AAgentPlayerState* PS = PC->GetPlayerState<AAgentPlayerState>())
 		{

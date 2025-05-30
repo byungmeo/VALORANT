@@ -134,6 +134,9 @@ protected:
     UFUNCTION(Server, Reliable)
     void ServerRPC_HandleGameplayEvent(const FGameplayTag& inputTag);
     
+    UFUNCTION(Client,Reliable)
+    virtual void Client_HandleGameplayEvent(FGameplayTag EventTag);
+    
     UFUNCTION(Server, Reliable)
     void ServerRPC_SetAbilityState(FGameplayTag StateTag, bool bApply);
     
