@@ -284,7 +284,7 @@ FVector USage_C_BarrierOrb::GetBarrierPlaceLocation()
 	}
 	
 	// 약간 지면 위로 띄우기 (겹침 방지)
-	FinalLocation.Z += 5.f;
+	FinalLocation.Z += 15.f;
 	
 	return FinalLocation;
 }

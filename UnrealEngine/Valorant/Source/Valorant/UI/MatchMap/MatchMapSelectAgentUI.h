@@ -26,6 +26,8 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayAgentSelectSound(const int AgentID);
 	UFUNCTION(BlueprintCallable)
 	void OnClickedButtonLockIn();
 	UFUNCTION()

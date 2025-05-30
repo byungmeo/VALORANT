@@ -667,7 +667,14 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 			}
 		}
 	}
+}
 
+void AMatchGameMode::OnDie(AMatchPlayerController* Victim)
+{
+	if (!IsValid(this))
+	{
+		return;
+	}
 	int Blue = 0;
 	int Red = 0;
 	// 생존 플레이어 카운트 및 라운드 종료 처리

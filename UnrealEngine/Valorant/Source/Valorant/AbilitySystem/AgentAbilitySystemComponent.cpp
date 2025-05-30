@@ -61,6 +61,7 @@ int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, c
             {
                 if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
                 {
+                    Client_HandleGameplayEvent(EventTag);
                     Ability->HandleFollowUpInput(EventTag);
                     break;
                 }
@@ -69,6 +70,25 @@ int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, c
     }
     
     return Result;
+}
+
+void UAgentAbilitySystemComponent::Client_HandleGameplayEvent_Implementation(FGameplayTag EventTag)
+{
+    if (IsWaitingForFollowUp() && CurrentFollowUpInputs.Contains(EventTag))
+    {
+        // 활성 어빌리티 찾기
+        for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+        {
+            if (Spec.IsActive())
+            {
+                if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
+                {
+                    Ability->HandleFollowUpInput(EventTag);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void UAgentAbilitySystemComponent::ServerRPC_HandleGameplayEvent_Implementation(const FGameplayTag& inputTag)
