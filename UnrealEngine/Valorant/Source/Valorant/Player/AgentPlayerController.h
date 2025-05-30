@@ -17,12 +17,14 @@ class UMiniMapWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_SixParams(FOnDamaged_PC, const FVector&, HitOrg, const EAgentDamagedPart, DamagedPart, const EAgentDamagedDirection, DamagedDirection, const bool, bDie, const bool, bLarge, const bool, bLowState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnKillEvent_PC, ABaseAgent*, InstigatorAgent, ABaseAgent*, VictimAgent, const FKillFeedInfo&, Info);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealed_PC, const bool, bHighState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged_PC, float, newHealth, bool, bIsDamage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChanged_PC, float, newMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnArmorChanged_PC, float, newArmor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEffectSpeedChanged_PC, float, newSpeed);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnServerPurchaseResult, bool, bSuccess, int32, ItemID, EShopItemType, ItemType, const FString&, FailureReason);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnChangedAmmo, bool, bDisplayWidget, int, MagazineAmmo, int, SpareAmmo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpikeOwnChanged_PC, const bool, bHighState);
 
 UCLASS()
 class VALORANT_API AAgentPlayerController : public AMatchPlayerController
@@ -39,6 +41,8 @@ public:
 	FOnDamaged_PC OnDamaged_PC;
 	UPROPERTY(BlueprintAssignable)
 	FOnKillEvent_PC OnKillEvent_PC;
+	UPROPERTY(BlueprintAssignable)
+	FOnHealed_PC OnHealed_PC;
 	UPROPERTY(BlueprintAssignable)
 	FOnHealthChanged_PC OnHealthChanged_PC;
 	UPROPERTY(BlueprintAssignable)
@@ -196,7 +200,15 @@ public:
 
 	UFUNCTION()
 	void OnDamaged(const FVector& HitOrg, const EAgentDamagedPart AgentDamagedPart, const EAgentDamagedDirection AgentDamagedDirection, const bool bArg, const bool bCond, const bool bLowState);
-
+	UFUNCTION()
+	void OnHealed(const bool bHighState);
+	
 	UFUNCTION()
 	void OnSpikePlanted(AMatchPlayerController* Planter);
+
+	UFUNCTION()
+	void OnSwitchWeapon(const EInteractorType EquipmentState);
+
+	UFUNCTION()
+	void OnSpikeOwnChanged(const bool bOwnSpike);
 };

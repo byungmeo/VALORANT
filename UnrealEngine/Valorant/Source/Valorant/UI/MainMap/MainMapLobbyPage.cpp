@@ -36,12 +36,12 @@ void UMainMapLobbyPage::OnClickedButtonStart()
 	{
 		return;
 	}
-	
+
+	bIsProgressMatchMaking = true;
+	bIsFindingSession = true;
+	WidgetSwitcher->SetActiveWidgetIndex(1);
 	if (USubsystemSteamManager* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
 	{
-		bIsProgressMatchMaking = true;
-		bIsFindingSession = true;
-		WidgetSwitcher->SetActiveWidgetIndex(1);
 		SubsystemManager->FindSessions();
 	}
 }
@@ -82,6 +82,13 @@ void UMainMapLobbyPage::OnFindFirstSteamSessionComplete(const FOnlineSessionSear
 void UMainMapLobbyPage::OnFindSteamSessionComplete(const TArray<FOnlineSessionSearchResult>& OnlineSessionSearchResults,
 	bool bArg)
 {
+	auto* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>();
+	if (SubsystemManager && false == SubsystemManager->bAllowCreateSession && OnlineSessionSearchResults.Num() == 0)
+	{
+		SubsystemManager->FindSessions();
+		return;
+	}
+	
 	if (false == bIsFindingSession)
 	{
 		return;
@@ -94,14 +101,11 @@ void UMainMapLobbyPage::OnFindSteamSessionComplete(const TArray<FOnlineSessionSe
 	// 세션 검색을 성공했지만, 0개인 경우 OnFindFirst... 는 호출되지 않아서 여기서 처리한다.
 	if (OnlineSessionSearchResults.Num() == 0)
 	{
-		if (USubsystemSteamManager* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
+		if (SubsystemManager && bArg)
 		{
-			if (bArg)
-			{
-				// 세션이 하나도 없으니 자신이 세션을 직접 만든다.
-				bIsHostingSession = true;
-				SubsystemManager->CreateSession();
-			}
+			// 세션이 하나도 없으니 자신이 세션을 직접 만든다.
+			bIsHostingSession = true;
+			SubsystemManager->CreateSession();
 		}
 	}
 }

@@ -201,6 +201,15 @@ FAbilityData* UValorantGameInstance::GetAbilityData(int AbilityID)
 	return nullptr;
 }
 
+UTexture2D* UValorantGameInstance::GetAgentIcon(int AgentID)
+{
+	if (const auto* Data = GetAgentData(AgentID))
+	{
+		return Data->KillFeedIcon;
+	}
+	return nullptr;
+}
+
 UValorantGameInstance* UValorantGameInstance::Get(class UWorld* World)
 {
 	return Cast<UValorantGameInstance>(World->GetGameInstance());

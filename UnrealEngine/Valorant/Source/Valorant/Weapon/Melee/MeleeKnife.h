@@ -43,6 +43,8 @@ public:
 	virtual bool ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const override;
 	virtual bool ServerOnly_CanDrop() const override;
 
+	virtual void ServerRPC_SetActive_Implementation(bool bActive) override;
+
 	virtual void StartFire() override;
 	virtual void Fire() override;
 

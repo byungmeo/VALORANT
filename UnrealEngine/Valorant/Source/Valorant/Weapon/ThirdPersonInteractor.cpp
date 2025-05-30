@@ -22,6 +22,7 @@ AThirdPersonInteractor::AThirdPersonInteractor()
 	SetReplicatingMovement(true);
 	
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
+	SetRootComponent(Mesh);
 	Mesh->SetCollisionProfileName(TEXT("NoCollision"), false);
 	Mesh->SetOwnerNoSee(true);
 }

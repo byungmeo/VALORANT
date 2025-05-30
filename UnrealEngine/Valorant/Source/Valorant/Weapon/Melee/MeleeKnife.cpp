@@ -48,6 +48,12 @@ bool AMeleeKnife::ServerOnly_CanDrop() const
 	return false;
 }
 
+void AMeleeKnife::ServerRPC_SetActive_Implementation(bool bActive)
+{
+	Super::ServerRPC_SetActive_Implementation(bActive);
+	ResetCombo();
+}
+
 void AMeleeKnife::StartFire()
 {
 	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController())
@@ -135,7 +141,7 @@ void AMeleeKnife::DamageBox(FVector center, FRotator rot)
 	Params.AddIgnoredActor(OwnerAgent);
 
 	const bool bOverlap = GetWorld()->OverlapMultiByChannel(Overlaps, center, rot.Quaternion(),ECC_EngineTraceChannel2, BoxShape, Params);
-	DrawDebugBox(GetWorld(),center,FVector(30,30,5),rot.Quaternion(),FColor::Green,false,2.0f);
+	// DrawDebugBox(GetWorld(),center,FVector(30,30,5),rot.Quaternion(),FColor::Green,false,2.0f);
 
 	if (bOverlap)
 	{

@@ -517,6 +517,11 @@ void AAgentPlayerController::OnRep_Pawn()
 		{
 			Agent->OnAgentDamaged.RemoveDynamic(this, &AAgentPlayerController::OnDamaged);
 			Agent->OnAgentDamaged.AddDynamic(this, &AAgentPlayerController::OnDamaged);
+			Agent->OnAgentHealed.RemoveDynamic(this,&AAgentPlayerController::OnHealed);
+			Agent->OnAgentHealed.AddDynamic(this,&AAgentPlayerController::OnHealed);
+			Agent->OnSwitchEquipment.RemoveDynamic(this,&AAgentPlayerController::OnSwitchWeapon);
+			Agent->OnSwitchEquipment.AddDynamic(this,&AAgentPlayerController::OnSwitchWeapon);
+			Agent->OnSpikeOwnChanged.AddDynamic(this,&AAgentPlayerController::OnSpikeOwnChanged);
 		}
 	}
 }
@@ -553,10 +558,31 @@ void AAgentPlayerController::OnDamaged(const FVector& HitOrg, const EAgentDamage
 	OnDamaged_PC.Broadcast(HitOrg, AgentDamagedPart, AgentDamagedDirection, bArg, bCond, bLowState);
 }
 
+void AAgentPlayerController::OnHealed(const bool bHighState)
+{
+	OnHealed_PC.Broadcast(bHighState);
+}
+
 void AAgentPlayerController::OnSpikePlanted(AMatchPlayerController* Planter)
 {
 	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
 	{
 		MatchMapHud->SpikePlanted();
+	}
+}
+
+void AAgentPlayerController::OnSwitchWeapon(const EInteractorType EquipmentState)
+{
+	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
+	{
+		MatchMapHud->OnSwitchWeapon(EquipmentState);
+	}
+}
+
+void AAgentPlayerController::OnSpikeOwnChanged(const bool bOwnSpike)
+{
+	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
+	{
+		MatchMapHud->OnSpikeOwnChanged(bOwnSpike);
 	}
 }

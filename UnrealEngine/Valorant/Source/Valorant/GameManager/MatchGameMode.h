@@ -60,8 +60,8 @@ class VALORANT_API AMatchGameMode : public AGameMode
 
 public:
 	AMatchGameMode();
-	static bool IsAttacker(const bool bIsBlueTeam);
-	static bool IsShifted();
+	bool IsAttacker(const bool bIsBlueTeam) const;
+	bool IsShifted() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -153,11 +153,11 @@ protected:
 
 public:
 	int TotalRound = 3;
-	// static int CurrentRound;
+	int CurrentRound = 0;
 	int RequiredScore = 2;
 	int TeamBlueScore = 0;
 	int TeamRedScore = 0;
-	// static int ShiftRound;
+	int ShiftRound = 2;
 	int BlueTeamConsecutiveLosses = 0;
 	int RedTeamConsecutiveLosses = 0;
 	void HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEndReason);

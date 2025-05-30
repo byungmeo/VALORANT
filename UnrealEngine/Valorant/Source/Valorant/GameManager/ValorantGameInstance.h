@@ -67,6 +67,9 @@ public:
 	void GetAllWeaponData(TArray<FWeaponData*>& WeaponList);
 	FGameplayEffectData* GetGEffectData(int GEffectID);
 	FAbilityData* GetAbilityData(int AbilityID);
+
+	UFUNCTION(BlueprintCallable)
+	UTexture2D* GetAgentIcon(int AgentID);
 	
 	static UValorantGameInstance* Get(class UWorld* World);
 
