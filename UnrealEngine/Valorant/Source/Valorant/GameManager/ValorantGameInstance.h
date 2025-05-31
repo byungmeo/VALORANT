@@ -30,6 +30,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UUserWidget> LobbyToSelectLoadingWidgetClass;
+	
+	void OnMatchHasStarted();
 
 protected:
 	UFUNCTION()
@@ -70,7 +72,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	UTexture2D* GetAgentIcon(int AgentID);
-	
+
 	static UValorantGameInstance* Get(class UWorld* World);
 
 private:
