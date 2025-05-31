@@ -142,4 +142,10 @@ protected:
     
     UFUNCTION(NetMulticast, Reliable)
     void MulticastRPC_NotifyAbilityStateChanged(FGameplayTag StateTag, bool bApply);
+
+private:
+    UFUNCTION(Reliable, Server)
+    void Server_CleanupAbilityState();
+    UFUNCTION(Reliable, Server)
+    void NetMultiCast_CleanupAbilityState();
 };

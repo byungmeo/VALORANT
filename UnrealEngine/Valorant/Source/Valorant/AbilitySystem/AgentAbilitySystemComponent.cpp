@@ -271,7 +271,19 @@ void UAgentAbilitySystemComponent::ClearFollowUpInputs()
 void UAgentAbilitySystemComponent::CleanupAbilityState()
 {
     //NET_LOG(LogTemp,Warning,TEXT("어빌리티 클린업"));
-    
+    if (GetOwner()->HasAuthority())
+    {
+        NetMultiCast_CleanupAbilityState();
+    }
+    else
+    {
+        Server_CleanupAbilityState();
+    }
+
+}
+
+void UAgentAbilitySystemComponent::NetMultiCast_CleanupAbilityState_Implementation()
+{
     // 모든 어빌리티 상태 정리
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Preparing, false);
     SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, false);
@@ -280,6 +292,11 @@ void UAgentAbilitySystemComponent::CleanupAbilityState()
     RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
     
     ClearFollowUpInputs();
+}
+
+void UAgentAbilitySystemComponent::Server_CleanupAbilityState_Implementation()
+{
+    NetMultiCast_CleanupAbilityState();
 }
 
 bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
