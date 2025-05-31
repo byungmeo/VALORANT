@@ -299,6 +299,8 @@ struct FAgentData : public FTableRowBase
 	UAnimMontage* CharSelectCameraMontage = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+	UTexture2D* AgentIcon = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 	UTexture2D* KillFeedIcon = nullptr;
 };
 

@@ -9,6 +9,7 @@
 #include "ResourceManager/ValorantGameType.h"
 #include "MatchMapHUD.generated.h"
 
+class UMatchMapHudTopWidget;
 class UVerticalBox;
 struct FKillFeedInfo;
 enum class EFollowUpInputType : uint8;
@@ -119,11 +120,10 @@ class VALORANT_API UMatchMapHUD : public UUserWidget
 	
 protected:
 	virtual void NativeConstruct() override;
-	
+
 	UFUNCTION()
 	void UpdateTime(float Time);
-	UFUNCTION()
-	void UpdateScore(int TeamBlueScore, int TeamRedScore);
+	
 	UFUNCTION()
 	void OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime);
 	UFUNCTION()
@@ -251,12 +251,6 @@ public:
 
 public:
 	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> TextBlockTime = nullptr;
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> TextBlockBlueScore = nullptr;
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> TextBlockRedScore = nullptr;
-	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UHorizontalBox> HorizontalBoxAmmo = nullptr;
@@ -264,10 +258,8 @@ public:
 	TObjectPtr<UTextBlock> TextBlockMagazineAmmo = nullptr;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TextBlockSpareAmmo = nullptr;
-	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
-	TObjectPtr<UOverlay> Overlay_Timer = nullptr;
-	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
-	TObjectPtr<UImage> Img_Spike = nullptr;
+	UPROPERTY(BlueprintReadOnly, meta=(BindWidget))
+	TObjectPtr<UMatchMapHudTopWidget> TopWidget = nullptr;
 
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* txt_Armor;
@@ -346,8 +338,8 @@ private:
  *	Debug
  */
 public:
-	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UTextBlock> TextBlockRoundSubStateDbg = nullptr;
+	// UPROPERTY(meta=(BindWidget))
+	// TObjectPtr<UTextBlock> TextBlockRoundSubStateDbg = nullptr;
 
 protected:
 	UFUNCTION()
