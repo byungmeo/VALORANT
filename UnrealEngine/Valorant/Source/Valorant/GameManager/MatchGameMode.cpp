@@ -76,8 +76,15 @@ void AMatchGameMode::BeginPlay()
 	{
 		Session->SessionSettings.Set(FName("bReadyToTravel"), true,
 		                             EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-		SessionInterface->UpdateSession(NAME_GameSession, Session->SessionSettings, true);
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, Try UpdateSession Completed"), __FUNCTION__);
+		bool bSuccess = SessionInterface->UpdateSession(NAME_GameSession, Session->SessionSettings, true);
+		if (bSuccess)
+		{
+			NET_LOG(LogTemp, Warning, TEXT("%hs Called, Try UpdateSession Completed"), __FUNCTION__);	
+		}
+		else
+		{
+			NET_LOG(LogTemp, Error, TEXT("%hs Called, Try UpdateSession Failed"), __FUNCTION__);
+		}
 	}
 
 	RequiredPlayerCount = SubsystemManager->ReqMatchAutoStartPlayerCount;
@@ -225,6 +232,9 @@ void AMatchGameMode::HandleMatchHasStarted()
 {
 	Super::HandleMatchHasStarted();
 
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	ValorantGameInstance->OnMatchHasStarted();
+	
 	TSubclassOf<AActor> ActorClass = APlayerStart::StaticClass();
 	TArray<AActor*> OutActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
@@ -234,12 +244,10 @@ void AMatchGameMode::HandleMatchHasStarted()
 		if (PlayerStart->PlayerStartTag == FName("Attackers"))
 		{
 			AttackersStartPoint = PlayerStart;
-			UE_LOG(LogTemp, Warning, TEXT("AttackersStartPoint Found"));
 		}
 		else if (PlayerStart->PlayerStartTag == FName("Defenders"))
 		{
 			DefendersStartPoint = PlayerStart;
-			UE_LOG(LogTemp, Warning, TEXT("DefendersStartPoint Found"));
 		}
 	}
 

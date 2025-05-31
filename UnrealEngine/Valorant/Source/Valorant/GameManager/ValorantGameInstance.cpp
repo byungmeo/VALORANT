@@ -2,10 +2,12 @@
 
 #include "ValorantGameInstance.h"
 
+#include "InterchangeResult.h"
 #include "MoviePlayer.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "SubsystemSteamManager.h"
+#include "Valorant.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h" 
@@ -126,11 +128,11 @@ void UValorantGameInstance::BeginLoadingScreen(const FString& MapName)
 			LoadingScreen.PlaybackType = MT_Normal;
 			LoadingScreen.bAllowEngineTick = false;
 			LoadingScreen.bWaitForManualStop = false;
-			// 맵 로딩이 완료되면 자동으로 파괴한다. (그럼에도 RemoveFromParent를 해야 하는지는 검증 필요)
 			LoadingScreen.bAutoCompleteWhenLoadingCompletes = true;
 			// 최소한 3초는 표시한다.
 			LoadingScreen.MinimumLoadingScreenDisplayTime = 3.f;
-			
+
+			CurrentLoadingWidget = nullptr;
 			GetMoviePlayer()->SetupLoadingScreen(LoadingScreen);
 		}
 	}
@@ -139,6 +141,34 @@ void UValorantGameInstance::BeginLoadingScreen(const FString& MapName)
 void UValorantGameInstance::EndLoadingScreen(UWorld* InLoadedWorld)
 {
 	UE_LOG(LogTemp, Warning, TEXT("EndLoadingScreen"));
+	
+	if (CurrentLoadingWidget)
+	{
+		CurrentLoadingWidget->RemoveFromParent();
+		CurrentLoadingWidget = nullptr;
+	}
+
+	if (GetWorld()->GetNetMode() == NM_ListenServer)
+	{
+		if (InLoadedWorld->GetMapName().Contains(TEXT("MatchMap")))
+		{
+			CurrentLoadingWidget = CreateWidget<UUserWidget>(this, LobbyToSelectLoadingWidgetClass);
+			if (CurrentLoadingWidget)
+			{
+				CurrentLoadingWidget->AddToViewport();
+			}
+		}
+	}
+}
+
+void UValorantGameInstance::OnMatchHasStarted()
+{
+	NET_LOG(LogTemp, Warning, TEXT("%hs Called"), __FUNCTION__);
+	if (CurrentLoadingWidget)
+	{
+		CurrentLoadingWidget->RemoveFromParent();
+		CurrentLoadingWidget = nullptr;
+	}
 }
 
 void UValorantGameInstance::OnGetPlayerCompleted(const bool bIsSuccess, const FPlayerDTO& PlayerDto)
