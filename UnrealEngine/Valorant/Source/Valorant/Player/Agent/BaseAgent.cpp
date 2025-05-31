@@ -125,7 +125,8 @@ ABaseAgent::ABaseAgent()
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
-	Camera->SetFieldOfView(70.f);
+	Camera->SetFieldOfView(90.f);
+	Camera->SetRelativeLocation(FVector(15, 0, 0));
 
 	// Interaction Capsule
 	InteractionCapsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("InteractionCapsule"));
