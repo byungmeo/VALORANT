@@ -198,7 +198,7 @@ protected:
 
 	// === 멀티플레이 ===
 	UFUNCTION()
-	void StopAllMontages();
+	void StopAllMontages() const;
 
 	UPROPERTY()
 	ABaseProjectile* SpawnedProjectile = nullptr;
@@ -224,4 +224,8 @@ private:
 
 	UFUNCTION()
 	void OnWaitingTimeout();
+
+	// 어빌리티 상태 플래그
+	bool bIsCanceling;
+	bool bIsEnding;
 };

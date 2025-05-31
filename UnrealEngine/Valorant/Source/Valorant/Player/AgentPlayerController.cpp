@@ -177,7 +177,7 @@ void AAgentPlayerController::HandleHealthChanged(float NewHealth, bool bIsDamage
 void AAgentPlayerController::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAgent,
 	const FKillFeedInfo& Info)
 {
-	NET_LOG(LogTemp, Warning, TEXT("%hs Called, InstigatorAgentName: %s"), __FUNCTION__, *InstigatorAgent->GetName());
+	//NET_LOG(LogTemp, Warning, TEXT("%hs Called, InstigatorAgentName: %s"), __FUNCTION__, *InstigatorAgent->GetName());
 	OnKillEvent_PC.Broadcast(InstigatorAgent, VictimAgent, Info);
 }
 

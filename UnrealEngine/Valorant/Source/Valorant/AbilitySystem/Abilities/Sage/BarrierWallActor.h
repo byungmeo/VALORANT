@@ -48,8 +48,8 @@ protected:
     void CompleteBuild();
     
     // 세그먼트 파괴
-    UFUNCTION()
-    void DestroySegment(int32 SegmentIndex);
+    UFUNCTION(NetMulticast,Reliable)
+    void NetMulti_DestroySegment(int32 SegmentIndex);
     
     UFUNCTION()
     void DestroyBarrier();
