@@ -70,15 +70,29 @@ void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateCancelAbility)
 {
+	// 취소 중 플래그 추가
+	bIsCanceling = true;
+    
 	// 정리 작업
 	UnregisterFollowUpInputs();
 	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
 	StopAllMontages();
 
+	// 모든 어빌리티 관련 태그 제거
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+	}
+
 	// 상태 태그 정리
 	SetAbilityPhase(FGameplayTag());
-	
+    
 	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
+    
+	bIsCanceling = false;
 }
 
 void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -388,19 +402,25 @@ void UBaseGameplayAbility::PlayMontages(UAnimMontage* Montage1P, UAnimMontage* M
 	}
 }
 
-void UBaseGameplayAbility::StopAllMontages()
+void UBaseGameplayAbility::StopAllMontages() const
 {
 	ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
 	if (!Agent)
 	{
 		return;
 	}
+	
+	// 죽음 몽타주 재생 끊기 방지
+	if (Agent->IsDead())
+	{
+		return;
+	}
 
 	// 3인칭 몽타주
-	Agent->StopThirdPersonMontage(0.1f);
+	Agent->StopThirdPersonMontage(0.05f);
 
 	// 1인칭 몽타주
-	Agent->StopFirstPersonMontage(0.1f);
+	Agent->StopFirstPersonMontage(0.05f);
 }
 
 bool UBaseGameplayAbility::SpawnProjectile(FVector LocationOffset, FRotator RotationOffset)
@@ -466,23 +486,6 @@ void UBaseGameplayAbility::SetAbilityPhase(FGameplayTag NewPhase)
 	if (HasAuthority(&CurrentActivationInfo))
 	{
 		OnRep_CurrentPhase();
-	}
-
-	// 어빌리티 실행 단계일 때 무기 교체 제한 태그 추가
-	if (NewPhase == FValorantGameplayTags::Get().State_Ability_Executing)
-	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-		{
-			ASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-		}
-	}
-	// 다른 단계로 전환될 때 무기 사용 제한 태그 제거
-	else
-	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-		{
-			ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-		}
 	}
 }
 
@@ -564,10 +567,27 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
                                       const FGameplayAbilityActivationInfo ActivationInfo,
                                       bool bReplicateEndAbility, bool bWasCancelled)
 {
+	// 이미 종료 중이면 리턴
+	if (bIsEnding)
+	{
+		return;
+	}
+    
+	bIsEnding = true;
+    
 	// 정리
 	UnregisterFollowUpInputs();
 	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
 	StopAllMontages();
+
+	// 모든 어빌리티 관련 태그 제거
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+	}
 
 	// 상태 태그 정리
 	SetAbilityPhase(FGameplayTag());
@@ -575,15 +595,25 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	// 어빌리티 종료 시 원래 무기로 복귀
 	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
 	{
-		// 이전 무기 상태로 복귀
+		// 이전 무기 상태가 존재하고
 		if (PreviousEquipmentState != EInteractorType::None)
 		{
-			if (HasAuthority(&ActivationInfo))
+			// 에이전트가 어빌리티 무기 상태라면
+			if (Agent->GetInteractorState() == EInteractorType::Ability)
 			{
-				EInteractorType ChangeState = PreviousEquipmentState;
-				PreviousEquipmentState = EInteractorType::None;
-				
-				Agent->SwitchEquipment(ChangeState);
+				// 이전 무기 상태로 복귀
+				if (HasAuthority(&ActivationInfo))
+				{
+					EInteractorType ChangeState = PreviousEquipmentState;
+					PreviousEquipmentState = EInteractorType::None;
+                
+					// 약간의 딜레이 후 무기 전환 (몽타주 블렌드 아웃 시간 고려)
+					FTimerHandle WeaponSwapTimer;
+					GetWorld()->GetTimerManager().SetTimer(WeaponSwapTimer, [Agent, ChangeState]()
+					{
+						Agent->SwitchEquipment(ChangeState);
+					}, 0.1f, false);
+				}
 			}
 			PreviousEquipmentState = EInteractorType::None;
 		}
@@ -593,6 +623,8 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	OnEndAbility.Broadcast();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+    
+	bIsEnding = false;
 }
 
 bool UBaseGameplayAbility::ReduceAbilityStack()

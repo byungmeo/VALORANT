@@ -730,85 +730,85 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
 	if (HasAuthority())
 	{
-		// 무기 전환이 차단된 상태인지 확인
-		if (IsWeaponSwitchBlocked())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("무기 전환이 차단된 상태입니다."));
-			return;
-		}
-
 		// 어빌리티 실행 중인지 확인
 		if (IsAbilityExecuting())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("어빌리티 실행 중에는 무기를 전환할 수 없습니다."));
 			return;
 		}
-		// ToDO : 수정
-		else if (IsAbilityPreparing())
-		{
-			return;
-		}
-		// 어빌리티가 준비 / 대기 페이즈면 취소
-		//else if (IsAbilityWaiting() || IsAbilityPreparing())
-		else if (IsAbilityWaiting())
+        
+		// 어빌리티가 준비/대기 중이면 모두 취소
+		if (IsAbilityPreparing() || IsAbilityWaiting())
 		{
 			// 활성화된 어빌리티 취소
 			CancelActiveAbilities();
-		}
-
-
-		if (EquipmentType == CurrentEquipmentState)
-		{
+            
+			// 취소 후 약간의 딜레이를 두고 무기 전환
+			FTimerHandle DelayedSwitchTimer;
+			GetWorld()->GetTimerManager().SetTimer(DelayedSwitchTimer, [this, EquipmentType]()
+			{
+				PerformWeaponSwitch(EquipmentType);
+			}, 0.1f, false);
 			return;
 		}
-		
-		if (CurrentInteractor)
-		{
-			PrevEquipmentState = CurrentEquipmentState;
-			ASC->ClearFollowUpInputs();
-		}
 
-		if (EquipmentType == EInteractorType::Ability)
-		{
-			EquipInteractor(nullptr);
-			// EqupInteractor 에서 Current를 Set 하므로 메뉴얼릭하게 설정
-			CurrentEquipmentState = EInteractorType::Ability;
-		}
-		else if (EquipmentType == EInteractorType::MainWeapon)
-		{
-			if (MainWeapon)
-			{
-				EquipInteractor(MainWeapon);
-			}
-		}
-		else if (EquipmentType == EInteractorType::SubWeapon)
-		{
-			if (SubWeapon)
-			{
-				EquipInteractor(SubWeapon);
-			}
-		}
-		else if (EquipmentType == EInteractorType::Melee)
-		{
-			if (MeleeKnife)
-			{
-				EquipInteractor(MeleeKnife);
-			}
-		}
-		else if (EquipmentType == EInteractorType::Spike)
-		{
-			if (Spike)
-			{
-				EquipInteractor(Spike);
-			}
-		}
-
-		UpdateEquipSpeedMultiplier();
+		// 정상적인 무기 전환 진행
+		PerformWeaponSwitch(EquipmentType);
 	}
 	else
 	{
 		ServerRPC_SwitchEquipment(EquipmentType);
 	}
+}
+
+void ABaseAgent::PerformWeaponSwitch(EInteractorType EquipmentType)
+{
+	if (EquipmentType == CurrentEquipmentState)
+	{
+		return;
+	}
+    
+	if (CurrentInteractor)
+	{
+		PrevEquipmentState = CurrentEquipmentState;
+		ASC->ClearFollowUpInputs();
+	}
+
+	if (EquipmentType == EInteractorType::Ability)
+	{
+		EquipInteractor(nullptr);
+		CurrentEquipmentState = EInteractorType::Ability;
+	}
+	else if (EquipmentType == EInteractorType::MainWeapon)
+	{
+		if (MainWeapon)
+		{
+			EquipInteractor(MainWeapon);
+		}
+	}
+	else if (EquipmentType == EInteractorType::SubWeapon)
+	{
+		if (SubWeapon)
+		{
+			EquipInteractor(SubWeapon);
+		}
+	}
+	else if (EquipmentType == EInteractorType::Melee)
+	{
+		if (MeleeKnife)
+		{
+			EquipInteractor(MeleeKnife);
+		}
+	}
+	else if (EquipmentType == EInteractorType::Spike)
+	{
+		if (Spike)
+		{
+			EquipInteractor(Spike);
+		}
+	}
+
+	UpdateEquipSpeedMultiplier();
 }
 
 void ABaseAgent::ActivateSpike()
@@ -1045,6 +1045,12 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 /** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
+	// 모든 활성 어빌리티 즉시 취소
+	CancelActiveAbilities();
+
+	CurrentEquipmentState = EInteractorType::None;
+	PrevEquipmentState = EInteractorType::None;
+	
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
@@ -1220,8 +1226,6 @@ void ABaseAgent::ServerApplyHitScanGE_Implementation(TSubclassOf<UGameplayEffect
 
 void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 {
-	// NET_LOG(LogTemp,Display,TEXT("Char, Health Changed 데미지 여부: %d"), bIsDamage);
-	
 	if (!bIsDamage)
 	{
 		if (HasAuthority())
@@ -1258,7 +1262,7 @@ void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 	{
 		ServerApplyGE(GE_HitSlow, nullptr);
 	}
-	
+    
 	LastDamagedOrg = FVector::ZeroVector;
 	LastDamagedPart = EAgentDamagedPart::None;
 	LastDamagedDirection = EAgentDamagedDirection::Front;

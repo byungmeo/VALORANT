@@ -278,6 +278,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SwitchEquipment(EInteractorType EquipmentType);
 
+	// 실제 무기 전환 로직
+	void PerformWeaponSwitch(EInteractorType EquipmentType);
+
 	void ActivateSpike();
 	void CancelSpike(ASpike* CancelObject);
 	UFUNCTION(Server, Reliable)
@@ -376,12 +379,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	bool IsAbilityExecuting() const { return HasGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing); }
+
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	bool IsAbilityActivating() const { return IsAbilityPreparing() || IsAbilityWaiting() || IsAbilityExecuting(); }
 	
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	bool IsMovementBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Movement); }
-	
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	bool IsWeaponSwitchBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch); }
 	
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	bool IsAbilityInputBlocked() const { return HasGameplayTag(FValorantGameplayTags::Get().Block_Ability_Input); }
