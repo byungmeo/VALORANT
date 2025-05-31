@@ -10,11 +10,6 @@
 #include "Player/AgentPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
-#include "GameplayTagAssetInterface.h"
-#include "Net/UnrealNetwork.h"
-#include "ValorantObject/BaseInteractor.h"
-#include "Kismet/GameplayStatics.h"
-#include "Particles/ParticleSystem.h"
 #include "Sound/SoundBase.h"
 #include "NiagaraFunctionLibrary.h"
 
@@ -23,8 +18,6 @@ UBaseGameplayAbility::UBaseGameplayAbility()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	bReplicateInputDirectly = true;
 
-	// 기본 태그 설정
-	//ActivationBlockedTags.AddTag(FValorantGameplayTags::Get().Block_Ability_Activation);
 	ActivationBlockedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("State.Debuff.Suppressed")));
 }
 
@@ -39,107 +32,71 @@ void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInf
 	}
 }
 
-bool UBaseGameplayAbility::CanBeCanceled() const
+void UBaseGameplayAbility::TransitionToState(EAbilityState NewState)
 {
-	// 실행 단계에서는 기본적으로 취소 불가
-	if (CurrentPhase == FValorantGameplayTags::Get().State_Ability_Executing)
+	if (CurrentState == NewState)
 	{
-		return bAllowCancelDuringExecution;
-	}
-    
-	// 준비나 대기 단계에서는 취소 가능
-	return Super::CanBeCanceled();
-}
-
-bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
-                                              const FGameplayAbilityActorInfo* ActorInfo,
-                                              const FGameplayTagContainer* SourceTags,
-                                              const FGameplayTagContainer* TargetTags,
-                                              FGameplayTagContainer* OptionalRelevantTags) const
-{
-	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
-	{
-		return false;
+		return;
 	}
 
-	// 차지 확인
-	return GetAbilityStack() > 0;
+	// 이전 상태 퇴출
+	switch (CurrentState)
+	{
+	case EAbilityState::Preparing:
+		ExitState_Preparing();
+		break;
+	case EAbilityState::Waiting:
+		ExitState_Waiting();
+		break;
+	case EAbilityState::Executing:
+		ExitState_Executing();
+		break;
+	}
+
+	// 상태 변경
+	EAbilityState OldState = CurrentState;
+	CurrentState = NewState;
+
+	// 새 상태 진입
+	switch (NewState)
+	{
+	case EAbilityState::Preparing:
+		EnterState_Preparing();
+		break;
+	case EAbilityState::Waiting:
+		EnterState_Waiting();
+		break;
+	case EAbilityState::Executing:
+		EnterState_Executing();
+		break;
+	case EAbilityState::Canceling:
+		EnterState_Canceling();
+		break;
+	case EAbilityState::Ending:
+		EnterState_Ending();
+		break;
+	}
+
+	// 델리게이트 브로드캐스트
+	OnStateChanged.Broadcast(ConvertAbilityStateToGamePlayTag(NewState));
+
+	// 디버그 로그
+	NET_LOG(LogTemp, Display, TEXT("어빌리티 상태 전환: %s -> %s"),
+	        *UEnum::GetValueAsString(OldState),
+	        *UEnum::GetValueAsString(NewState));
 }
 
-void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
-	bool bReplicateCancelAbility)
+void UBaseGameplayAbility::EnterState_Preparing()
 {
-	// 취소 중 플래그 추가
-	bIsCanceling = true;
-    
-	// 정리 작업
-	UnregisterFollowUpInputs();
-	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
-	StopAllMontages();
-
-	// 모든 어빌리티 관련 태그 제거
+	// ASC에 상태 태그 추가
 	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+		ASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+		ASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
 	}
 
-	// 상태 태그 정리
-	SetAbilityPhase(FGameplayTag());
-    
-	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
-    
-	bIsCanceling = false;
-}
-
-void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
-                                           const FGameplayAbilityActorInfo* ActorInfo,
-                                           const FGameplayAbilityActivationInfo ActivationInfo,
-                                           const FGameplayEventData* TriggerEventData)
-{
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	CachedActorInfo = *ActorInfo;
-
-	// 어빌리티 실행 전 현재 무기 상태 저장, 어빌리티로 무기전환
-	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
-	{
-		PreviousEquipmentState = Agent->GetInteractorState();
-		if (HasAuthority(&ActivationInfo))
-		{
-			Agent->SwitchEquipment(EInteractorType::Ability);
-		}
-	}
-
-	StartAbilityExecution();
-}
-
-void UBaseGameplayAbility::StartAbilityExecution()
-{
-	switch (ActivationType)
-	{
-	case EAbilityActivationType::Instant:
-		// 즉시 실행
-		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Executing);
-		HandleExecutePhase();
-		break;
-
-	case EAbilityActivationType::WithPrepare:
-		// 준비 단계부터 시작
-		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Preparing);
-		HandlePreparePhase();
-		break;
-	}
-}
-
-void UBaseGameplayAbility::HandlePreparePhase()
-{
-	// 하위 클래서에서 정의될 어빌리티 준비 로직
 	PrepareAbility();
-	
+
 	// 준비 애니메이션 재생
 	if (PrepareMontage_1P || PrepareMontage_3P)
 	{
@@ -157,89 +114,94 @@ void UBaseGameplayAbility::HandlePreparePhase()
 			Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
 			Task->ReadyForActivation();
 		}
-		
-		ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
-		if (!Agent)
-		{
-			return;
-		}
-		
+
 		// 1인칭 몽타주 재생
-		if (PrepareMontage_1P)
+		if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
 		{
-			Agent->Client_PlayFirstPersonMontage(PrepareMontage_1P);
+			if (PrepareMontage_1P)
+			{
+				Agent->Client_PlayFirstPersonMontage(PrepareMontage_1P);
+			}
 		}
 	}
 	else
 	{
 		// 애니메이션이 없으면 바로 대기 단계로
-		OnMontageCompleted();
+		TransitionToState(EAbilityState::Waiting);
 	}
 }
 
-void UBaseGameplayAbility::HandleWaitingPhase()
+void UBaseGameplayAbility::ExitState_Preparing()
 {
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+	}
+}
+
+void UBaseGameplayAbility::EnterState_Waiting()
+{
+	// ASC에 상태 태그 추가
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+	}
+
 	// 대기 애니메이션 재생 (루프)
 	if (WaitingMontage_1P || WaitingMontage_3P)
 	{
 		PlayMontages(WaitingMontage_1P, WaitingMontage_3P, false);
-
-		ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
-		if (!Agent)
-		{
-			return;
-		}
-		
-		// 1인칭 몽타주 재생
-		if (WaitingMontage_1P)
-		{
-			Agent->Client_PlayFirstPersonMontage(WaitingMontage_1P);
-		}
-		// 1인칭 몽타주 재생
-		if (WaitingMontage_3P)
-		{
-			Agent->NetMulti_PlayThirdPersonMontage(WaitingMontage_3P);
-		}
 	}
 
-	// 하위 클래서에서 정의될 어빌리티 대기 로직
 	WaitAbility();
 
 	// 후속 입력 등록
 	RegisterFollowUpInputs();
 
-	// 타임아웃 설정 (default : 10초)
+	// 타임아웃 설정
 	GetWorld()->GetTimerManager().SetTimer(WaitingTimeoutHandle, this,
 	                                       &UBaseGameplayAbility::OnWaitingTimeout, FollowUpTime, false);
 }
 
-void UBaseGameplayAbility::HandleExecutePhase()
+void UBaseGameplayAbility::ExitState_Waiting()
 {
-	// 서버에서만 스택 소모 실행
+	// 타이머 정리
+	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
+
+	// 후속 입력 해제
+	UnregisterFollowUpInputs();
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+	}
+}
+
+void UBaseGameplayAbility::EnterState_Executing()
+{
+	// ASC에 상태 태그 추가
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+	}
+
+	// 서버에서만 스택 소모
 	if (HasAuthority(&CurrentActivationInfo))
 	{
 		ReduceAbilityStack();
 	}
 
-	// 하위 클래서에서 정의될 어빌리티 실행 로직
 	ExecuteAbility();
-	
-	// 대기 타이머 정리
-	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
 
 	// 실행 애니메이션 재생
 	if (ExecuteMontage_1P || ExecuteMontage_3P)
 	{
-		ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
-		if (!Agent)
+		if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
 		{
-			return;
-		}
-		
-		// 1인칭 몽타주 재생
-		if (ExecuteMontage_1P)
-		{
-			Agent->Client_PlayFirstPersonMontage(ExecuteMontage_1P);
+			if (ExecuteMontage_1P)
+			{
+				Agent->Client_PlayFirstPersonMontage(ExecuteMontage_1P);
+			}
 		}
 
 		UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
@@ -255,14 +217,166 @@ void UBaseGameplayAbility::HandleExecutePhase()
 	else
 	{
 		// 애니메이션이 없으면 바로 종료
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		TransitionToState(EAbilityState::Ending);
+	}
+}
+
+void UBaseGameplayAbility::ExitState_Executing()
+{
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+	}
+}
+
+void UBaseGameplayAbility::EnterState_Canceling()
+{
+	CleanupAbility();
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+}
+
+void UBaseGameplayAbility::EnterState_Ending()
+{
+	CleanupAbility();
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UBaseGameplayAbility::CleanupAbility()
+{
+	// 모든 정리 작업을 한 곳에서 처리
+
+	CurrentState = EAbilityState::None;
+
+	// 타이머 정리
+	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
+
+	// 후속 입력 정리
+	UnregisterFollowUpInputs();
+
+	// 몽타주 정지
+	StopAllMontages();
+
+	// 모든 어빌리티 관련 태그 제거
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+	}
+
+	// 무기 복귀 처리
+	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
+	{
+		if (PreviousEquipmentState != EInteractorType::None &&
+			Agent->GetInteractorState() == EInteractorType::Ability)
+		{
+			// 약간의 딜레이 후 무기 전환
+			FTimerHandle WeaponSwapTimer;
+			GetWorld()->GetTimerManager().SetTimer(WeaponSwapTimer, [Agent, this]()
+			{
+				Agent->SwitchEquipment(PreviousEquipmentState);
+			}, 0.1f, false);
+		}
+	}
+
+	OnEndAbility.Broadcast();
+}
+
+
+bool UBaseGameplayAbility::CanBeCanceled() const
+{
+	// 실행 단계에서는 설정에 따라 취소 가능 여부 결정
+	if (CurrentState == EAbilityState::Executing)
+	{
+		return bAllowCancelDuringExecution;
+	}
+
+	// 준비나 대기 단계에서는 항상 취소 가능
+	return CurrentState == EAbilityState::Preparing || CurrentState == EAbilityState::Waiting;
+}
+
+
+bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+                                              const FGameplayAbilityActorInfo* ActorInfo,
+                                              const FGameplayTagContainer* SourceTags,
+                                              const FGameplayTagContainer* TargetTags,
+                                              FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// 차지 확인
+	return GetAbilityStack() > 0;
+}
+
+void UBaseGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle,
+                                         const FGameplayAbilityActorInfo* ActorInfo,
+                                         const FGameplayAbilityActivationInfo ActivationInfo,
+                                         bool bReplicateCancelAbility)
+{
+	// 이미 취소/종료 중이면 무시
+	if (CurrentState == EAbilityState::Canceling || CurrentState == EAbilityState::Ending)
+	{
+		return;
+	}
+
+	TransitionToState(EAbilityState::Canceling);
+}
+
+void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
+                                      const FGameplayAbilityActorInfo* ActorInfo,
+                                      const FGameplayAbilityActivationInfo ActivationInfo,
+                                      bool bReplicateEndAbility, bool bWasCancelled)
+{
+	// 이미 종료 중이면 무시
+	if (CurrentState == EAbilityState::Ending || CurrentState == EAbilityState::Canceling)
+	{
+		return;
+	}
+
+	CurrentState = EAbilityState::None;
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+                                           const FGameplayAbilityActorInfo* ActorInfo,
+                                           const FGameplayAbilityActivationInfo ActivationInfo,
+                                           const FGameplayEventData* TriggerEventData)
+{
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+	CachedActorInfo = *ActorInfo;
+
+	// 현재 무기 상태 저장
+	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
+	{
+		PreviousEquipmentState = Agent->GetInteractorState();
+		if (HasAuthority(&ActivationInfo))
+		{
+			Agent->SwitchEquipment(EInteractorType::Ability);
+		}
+	}
+
+	// 어빌리티 타입에 따라 시작 상태 결정
+	switch (ActivationType)
+	{
+	case EAbilityActivationType::Instant:
+		TransitionToState(EAbilityState::Executing);
+		break;
+
+	case EAbilityActivationType::WithPrepare:
+		TransitionToState(EAbilityState::Preparing);
+		break;
 	}
 }
 
 void UBaseGameplayAbility::PrepareAbility()
 {
 	FGameplayTagContainer OwnedTags = AbilityTags;
-	
+
 	const FGameplayTag skillTaglRoot = FGameplayTag::RequestGameplayTag(TEXT("Input.Skill"));
 
 	FGameplayTag inputTag;
@@ -274,7 +388,7 @@ void UBaseGameplayAbility::PrepareAbility()
 			break;
 		}
 	}
-	
+
 	OnPrepareAbility.Broadcast(inputTag, FollowUpInputType);
 }
 
@@ -303,16 +417,17 @@ bool UBaseGameplayAbility::OnRepeatInput()
 
 void UBaseGameplayAbility::OnMontageCompleted()
 {
-	if (CurrentPhase == FValorantGameplayTags::Get().State_Ability_Preparing)
+	switch (CurrentState)
 	{
+	case EAbilityState::Preparing:
 		// 준비 완료 -> 대기 단계로
-		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Waiting);
-		HandleWaitingPhase();
-	}
-	else if (CurrentPhase == FValorantGameplayTags::Get().State_Ability_Executing)
-	{
+		TransitionToState(EAbilityState::Waiting);
+		break;
+
+	case EAbilityState::Executing:
 		// 실행 완료 -> 어빌리티 종료
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		TransitionToState(EAbilityState::Ending);
+		break;
 	}
 }
 
@@ -327,7 +442,7 @@ void UBaseGameplayAbility::OnMontageBlendOut()
 
 void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag)
 {
-	if (CurrentPhase != FValorantGameplayTags::Get().State_Ability_Waiting)
+	if (CurrentState != EAbilityState::Waiting)
 	{
 		return;
 	}
@@ -364,9 +479,7 @@ void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag)
 
 	if (bShouldExecute)
 	{
-		UnregisterFollowUpInputs();
-		SetAbilityPhase(FValorantGameplayTags::Get().State_Ability_Executing);
-		HandleExecutePhase();
+		TransitionToState(EAbilityState::Executing);
 	}
 }
 
@@ -393,7 +506,7 @@ void UBaseGameplayAbility::PlayMontages(UAnimMontage* Montage1P, UAnimMontage* M
 	{
 		Agent->Client_PlayFirstPersonMontage(Montage3P);
 	}
-	
+
 
 	// 1인칭 몽타주
 	if (Montage1P)
@@ -409,7 +522,7 @@ void UBaseGameplayAbility::StopAllMontages() const
 	{
 		return;
 	}
-	
+
 	// 죽음 몽타주 재생 끊기 방지
 	if (Agent->IsDead())
 	{
@@ -440,16 +553,16 @@ bool UBaseGameplayAbility::SpawnProjectile(FVector LocationOffset, FRotator Rota
 	UCameraComponent* CameraComp = Character->FindComponentByClass<UCameraComponent>();
 	FVector SpawnLocation;
 	FRotator SpawnRotation;
-    
+
 	if (CameraComp)
 	{
 		// 카메라 위치에서 약간 앞쪽/아래쪽에서 스폰 (손 위치처럼)
-		SpawnLocation = CameraComp->GetComponentLocation() + 
-					   CameraComp->GetForwardVector() * 30.0f + 
-					   CameraComp->GetRightVector() * 15.0f +    // 오른손 위치
-					   CameraComp->GetUpVector() * -10.0f +      // 약간 아래
-					   LocationOffset;
-        
+		SpawnLocation = CameraComp->GetComponentLocation() +
+			CameraComp->GetForwardVector() * 30.0f +
+			CameraComp->GetRightVector() * 15.0f + // 오른손 위치
+			CameraComp->GetUpVector() * -10.0f + // 약간 아래
+			LocationOffset;
+
 		SpawnRotation = CameraComp->GetComponentRotation() + RotationOffset;
 	}
 	else
@@ -459,54 +572,20 @@ bool UBaseGameplayAbility::SpawnProjectile(FVector LocationOffset, FRotator Rota
 		SpawnLocation = EyeLocation + Character->GetActorForwardVector() * 50.0f + LocationOffset;
 		SpawnRotation = Character->GetControlRotation() + RotationOffset;
 	}
-    
+
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = Character;
 	SpawnParams.Instigator = Character;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-    
+
 	SpawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(
-		ProjectileClass, 
-		SpawnLocation, 
-		SpawnRotation, 
+		ProjectileClass,
+		SpawnLocation,
+		SpawnRotation,
 		SpawnParams
 	);
-    
+
 	return SpawnedProjectile != nullptr;
-}
-
-void UBaseGameplayAbility::SetAbilityPhase(FGameplayTag NewPhase)
-{
-	if (CurrentPhase == NewPhase)
-	{
-		return;
-	}
-
-	CurrentPhase = NewPhase;
-	if (HasAuthority(&CurrentActivationInfo))
-	{
-		OnRep_CurrentPhase();
-	}
-}
-
-void UBaseGameplayAbility::OnRep_CurrentPhase()
-{
-	OnPhaseChanged.Broadcast(CurrentPhase);
-
-	// ASC에 상태 태그 업데이트
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-	{
-		// 모든 상태 태그 제거
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
-
-		// 현재 상태 태그 추가
-		if (CurrentPhase.IsValid())
-		{
-			ASC->AddLooseGameplayTag(CurrentPhase);
-		}
-	}
 }
 
 void UBaseGameplayAbility::RegisterFollowUpInputs()
@@ -560,71 +639,6 @@ void UBaseGameplayAbility::UnregisterFollowUpInputs()
 void UBaseGameplayAbility::OnWaitingTimeout()
 {
 	CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-}
-
-void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
-                                      const FGameplayAbilityActorInfo* ActorInfo,
-                                      const FGameplayAbilityActivationInfo ActivationInfo,
-                                      bool bReplicateEndAbility, bool bWasCancelled)
-{
-	// 이미 종료 중이면 리턴
-	if (bIsEnding)
-	{
-		return;
-	}
-    
-	bIsEnding = true;
-    
-	// 정리
-	UnregisterFollowUpInputs();
-	GetWorld()->GetTimerManager().ClearTimer(WaitingTimeoutHandle);
-	StopAllMontages();
-
-	// 모든 어빌리티 관련 태그 제거
-	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-	{
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
-		ASC->RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-	}
-
-	// 상태 태그 정리
-	SetAbilityPhase(FGameplayTag());
-
-	// 어빌리티 종료 시 원래 무기로 복귀
-	if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
-	{
-		// 이전 무기 상태가 존재하고
-		if (PreviousEquipmentState != EInteractorType::None)
-		{
-			// 에이전트가 어빌리티 무기 상태라면
-			if (Agent->GetInteractorState() == EInteractorType::Ability)
-			{
-				// 이전 무기 상태로 복귀
-				if (HasAuthority(&ActivationInfo))
-				{
-					EInteractorType ChangeState = PreviousEquipmentState;
-					PreviousEquipmentState = EInteractorType::None;
-                
-					// 약간의 딜레이 후 무기 전환 (몽타주 블렌드 아웃 시간 고려)
-					FTimerHandle WeaponSwapTimer;
-					GetWorld()->GetTimerManager().SetTimer(WeaponSwapTimer, [Agent, ChangeState]()
-					{
-						Agent->SwitchEquipment(ChangeState);
-					}, 0.1f, false);
-				}
-			}
-			PreviousEquipmentState = EInteractorType::None;
-		}
-	}
-
-	NET_LOG(LogTemp,Warning,TEXT("어빌리티 종료 브로드캐스트"));
-	OnEndAbility.Broadcast();
-
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-    
-	bIsEnding = false;
 }
 
 bool UBaseGameplayAbility::ReduceAbilityStack()
@@ -683,5 +697,36 @@ void UBaseGameplayAbility::PlayCommonEffects(UNiagaraSystem* NiagaraEffect, USou
 	if (SoundEffect)
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), SoundEffect, Location);
+	}
+}
+
+FGameplayTag UBaseGameplayAbility::ConvertAbilityStateToGamePlayTag(EAbilityState NewState)
+{
+	switch (NewState)
+	{
+	case EAbilityState::Preparing:
+		{
+			return FValorantGameplayTags::Get().State_Ability_Preparing;
+		}
+	case EAbilityState::Waiting:
+		{
+			return FValorantGameplayTags::Get().State_Ability_Waiting;
+		}
+	case EAbilityState::Executing:
+		{
+			return FValorantGameplayTags::Get().State_Ability_Executing;
+		}
+	case EAbilityState::Canceling:
+		{
+			return FValorantGameplayTags::Get().State_Ability_Canceling;
+		}
+	case EAbilityState::Ending:
+		{
+			return FValorantGameplayTags::Get().State_Ability_Ending;
+		}
+	default:
+		{
+			return FGameplayTag();
+		}
 	}
 }
