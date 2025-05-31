@@ -14,10 +14,6 @@ UPhoenix_E_Curveball::UPhoenix_E_Curveball(): UBaseGameplayAbility()
 	m_AbilityID = 2003;
 	ActivationType = EAbilityActivationType::WithPrepare;
 	FollowUpInputType = EFollowUpInputType::LeftOrRight;
-
-	// 태그 설정
-	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Phoenix.Curveball")));
-	ActivationOwnedTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Input.Skill.E")));
 }
 
 bool UPhoenix_E_Curveball::OnLeftClickInput()
