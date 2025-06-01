@@ -10,6 +10,13 @@
 class UGameplayEffect;
 class ABaseAgent;
 
+UENUM(BlueprintType)
+enum class EKayoGrenadeThrowType : uint8
+{
+	Underhand,    // 언더핸드 (짧은 거리)
+	Overhand      // 오버핸드 (긴 거리)
+};
+
 UCLASS()
 class VALORANT_API AKayoGrenade : public ABaseProjectile
 {
@@ -18,13 +25,30 @@ class VALORANT_API AKayoGrenade : public ABaseProjectile
 public:
 	AKayoGrenade();
 
+	// 던지기 타입 설정
+	UFUNCTION(BlueprintCallable, Category = "Grenade")
+	void SetThrowType(EKayoGrenadeThrowType ThrowType);
+
 private:
-	// 투사체 설정
-	const float Speed = 1800;
-	const float Gravity = 0.3f;
+	// 기본 투사체 설정
+	float Speed = 1800;
+	float Gravity = 0.3f;
 	const bool bShouldBounce = true;
-	const float Bounciness = 0.2f;
-	const float Friction = 0.8f;
+	float Bounciness = 0.2f;
+	float Friction = 0.8f;
+	
+	// 언더핸드 설정
+	const float UnderhandSpeed = 1260;      // 70% 속도
+	const float UnderhandGravity = 0.5f;   // 더 높은 중력
+	const float UnderhandBounciness = 0.15f;
+	const float UnderhandFriction = 0.9f;
+	
+	// 오버핸드 설정
+	const float OverhandSpeed = 1800;
+	const float OverhandGravity = 0.3f;
+	const float OverhandBounciness = 0.2f;
+	const float OverhandFriction = 0.8f;
+	
 	const float EquipTime = 0.7f;
 	const float UnequipTime = 0.6f;
 	const float ActiveTime = 0.5f;
@@ -87,4 +111,8 @@ protected:
 	void MulticastPlayExplosionEffects(FVector Location);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayWarningEffects(FVector Location);
+	
+private:
+	// 현재 던지기 타입
+	EKayoGrenadeThrowType CurrentThrowType = EKayoGrenadeThrowType::Overhand;
 };
