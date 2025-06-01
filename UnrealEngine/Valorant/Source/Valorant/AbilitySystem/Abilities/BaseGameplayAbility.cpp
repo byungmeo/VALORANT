@@ -127,7 +127,7 @@ void UBaseGameplayAbility::EnterState_Preparing()
     // 준비 애니메이션 재생
     if (PrepareMontage_1P || PrepareMontage_3P)
     {
-        PlayMontages(PrepareMontage_1P, PrepareMontage_3P);
+        PlayMontages(PrepareMontage_1P, nullptr);
         
         // 몽타주 완료 대기
         UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
@@ -189,7 +189,7 @@ void UBaseGameplayAbility::EnterState_Executing()
     // 실행 애니메이션 재생
     if (ExecuteMontage_1P || ExecuteMontage_3P)
     {
-        PlayMontages(ExecuteMontage_1P, ExecuteMontage_3P);
+        PlayMontages(ExecuteMontage_1P, nullptr);
         
         UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
             this, NAME_None, ExecuteMontage_3P, 1.0f);
@@ -294,10 +294,18 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
         return;
     }
     
+    // 타이머 정리
+    GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+    
     CurrentState = EAbilityState::None;
     
     // 모든 태그 정리
     UpdateAbilityTags(EAbilityState::None);
+
+    // 캐시된 정보 정리
+    CachedActorInfo = FGameplayAbilityActorInfo();
+    CachedASC = nullptr;
+    SpawnedProjectile = nullptr;
     
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -333,6 +341,16 @@ bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle H
     {
         return false;
     }
+
+    // 에이전트가 죽었는지 확인
+    if (ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo()))
+    {
+        if (Agent->IsDead())
+        {
+            NET_LOG(LogTemp, Warning, TEXT("죽은 에이전트는 어빌리티를 사용할 수 없습니다"));
+            return false;
+        }
+    }
     
     // 스택 확인
     return GetAbilityStack() > 0;
@@ -357,12 +375,12 @@ void UBaseGameplayAbility::UpdateAbilityTags(EAbilityState NewState)
     {
     case EAbilityState::Preparing:
         CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
-        CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+        //CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
         break;
         
     case EAbilityState::Waiting:
         CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-        CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+        //CachedASC->AddLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
         break;
         
     case EAbilityState::Executing:
@@ -458,15 +476,15 @@ void UBaseGameplayAbility::NotifyAbilityExecuted(bool bSuccess)
     // 추가로 GameplayCue를 통한 시각적 피드백
     if (bSuccess)
     {
-        FGameplayCueParameters CueParams;
-        CueParams.SourceObject = GetAvatarActorFromActorInfo();
-        
-        // 어빌리티별 Cue 태그 (예: GameplayCue.Ability.SlowOrb.Execute)
-        FGameplayTag CueTag = FGameplayTag::RequestGameplayTag(
-            FName(FString::Printf(TEXT("GameplayCue.Ability.%s.Execute"), 
-                *GetAssetTags().First().GetTagName().ToString())));
-        
-        CachedASC->ExecuteGameplayCue(CueTag, CueParams);
+        // FGameplayCueParameters CueParams;
+        // CueParams.SourceObject = GetAvatarActorFromActorInfo();
+        //
+        // // 어빌리티별 Cue 태그 (예: GameplayCue.Ability.SlowOrb.Execute)
+        // FGameplayTag CueTag = FGameplayTag::RequestGameplayTag(
+        //     FName(FString::Printf(TEXT("GameplayCue.Ability.%s.Execute"), 
+        //         *GetAssetTags().First().GetTagName().ToString())));
+        //
+        // CachedASC->ExecuteGameplayCue(CueTag, CueParams);
     }
 }
 

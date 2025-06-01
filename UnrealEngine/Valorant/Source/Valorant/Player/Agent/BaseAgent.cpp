@@ -197,7 +197,12 @@ void ABaseAgent::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	//국룰 위치
-	InitAgentAbility();
+	// 약간의 딜레이를 두고 초기화 (PlayerState가 완전히 준비될 때까지 대기)
+	FTimerHandle InitAbilityTimer;
+	GetWorld()->GetTimerManager().SetTimer(InitAbilityTimer, [this]()
+	{
+		InitAgentAbility();
+	}, 0.1f, false);
 
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(NewController);
 	if (pc)
@@ -242,7 +247,12 @@ void ABaseAgent::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	//국룰 위치
-	InitAgentAbility();
+	// 클라이언트도 약간의 딜레이를 두고 초기화
+	FTimerHandle InitAbilityTimer;
+	GetWorld()->GetTimerManager().SetTimer(InitAbilityTimer, [this]()
+	{
+		InitAgentAbility();
+	}, 0.1f, false);
 
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
 	if (pc)
@@ -283,6 +293,9 @@ void ABaseAgent::OnRep_PlayerState()
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// 어빌리티 초기화 플래그 리셋 (리스폰 시)
+	bAbilityInitialized = false;
 
 	ABP_1P = Cast<UAgentAnimInstance>(FirstPersonMesh->GetAnimInstance());
 	ABP_3P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
@@ -384,7 +397,14 @@ void ABaseAgent::InitAgentAbility()
 		return;
 	}
 
-	ps->OnKillDelegate.AddDynamic(this,&ABaseAgent::OnKill);
+	// 이미 초기화되었는지 확인
+	if (bAbilityInitialized)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("어빌리티가 이미 초기화되었습니다. 중복 초기화 방지"));
+		return;
+	}
+
+	ps->OnKillDelegate.AddDynamic(this, &ABaseAgent::OnKill);
 
 	ASC = ps->GetAbilitySystemComponent();
 	ASC->InitAbilityActorInfo(ps, this);
@@ -400,18 +420,20 @@ void ABaseAgent::InitAgentAbility()
 			if (spec.Ability)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
-		
+        
 				FString TagString;
 				TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
 				for (const FGameplayTag& Tag : tags)
 				{
 					TagString += Tag.ToString() + TEXT(" ");
 				}
-		
+        
 				UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
 			}
 		}
 	}
+
+	bAbilityInitialized = true;
 }
 
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
@@ -493,6 +515,9 @@ void ABaseAgent::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjus
 
 void ABaseAgent::StartFire()
 {
+	// 어빌리티 활성화중이라면 무기 강제 전환 X
+	if (IsAbilityActivating()) return;
+	
 	if (CurrentInteractor == nullptr)
 	{
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
@@ -1054,6 +1079,15 @@ void ABaseAgent::Die()
     
 	// 1. 어빌리티 정리를 가장 먼저 수행
 	CancelActiveAbilities();
+
+	// 어빌리티 완전 제거 
+	if (ASC.IsValid() && HasAuthority())
+	{
+		ASC->ResetAgentAbilities();
+	}
+
+	// 초기화 플래그 리셋
+	bAbilityInitialized = false;
     
 	// 2. 장비 상태 초기화
 	CurrentEquipmentState = EInteractorType::None;

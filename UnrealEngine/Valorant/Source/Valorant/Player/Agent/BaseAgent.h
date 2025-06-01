@@ -186,6 +186,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UCurveVector* DieCameraCurve;
 
+	// 어빌리티 초기화 플래그 
+	bool bAbilityInitialized = false;
+
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

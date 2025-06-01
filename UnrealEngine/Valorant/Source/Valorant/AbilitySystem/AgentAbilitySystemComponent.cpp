@@ -44,6 +44,13 @@ void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
         NET_LOG(LogTemp, Error, TEXT("InitializeByAgentData는 서버에서만 호출되어야 합니다"));
         return;
     }
+
+    // 이미 초기화되었는지 확인
+    if (m_AgentID == agentID && GetActivatableAbilities().Num() > 0)
+    {
+        NET_LOG(LogTemp, Warning, TEXT("에이전트(%d)가 이미 초기화되어 있습니다."), agentID);
+        return;
+    }
     
     m_GameInstance = Cast<UValorantGameInstance>(GetWorld()->GetGameInstance());
     FAgentData* data = m_GameInstance->GetAgentData(agentID);
@@ -68,6 +75,13 @@ void UAgentAbilitySystemComponent::InitializeAttribute(const FAgentData* agentDa
 
 void UAgentAbilitySystemComponent::RegisterAgentAbilities(const FAgentData* agentData)
 {
+    // 이미 어빌리티가 등록되었는지 확인
+    if (GetActivatableAbilities().Num() > 0)
+    {
+        NET_LOG(LogTemp, Warning, TEXT("어빌리티가 이미 등록되어 있습니다. 초기화 후 재등록합니다."));
+        ResetAgentAbilities();
+    }
+    
     NET_LOG(LogTemp, Warning, TEXT("어빌리티 등록: C(%d), E(%d), Q(%d), X(%d)"), 
             agentData->AbilityID_C, agentData->AbilityID_E, 
             agentData->AbilityID_Q, agentData->AbilityID_X);
@@ -113,6 +127,16 @@ void UAgentAbilitySystemComponent::SetAgentAbility(int32 abilityID, int32 level)
         {
             skillTag = tag;
             bIsSkill = true;
+
+            // 이미 같은 태그의 어빌리티가 있는지 확인
+            for (const FGameplayAbilitySpec& ExistingSpec : GetActivatableAbilities())
+            {
+                if (ExistingSpec.GetDynamicSpecSourceTags().HasTag(skillTag))
+                {
+                    NET_LOG(LogTemp, Warning, TEXT("%s 스킬이 이미 등록되어 있습니다. 스킵합니다."), *skillTag.ToString());
+                    return;
+                }
+            }
             
             // 데이터 저장
             if (tag == FValorantGameplayTags::Get().InputTag_Ability_C)
@@ -149,11 +173,24 @@ void UAgentAbilitySystemComponent::ResetAgentAbilities()
     // 활성 어빌리티 강제 취소
     ForceCleanupAllAbilities();
     
-    // 모든 어빌리티 제거
-    for (const FGameplayAbilitySpec& spec : GetActivatableAbilities())
+    // 모든 어빌리티 스펙 저장
+    TArray<FGameplayAbilitySpecHandle> HandlesToRemove;
+    for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
     {
-        ClearAbility(spec.Handle);
+        HandlesToRemove.Add(Spec.Handle);
     }
+    
+    // 모든 어빌리티 제거
+    for (const FGameplayAbilitySpecHandle& Handle : HandlesToRemove)
+    {
+        ClearAbility(Handle);
+    }
+    
+    // 어빌리티 데이터 초기화
+    m_Ability_C = FAbilityData();
+    m_Ability_E = FAbilityData();
+    m_Ability_Q = FAbilityData();
+    m_Ability_X = FAbilityData();
 }
 
 bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& InputTag)
@@ -170,6 +207,16 @@ bool UAgentAbilitySystemComponent::TryActivateAbilityByTag(const FGameplayTag& I
         ServerRPC_HandleGameplayEvent(InputTag);
         //HandleGameplayEvent(InputTag, &EventData);
         return true;
+    }
+
+    // 이미 실행 중인 어빌리티가 있는지 체크
+    for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+    {
+        if (Spec.IsActive() && Spec.GetDynamicSpecSourceTags().HasTag(InputTag))
+        {
+            NET_LOG(LogTemp, Warning, TEXT("어빌리티가 이미 활성화되어 있습니다: %s"), *InputTag.ToString());
+            return false;
+        }
     }
     
     // 일반 어빌리티 활성화
