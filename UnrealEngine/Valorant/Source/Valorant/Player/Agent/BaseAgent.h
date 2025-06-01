@@ -551,7 +551,7 @@ protected:
 	UFUNCTION()
 	void UpdateEffectSpeed(float newEffectSpeed);
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
 	void MulticastRPC_OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false, const bool bLowState = false);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnHealed(const bool bHighState = false);
