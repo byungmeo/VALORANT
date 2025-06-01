@@ -417,9 +417,9 @@ public:
 
 	// Log 관련 함수
 	UFUNCTION(Category = "Log")
-	void StartLogging() { bIsLogMode = true; }
+	void StartLogging();
 	UFUNCTION(Category = "Log")  
-	void StopLogging() { bIsLogMode = false; }
+	void StopLogging();
 	UFUNCTION(Category = "Log")
 	void InitLog();
 	UFUNCTION(Category = "Log")
