@@ -15,11 +15,11 @@ class VALORANT_API AMatchPlayerState : public APlayerState
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	FString DisplayName = "None";
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bIsBlueTeam = true;
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bIsAttacker = false;
 
 protected:

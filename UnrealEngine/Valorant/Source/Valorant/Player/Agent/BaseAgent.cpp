@@ -94,6 +94,7 @@ ABaseAgent::ABaseAgent()
 	TpMesh->SetCollisionProfileName(TEXT("Agent"));
 	TpMesh->SetGenerateOverlapEvents(true);
 	TpMesh->SetOwnerNoSee(true);
+	TpMesh->SetCastShadow(false);
 	
 	// FP Mesh
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>("FirstPersonMesh");
@@ -111,6 +112,7 @@ ABaseAgent::ABaseAgent()
 	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision"));
 	FirstPersonMesh->SetCanEverAffectNavigation(false);
 	FirstPersonMesh->SetOnlyOwnerSee(true);
+	FirstPersonMesh->SetCastShadow(false);
 
 	// Defusal Mesh
 	DefusalMesh = CreateDefaultSubobject<USkeletalMeshComponent>("DefusalMesh");
@@ -121,11 +123,13 @@ ABaseAgent::ABaseAgent()
 	
 	DefusalMesh->SetCollisionProfileName(TEXT("NoCollision"));
 	DefusalMesh->SetVisibility(false);
+	DefusalMesh->SetCastShadow(false);
 	
 	// Camera
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(FirstPersonMesh, TEXT("CameraSocket"));
-	Camera->SetFieldOfView(70.f);
+	Camera->SetFieldOfView(90.f);
+	Camera->SetRelativeLocation(FVector(15, 0, 0));
 
 	// Interaction Capsule
 	InteractionCapsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("InteractionCapsule"));

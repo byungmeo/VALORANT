@@ -3,8 +3,10 @@
 
 #include "MatchMapHUD.h"
 
+#include "MatchMapHudTopWidget.h"
 #include "Valorant.h"
 #include "AbilitySystem/Abilities/BaseGameplayAbility.h"
+#include "Components/CanvasPanel.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
@@ -39,9 +41,8 @@ void UMatchMapHUD::NativeConstruct()
 	// 게임 인스턴스 가져오기
 	GameInstance = UValorantGameInstance::Get(GetWorld());
 
-	auto* GameState = Cast<AMatchGameState>(GetWorld()->GetGameState());
+	auto* GameState = GetWorld()->GetGameState<AMatchGameState>();
 	GameState->OnRemainRoundStateTimeChanged.AddDynamic(this, &UMatchMapHUD::UpdateTime);
-	GameState->OnTeamScoreChanged.AddDynamic(this, &UMatchMapHUD::UpdateScore);
 	GameState->OnRoundSubStateChanged.AddDynamic(this, &UMatchMapHUD::OnRoundSubStateChanged);
 	GameState->OnRoundEnd.AddDynamic(this, &UMatchMapHUD::OnRoundEnd);
 
@@ -83,8 +84,6 @@ void UMatchMapHUD::UpdateTime(float Time)
 {
 	const int Minute = static_cast<int>(Time / 60);
 	const int Seconds = static_cast<int>(Time) % 60;
-	const FString TimeStr = FString::Printf(TEXT("%d:%02d"), Minute, Seconds);
-	TextBlockTime->SetText(FText::FromString(TimeStr));
 	if (bIsPreRound && FMath::IsNearlyEqual(Time, 3.f, 0.5f))
 	{
 		PlayRemTimeVO(3);
@@ -114,12 +113,6 @@ void UMatchMapHUD::UpdateTime(float Time)
 			}
 		}
 	}
-}
-
-void UMatchMapHUD::UpdateScore(int TeamBlueScore, int TeamRedScore)
-{
-	TextBlockBlueScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamBlueScore)));
-	TextBlockRedScore->SetText(FText::FromString(FString::Printf(TEXT("%d"), TeamRedScore)));
 }
 
 void UMatchMapHUD::OnRoundSubStateChanged(const ERoundSubState RoundSubState, const float TransitionTime)
@@ -202,8 +195,8 @@ void UMatchMapHUD::DisplayAnnouncement(EMatchAnnouncement MatchAnnouncement, flo
 	WidgetSwitcherAnnouncement->SetVisibility(ESlateVisibility::Visible);
 	WidgetSwitcherAnnouncement->SetActiveWidgetIndex(static_cast<int32>(MatchAnnouncement));
 
-	Overlay_Timer->SetVisibility(ESlateVisibility::Visible);
-	Img_Spike->SetVisibility(ESlateVisibility::Hidden);
+	TopWidget->CanvasPanelTimer->SetVisibility(ESlateVisibility::Visible);
+	TopWidget->ImageSpike->SetVisibility(ESlateVisibility::Hidden);
 	
 	OnLowState(false);
 	HideFollowUpInputUI();
@@ -279,7 +272,7 @@ void UMatchMapHUD::InitUI(AAgentPlayerState* ps)
 
 void UMatchMapHUD::DebugRoundSubState(const FString& RoundSubStateStr)
 {
-	TextBlockRoundSubStateDbg->SetText(FText::FromString(TEXT("RoundSubState: ") + RoundSubStateStr));
+	// TextBlockRoundSubStateDbg->SetText(FText::FromString(TEXT("RoundSubState: ") + RoundSubStateStr));
 }
 
 // 어빌리티 스택 처리 함수 구현
