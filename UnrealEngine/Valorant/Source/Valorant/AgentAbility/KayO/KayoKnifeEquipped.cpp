@@ -27,14 +27,14 @@ AKayoKnifeEquipped::AKayoKnifeEquipped()
     KnifeMesh->SetIsReplicated(true);
 
     // 메시 에셋 설정
-    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Knife/AB_Grenadier_S0_E_Knife_Skelmesh.AB_Grenadier_S0_E_Knife_Skelmesh'"));
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Agent/KayO/Ability/KayO_AbilityE_ZeroPoint/AB_Grenadier_S0_E_Knife_Skelmesh.AB_Grenadier_S0_E_Knife_Skelmesh'"));
     if (MeshAsset.Succeeded())
     {
         KnifeMesh->SetSkeletalMesh(MeshAsset.Object);
     }
 
     // 애니메이션 블루프린트 설정
-    static ConstructorHelpers::FClassFinder<UAnimInstance> AnimInstanceClass(TEXT("/Script/Engine.AnimBlueprint'/Game/Resource/Props/Projectiles/KAYO_Ability_Knife/ABP_Knife.ABP_Knife_C'"));
+    static ConstructorHelpers::FClassFinder<UAnimInstance> AnimInstanceClass(TEXT("/Script/Engine.AnimBlueprint'/Game/Resource/Agent/KayO/Ability/KayO_AbilityE_ZeroPoint/ABP_Knife.ABP_Knife_C'"));
     if (AnimInstanceClass.Succeeded())
     {
         KnifeMesh->SetAnimInstanceClass(AnimInstanceClass.Class);
@@ -188,20 +188,6 @@ void AKayoKnifeEquipped::Tick(float DeltaTime)
     if (!bVisibilityInitialized && GetOwner())
     {
         UpdateVisibilitySettings();
-    }
-    
-    // 나이프가 보이고 장착된 경우에만 애니메이션 적용
-    if (KnifeMesh && KnifeMesh->IsVisible() && bIsEquipped)
-    {
-        // 나이프 미세한 회전 (대기 애니메이션)
-        // FRotator CurrentRotation = KnifeMesh->GetRelativeRotation();
-        // CurrentRotation.Roll += KnifeIdleSpeed * DeltaTime;
-        // KnifeMesh->SetRelativeRotation(CurrentRotation);
-        
-        // 나이프 펄스 효과
-        CurrentPulseTime += DeltaTime * KnifePulseSpeed;
-        float PulseValue = FMath::Sin(CurrentPulseTime) * KnifePulseScale + 1.0f;
-        KnifeMesh->SetRelativeScale3D(BaseScale * PulseValue);
     }
 }
 

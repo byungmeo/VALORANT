@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "CharSelectCamera.generated.h"
 
+enum class ERoundSubState : uint8;
 class USpringArmComponent;
 class ACharSelectCharacterActor;
 class UCameraComponent;
@@ -36,4 +37,7 @@ protected:
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void PlaySelectAnimation(const UAnimMontage* Montage);
+
+	UFUNCTION()
+	void OnRoundStateChanged(const ERoundSubState RoundSubState, const float TransitionTime);
 };

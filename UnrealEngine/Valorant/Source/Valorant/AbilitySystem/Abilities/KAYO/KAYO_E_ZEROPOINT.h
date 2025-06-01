@@ -17,6 +17,7 @@ public:
 protected:
 	// 어빌리티 준비 단계
 	virtual void PrepareAbility() override;
+	virtual void WaitAbility() override;
 	
 	// 후속 입력 처리 (좌클릭으로 나이프 던지기)
 	virtual bool OnLeftClickInput() override;

@@ -6,7 +6,7 @@
 #include "CharSelectCharacterActor.h"
 #include "Valorant.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
+#include "GameManager/MatchGameState.h"
 #include "GameManager/SubsystemSteamManager.h"
 #include "GameManager/ValorantGameInstance.h"
 
@@ -94,4 +94,25 @@ void ACharSelectCamera::OnSelectedAgent(const int SelectedAgentID)
 void ACharSelectCamera::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (auto* GameState = GetWorld()->GetGameState<AMatchGameState>())
+	{
+		GameState->OnRoundSubStateChanged.AddDynamic(this, &ACharSelectCamera::OnRoundStateChanged);
+	}
+}
+
+void ACharSelectCamera::OnRoundStateChanged(const ERoundSubState RoundSubState, const float TransitionTime)
+{
+	if (RoundSubState != ERoundSubState::RSS_SelectAgent)
+	{
+		if (CharacterActor)
+		{
+			CharacterActor->Destroy();
+			CharacterActor = nullptr;
+			if (auto* GameState = GetWorld()->GetGameState<AMatchGameState>())
+			{
+				GameState->OnRoundSubStateChanged.RemoveAll(this);
+			}
+		}
+	}
 }

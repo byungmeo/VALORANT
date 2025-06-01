@@ -25,20 +25,20 @@ AKayoGrenade::AKayoGrenade()
 	Mesh->SetRelativeScale3D(FVector(0.15f));
 
 	// 메시 에셋 설정
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> GrenadeMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/KayoGrenade.KayoGrenade'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> GrenadeMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Agent/KayO/Ability/KayO_AbilityC_Fragment/KayoGrenade.KayoGrenade'"));
 	if (GrenadeMeshAsset.Succeeded())
 	{
 		Mesh->SetStaticMesh(GrenadeMeshAsset.Object);
 	}
 	
 	// 머티리얼 설정
-	static ConstructorHelpers::FObjectFinder<UMaterial> GrenadeMaterial(TEXT("/Script/Engine.Material'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/M_KayoGrenade.M_KayoGrenade'"));
+	static ConstructorHelpers::FObjectFinder<UMaterial> GrenadeMaterial(TEXT("/Script/Engine.Material'/Game/Resource/Agent/KayO/Ability/KayO_AbilityC_Fragment/M_KayoGrenade.M_KayoGrenade'"));
 	if (GrenadeMaterial.Succeeded())
 	{
 		Mesh->SetMaterial(0, GrenadeMaterial.Object);
 	}
 
-	// 투사체 이동 설정
+	// 기본 투사체 이동 설정 (오버핸드)
 	ProjectileMovement->InitialSpeed = Speed;
 	ProjectileMovement->MaxSpeed = Speed;
 	ProjectileMovement->ProjectileGravityScale = Gravity;
@@ -50,6 +50,56 @@ AKayoGrenade::AKayoGrenade()
 void AKayoGrenade::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void AKayoGrenade::SetThrowType(EKayoGrenadeThrowType ThrowType)
+{
+	CurrentThrowType = ThrowType;
+	
+	// 던지기 타입에 따라 투사체 설정 변경
+	if (ProjectileMovement)
+	{
+		switch (ThrowType)
+		{
+		case EKayoGrenadeThrowType::Underhand:
+			// 언더핸드 설정 - 짧은 거리, 느린 속도
+			Speed = UnderhandSpeed;
+			Gravity = UnderhandGravity;
+			Bounciness = UnderhandBounciness;
+			Friction = UnderhandFriction;
+			
+			ProjectileMovement->InitialSpeed = Speed;
+			ProjectileMovement->MaxSpeed = Speed;
+			ProjectileMovement->ProjectileGravityScale = Gravity;
+			ProjectileMovement->Bounciness = Bounciness;
+			ProjectileMovement->Friction = Friction;
+			
+			UE_LOG(LogTemp, Warning, TEXT("KAYO Grenade - Underhand settings applied (Speed: %.0f, Gravity: %.2f)"), Speed, Gravity);
+			break;
+			
+		case EKayoGrenadeThrowType::Overhand:
+			// 오버핸드 설정 - 긴 거리, 빠른 속도
+			Speed = OverhandSpeed;
+			Gravity = OverhandGravity;
+			Bounciness = OverhandBounciness;
+			Friction = OverhandFriction;
+			
+			ProjectileMovement->InitialSpeed = Speed;
+			ProjectileMovement->MaxSpeed = Speed;
+			ProjectileMovement->ProjectileGravityScale = Gravity;
+			ProjectileMovement->Bounciness = Bounciness;
+			ProjectileMovement->Friction = Friction;
+			
+			UE_LOG(LogTemp, Warning, TEXT("KAYO Grenade - Overhand settings applied (Speed: %.0f, Gravity: %.2f)"), Speed, Gravity);
+			break;
+		}
+		
+		// 속도 벡터 재계산 (이미 날아가고 있는 경우)
+		if (ProjectileMovement->Velocity.Size() > 0)
+		{
+			ProjectileMovement->Velocity = ProjectileMovement->Velocity.GetSafeNormal() * Speed;
+		}
+	}
 }
 
 void AKayoGrenade::OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
@@ -239,6 +289,10 @@ void AKayoGrenade::DrawDebugExplosion() const
 		// 남은 폭발 횟수 표시
 		FString DebugText = FString::Printf(TEXT("Pulse %d/4"), 4 - DeterrentCount);
 		DrawDebugString(GetWorld(), ExplosionCenter + FVector(0, 0, 50), DebugText, nullptr, FColor::White, 1.0f);
+		
+		// 던지기 타입 표시
+		FString ThrowTypeText = CurrentThrowType == EKayoGrenadeThrowType::Underhand ? TEXT("Underhand") : TEXT("Overhand");
+		DrawDebugString(GetWorld(), ExplosionCenter + FVector(0, 0, 70), ThrowTypeText, nullptr, FColor::Cyan, 1.0f);
 	}
 #endif
 }

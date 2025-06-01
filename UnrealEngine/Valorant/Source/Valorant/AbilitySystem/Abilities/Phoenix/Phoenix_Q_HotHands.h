@@ -45,7 +45,7 @@ protected:
     class USoundBase* ThrowSound;
 
     // === 오버라이드 함수들 ===
-    virtual void WaitAbility() override;
+    virtual void PrepareAbility() override;
     virtual bool OnLeftClickInput() override;
     virtual bool OnRightClickInput() override;
 
