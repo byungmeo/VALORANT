@@ -25,9 +25,12 @@ void UKAYO_Q_FLASHDRIVE::PrepareAbility()
 	Super::PrepareAbility();
 	
 	// 준비 효과 재생
-	if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+	if (IsLocallyControlled())
 	{
-		PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+		if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+		{
+			PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+		}	
 	}
 	
 	// 장착된 플래시뱅 생성

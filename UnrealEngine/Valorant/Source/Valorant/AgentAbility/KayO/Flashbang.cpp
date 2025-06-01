@@ -15,7 +15,7 @@ AFlashbang::AFlashbang()
 	Mesh->SetupAttachment(GetRootComponent());
 
 	// KAYO 플래시뱅 메시 설정
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Flashbang/AB_Grenadier_S0_4_Skelmesh.AB_Grenadier_S0_4_Skelmesh'"));
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Agent/KayO/Ability/KayO_AbilityQ_FlashDrive/AB_Grenadier_S0_4_Skelmesh.AB_Grenadier_S0_4_Skelmesh'"));
 	if (MeshAsset.Succeeded())
 	{
 		Mesh->SetSkeletalMesh(MeshAsset.Object);

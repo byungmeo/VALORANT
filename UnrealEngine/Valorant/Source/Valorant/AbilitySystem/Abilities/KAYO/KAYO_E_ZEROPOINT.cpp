@@ -25,9 +25,12 @@ void UKAYO_E_ZEROPOINT::PrepareAbility()
 	Super::PrepareAbility();
 	
 	// 준비 효과 재생
-	if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+	if (IsLocallyControlled())
 	{
-		PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+		if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+		{
+			PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+		}
 	}
 	
 	// 장착된 나이프 생성
@@ -172,7 +175,7 @@ bool UKAYO_E_ZEROPOINT::ThrowKnife()
 	}
 
 	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
-	if (!Character)
+	if (nullptr == Character)
 	{
 		UE_LOG(LogTemp, Error, TEXT("KAYO E - 캐릭터 참조 실패"));
 		return false;

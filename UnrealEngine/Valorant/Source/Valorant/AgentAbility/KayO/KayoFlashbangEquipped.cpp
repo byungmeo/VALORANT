@@ -26,7 +26,7 @@ AKayoFlashbangEquipped::AKayoFlashbangEquipped()
     FlashbangMesh->SetIsReplicated(true);
     
     // 메시 에셋 설정
-    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Flashbang/AB_Grenadier_S0_4_Skelmesh.AB_Grenadier_S0_4_Skelmesh'"));
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Agent/KayO/Ability/KayO_AbilityQ_FlashDrive/AB_Grenadier_S0_4_Skelmesh.AB_Grenadier_S0_4_Skelmesh'"));
     if (MeshAsset.Succeeded())
     {
         FlashbangMesh->SetSkeletalMesh(MeshAsset.Object);
