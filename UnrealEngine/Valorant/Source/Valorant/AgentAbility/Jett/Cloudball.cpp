@@ -28,12 +28,12 @@ ACloudball::ACloudball()
 		OuterMesh->SetStaticMesh(CloudballMeshAsset.Object);
 	}
 	
-	static ConstructorHelpers::FObjectFinder<UMaterialInstance> InnerMaterial(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Resource/Props/Projectiles/Jett_Ability_Windball/MI_InnerWind.MI_InnerWind'"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> InnerMaterial(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Resource/Agent/Jett/Ability/Jett_AbilityC_CloudBurst/MI_InnerWind.MI_InnerWind'"));
 	if (InnerMaterial.Succeeded())
 	{
 		InnerMesh->SetMaterial(0, InnerMaterial.Object);
 	}
-	static ConstructorHelpers::FObjectFinder<UMaterialInstance> OuterMaterial(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Resource/Props/Projectiles/Jett_Ability_Windball/MI_OuterWind.MI_OuterWind'"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> OuterMaterial(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Resource/Agent/Jett/Ability/Jett_AbilityC_CloudBurst/MI_OuterWind.MI_OuterWind'"));
 	if (OuterMaterial.Succeeded())
 	{
 		OuterMesh->SetMaterial(0, OuterMaterial.Object);
