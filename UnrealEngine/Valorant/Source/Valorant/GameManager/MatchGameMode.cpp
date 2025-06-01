@@ -620,7 +620,7 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 void AMatchGameMode::ResetAgentGAS(AAgentPlayerState* AgentPS)
 {
 	AgentPS->GetBaseAttributeSet()->ResetAttributeData();
-	AgentPS->GetAbilitySystemComponent()->CleanupAbilityState();
+	AgentPS->GetAbilitySystemComponent()->ForceCleanupAllAbilities();
 }
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)
@@ -993,6 +993,12 @@ void AMatchGameMode::SpawnDefaultWeapon(ABaseAgent* agent)
 	{
 		return;
 	}
+
+	if (agent->GetMeleeWeapon() == nullptr)
+	{
+		ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
+		agent->ServerRPC_Interact(knife);
+	}
 	
 	if (agent->GetSubWeapon() == nullptr) 
 	{
@@ -1000,11 +1006,6 @@ void AMatchGameMode::SpawnDefaultWeapon(ABaseAgent* agent)
 		agent->ServerRPC_Interact(gun);
 	}
 	
-	if (agent->GetMeleeWeapon() == nullptr)
-	{
-		ABaseWeapon* knife = GetWorld()->SpawnActor<ABaseWeapon>(MeleeAsset);
-		agent->ServerRPC_Interact(knife);
-	}
 	else
 	{
 		agent->SwitchEquipment(EInteractorType::Melee);

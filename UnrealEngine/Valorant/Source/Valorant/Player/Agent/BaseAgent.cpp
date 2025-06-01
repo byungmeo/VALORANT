@@ -287,6 +287,9 @@ void ABaseAgent::OnRep_PlayerState()
 void ABaseAgent::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// 어빌리티 초기화 플래그 리셋 (리스폰 시)
+	bAbilityInitialized = false;
 
 	ABP_1P = Cast<UAgentAnimInstance>(FirstPersonMesh->GetAnimInstance());
 	ABP_3P = Cast<UAgentAnimInstance>(GetMesh()->GetAnimInstance());
@@ -388,7 +391,14 @@ void ABaseAgent::InitAgentAbility()
 		return;
 	}
 
-	ps->OnKillDelegate.AddDynamic(this,&ABaseAgent::OnKill);
+	// 이미 초기화되었는지 확인
+	if (bAbilityInitialized)
+	{
+		NET_LOG(LogTemp, Warning, TEXT("어빌리티가 이미 초기화되었습니다. 중복 초기화 방지"));
+		return;
+	}
+
+	ps->OnKillDelegate.AddDynamic(this, &ABaseAgent::OnKill);
 
 	ASC = ps->GetAbilitySystemComponent();
 	ASC->InitAbilityActorInfo(ps, this);
@@ -404,18 +414,20 @@ void ABaseAgent::InitAgentAbility()
 			if (spec.Ability)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("GA: %s"), *spec.Ability->GetName());
-		
+        
 				FString TagString;
 				TArray<FGameplayTag> tags = spec.GetDynamicSpecSourceTags().GetGameplayTagArray();
 				for (const FGameplayTag& Tag : tags)
 				{
 					TagString += Tag.ToString() + TEXT(" ");
 				}
-		
+        
 				UE_LOG(LogTemp, Warning, TEXT("태그 목록: %s"), *TagString);
 			}
 		}
 	}
+
+	bAbilityInitialized = true;
 }
 
 void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
@@ -497,6 +509,9 @@ void ABaseAgent::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjus
 
 void ABaseAgent::StartFire()
 {
+	// 어빌리티 활성화중이라면 무기 강제 전환 X
+	if (IsAbilityActivating()) return;
+	
 	if (CurrentInteractor == nullptr)
 	{
 		// NET_LOG(LogTemp, Warning, TEXT("%hs Called, CurrentInteractor is nullptr"), __FUNCTION__);
@@ -732,88 +747,93 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 
 void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 {
-	if (HasAuthority())
-	{
-		// 어빌리티 실행 중인지 확인
-		if (IsAbilityExecuting())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("어빌리티 실행 중에는 무기를 전환할 수 없습니다."));
-			return;
-		}
-        
-		// 어빌리티가 준비/대기 중이면 모두 취소
-		if (IsAbilityPreparing() || IsAbilityWaiting())
-		{
-			// 활성화된 어빌리티 취소
-			CancelActiveAbilities();
-            
-			// 취소 후 약간의 딜레이를 두고 무기 전환
-			FTimerHandle DelayedSwitchTimer;
-			GetWorld()->GetTimerManager().SetTimer(DelayedSwitchTimer, [this, EquipmentType]()
-			{
-				PerformWeaponSwitch(EquipmentType);
-			}, 0.1f, false);
-			return;
-		}
-
-		// 정상적인 무기 전환 진행
-		PerformWeaponSwitch(EquipmentType);
-	}
-	else
+	if (!HasAuthority())
 	{
 		ServerRPC_SwitchEquipment(EquipmentType);
+		return;
 	}
-}
-
-void ABaseAgent::PerformWeaponSwitch(EInteractorType EquipmentType)
-{
+    
+	// 동일한 장비로 전환 시도 시 무시
 	if (EquipmentType == CurrentEquipmentState)
 	{
 		return;
 	}
     
+	// 어빌리티 상태 확인
+	if (ASC.IsValid())
+	{
+		// 무기 전환 차단 태그 체크
+		if (ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch))
+		{
+			NET_LOG(LogTemp, Warning, TEXT("어빌리티 사용 중 무기 전환 차단됨"));
+			return;
+		}
+
+		// 어빌리티 강제 취소
+		NET_LOG(LogTemp, Display, TEXT("무기 전환을 위해 활성 어빌리티 취소"));
+		ASC->ForceCleanupAllAbilities();
+		
+		// 약간의 딜레이 후 무기 전환
+		FTimerHandle DelayedSwitchTimer;
+		GetWorld()->GetTimerManager().SetTimer(DelayedSwitchTimer, [this, EquipmentType]()
+		{
+			PerformWeaponSwitch(EquipmentType);
+		}, 0.1f, false);
+		return;
+	}
+    
+	// 정상적인 무기 전환
+	PerformWeaponSwitch(EquipmentType);
+}
+
+void ABaseAgent::PerformWeaponSwitch(EInteractorType EquipmentType)
+{
+	// 이전 상태 저장
 	if (CurrentInteractor)
 	{
 		PrevEquipmentState = CurrentEquipmentState;
-		ASC->ClearFollowUpInputs();
 	}
-
-	if (EquipmentType == EInteractorType::Ability)
+    
+	// 새 장비로 전환
+	switch (EquipmentType)
 	{
+	case EInteractorType::Ability:
 		EquipInteractor(nullptr);
 		CurrentEquipmentState = EInteractorType::Ability;
-	}
-	else if (EquipmentType == EInteractorType::MainWeapon)
-	{
+		break;
+        
+	case EInteractorType::MainWeapon:
 		if (MainWeapon)
 		{
 			EquipInteractor(MainWeapon);
 		}
-	}
-	else if (EquipmentType == EInteractorType::SubWeapon)
-	{
+		break;
+        
+	case EInteractorType::SubWeapon:
 		if (SubWeapon)
 		{
 			EquipInteractor(SubWeapon);
 		}
-	}
-	else if (EquipmentType == EInteractorType::Melee)
-	{
+		break;
+        
+	case EInteractorType::Melee:
 		if (MeleeKnife)
 		{
 			EquipInteractor(MeleeKnife);
 		}
-	}
-	else if (EquipmentType == EInteractorType::Spike)
-	{
+		break;
+        
+	case EInteractorType::Spike:
 		if (Spike)
 		{
 			EquipInteractor(Spike);
 		}
+		break;
 	}
-
+    
 	UpdateEquipSpeedMultiplier();
 }
+
 
 void ABaseAgent::ActivateSpike()
 {
@@ -1049,81 +1069,75 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 /** 서버에서만 호출됨*/
 void ABaseAgent::Die()
 {
-	// 모든 활성 어빌리티 즉시 취소
+	NET_LOG(LogTemp, Display, TEXT("%s 사망 처리 시작"), *GetName());
+    
+	// 1. 어빌리티 정리를 가장 먼저 수행
 	CancelActiveAbilities();
 
+	// 어빌리티 완전 제거 
+	if (ASC.IsValid() && HasAuthority())
+	{
+		ASC->ResetAgentAbilities();
+	}
+
+	// 초기화 플래그 리셋
+	bAbilityInitialized = false;
+    
+	// 2. 장비 상태 초기화
 	CurrentEquipmentState = EInteractorType::None;
 	PrevEquipmentState = EInteractorType::None;
-	
+    
+	// 3. 모든 장비 드롭
 	if (MainWeapon)
 	{
 		MainWeapon->ServerRPC_Drop();
+		MainWeapon = nullptr;
 	}
 	if (SubWeapon)
 	{
 		SubWeapon->ServerRPC_Drop();
+		SubWeapon = nullptr;
 	}
 	if (MeleeKnife)
 	{
 		MeleeKnife->Destroy();
+		MeleeKnife = nullptr;
 	}
 	if (Spike)
 	{
 		Spike->ServerRPC_Drop();
+		Spike = nullptr;
 	}
-
-	// 게임모드 죽음 로직(인원수 체크)
-	GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnDie(PC);
-
+    
+	// 4. 게임모드에 죽음 알림
+	if (AMatchGameMode* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>())
+	{
+		GameMode->OnDie(PC);
+	}
+    
+	// 5. 킬 피드 처리
 	ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator());
-	MulticastRPC_Die(InstigatorAgent, this, LastKillFeedInfo);
-	// 킬러 플레이어 컨트롤러 찾기
-	AMatchPlayerController* KillerPC = nullptr;
-
-	// Instigator 로그 추가
-	AActor* InstigatorActor = GetInstigator();
-	if (InstigatorActor)
+	if (InstigatorAgent && InstigatorAgent != this)
 	{
-		NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator 정보: %s"), *InstigatorActor->GetName());
-	}
-	else
-	{
-		NET_LOG(LogTemp, Warning, TEXT("Die() - Instigator가 없습니다. 데미지 적용 시 Instigator가 제대로 설정되지 않았습니다."));
-	}
-
-	if (GetInstigator() && GetInstigator() != this)
-	{
-		KillerPC = Cast<AMatchPlayerController>(GetInstigator()->GetController());
-		// 키의 유효성 검사
-		NET_LOG(LogTemp, Warning, TEXT("죽음 처리: 킬러 컨트롤러 - %s"), KillerPC ? *KillerPC->GetName() : TEXT("없음"));
-
-		if (KillerPC)
+		if (AMatchPlayerController* KillerPC = Cast<AMatchPlayerController>(InstigatorAgent->GetController()))
 		{
-			GetWorld()->GetAuthGameMode<AMatchGameMode>()->OnKill(KillerPC, PC);
-			// AAgentPlayerState* KillerPS = KillerPC->GetPlayerState<AAgentPlayerState>();
-			// if (KillerPS)
-			// {
-			// 	UCreditComponent* CreditComp = KillerPS->FindComponentByClass<UCreditComponent>();
-			// 	if (CreditComp)
-			// 	{
-			// 		// 헤드샷 여부 체크 (데미지 시스템에서 구현 필요)
-			// 		bool bIsHeadshot = false; // 임시로 false 설정
-			// 		CreditComp->AwardKillCredits(bIsHeadshot);
-			// 		
-			// 		NET_LOG(LogTemp, Warning, TEXT("%s가 %s를 처치하여 크레딧 보상을 받았습니다."), 
-			// 			*KillerPC->GetPlayerState<APlayerState>()->GetPlayerName(), 
-			// 			*GetPlayerState<APlayerState>()->GetPlayerName());
-			// 		
-			// 	}
-			// }
+			if (AMatchGameMode* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>())
+			{
+				GameMode->OnKill(KillerPC, PC);
+			}
 		}
 	}
-	
+    
+	// 6. 클라이언트 동기화
+	MulticastRPC_Die(InstigatorAgent, this, LastKillFeedInfo);
+    
+	// 7. 카메라 처리 타이머
 	GetWorldTimerManager().SetTimer(DeadTimerHandle, FTimerDelegate::CreateLambda([this]()
 	{
 		OnDieCameraFinished();
 	}), DieCameraTimeRange, false);
-
+    
+	// 8. 메시 가시성 설정
 	GetMesh()->SetOwnerNoSee(false);
 }
 
@@ -1681,28 +1695,11 @@ void ABaseAgent::CancelActiveAbilities()
 	{
 		return;
 	}
-
-	// 활성화된 모든 어빌리티 찾기
-	TArray<FGameplayAbilitySpec*> ActiveSpecs;
-	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
-	{
-		if (Spec.IsActive())
-		{
-			ActiveSpecs.Add(&Spec);
-		}
-	}
-
-	// 모든 활성 어빌리티 취소
-	for (FGameplayAbilitySpec* Spec : ActiveSpecs)
-	{
-		if (Spec)
-		{
-			ASC->CancelAbilityHandle(Spec->Handle);
-		}
-	}
-
-	// 어빌리티 상태 정리
-	ASC->CleanupAbilityState();
+    
+	NET_LOG(LogTemp, Display, TEXT("모든 활성 어빌리티 취소"));
+    
+	// ASC의 통합 정리 함수 호출
+	ASC->ForceCleanupAllAbilities();
 }
 
 bool ABaseAgent::HasGameplayTag(const FGameplayTag& TagToCheck) const

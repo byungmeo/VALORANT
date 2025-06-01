@@ -5,227 +5,242 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "ResourceManager/ValorantGameType.h"
 #include "NiagaraSystem.h"
+#include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "BaseGameplayAbility.generated.h"
 
 class ABaseProjectile;
+class UAgentAbilitySystemComponent;
 
 UENUM(BlueprintType)
 enum class EAbilityActivationType : uint8
 {
-	Instant,        // 즉시 실행
-	WithPrepare     // 준비 -> 대기 -> 실행
+    Instant,        // 즉시 실행
+    WithPrepare     // 준비 -> 대기 -> 실행
 };
 
 UENUM(BlueprintType)
 enum class EFollowUpInputType : uint8
 {
-	None,
-	LeftClick,
-	RightClick,
-	RepeatKey,
-	LeftOrRight,    // 좌클릭 또는 우클릭
-	Any             // 모든 후속 입력
+    None,
+    LeftClick,
+    RightClick,
+    LeftOrRight
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityPhaseChanged, FGameplayTag, NewPhase);
+UENUM(BlueprintType)
+enum class EAbilityState : uint8
+{
+    None,
+    Preparing,
+    Waiting,
+    Executing,
+    Completed,
+    Cancelled
+};
+
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityStateChanged, FGameplayTag, StateTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPrepareAbility, FGameplayTag, SlotTag, EFollowUpInputType, InputType);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndAbility);
 
 UCLASS()
 class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	UBaseGameplayAbility();
+    UBaseGameplayAbility();
 
-	// === Utility ===
-	// 어빌리티가 취소 가능한지 여부
-	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-	bool bAllowCancelDuringExecution = false;
-	
-	// 어빌리티가 취소 가능한지 확인
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual bool CanBeCanceled() const override;
+    // 상태 관리
+    UFUNCTION(BlueprintPure, Category = "Ability|State")
+    EAbilityState GetCurrentState() const { return CurrentState; }
 
-	// === 설정 ===
-	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-	int32 m_AbilityID = 0;
+    UFUNCTION(BlueprintPure, Category = "Ability|State")
+    bool IsInState(EAbilityState State) const { return CurrentState == State; }
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-	EAbilityActivationType ActivationType = EAbilityActivationType::Instant;
+    // 후속 입력 처리
+    UFUNCTION(BlueprintCallable, Category = "Ability")
+    virtual void HandleFollowUpInput(FGameplayTag InputTag);
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-	EFollowUpInputType FollowUpInputType = EFollowUpInputType::None;
+    // 설정
+    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+    int32 m_AbilityID = 0;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
-	float FollowUpTime = 10.0f;
+    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+    EAbilityActivationType ActivationType = EAbilityActivationType::Instant;
 
-	// === 애니메이션 (1인칭/3인칭 페어) ===
-	UPROPERTY(EditDefaultsOnly, Category = "Animation")
-	UAnimMontage* PrepareMontage_1P = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+    EFollowUpInputType FollowUpInputType = EFollowUpInputType::None;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation")
-	UAnimMontage* PrepareMontage_3P = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+    float FollowUpTime = 10.0f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation")
-	UAnimMontage* WaitingMontage_1P = nullptr; // 대기 중 루프 애니메이션
+    UPROPERTY(EditDefaultsOnly, Category = "Ability Config")
+    bool bAllowCancelDuringExecution = false;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation")
-	UAnimMontage* WaitingMontage_3P = nullptr;
+    // 애니메이션
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* PrepareMontage_1P = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation")
-	UAnimMontage* ExecuteMontage_1P = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* PrepareMontage_3P = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation")
-	UAnimMontage* ExecuteMontage_3P = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* WaitingMontage_1P = nullptr;
 
-	// === 투사체 ===
-	UPROPERTY(EditDefaultsOnly, Category = "Projectile")
-	TSubclassOf<class ABaseProjectile> ProjectileClass;
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* WaitingMontage_3P = nullptr;
 
-	// === 공통 효과 ===
-	// 투사체 발사 효과
-	UPROPERTY(EditDefaultsOnly, Category = "Effects|Projectile")
-	class UNiagaraSystem* ProjectileLaunchEffect = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* ExecuteMontage_1P = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Effects|Projectile")
-	class USoundBase* ProjectileLaunchSound = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* ExecuteMontage_3P = nullptr;
 
-	// 어빌리티 준비 효과
-	UPROPERTY(EditDefaultsOnly, Category = "Effects|Prepare")
-	class UNiagaraSystem* PrepareEffect = nullptr;
+    // 투사체
+    UPROPERTY(EditDefaultsOnly, Category = "Projectile")
+    TSubclassOf<ABaseProjectile> ProjectileClass;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Effects|Prepare")
-	class USoundBase* PrepareSound = nullptr;
+    // 효과
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    UNiagaraSystem* PrepareEffect = nullptr;
 
-	// 어빌리티 실행 효과
-	UPROPERTY(EditDefaultsOnly, Category = "Effects|Execute")
-	class UNiagaraSystem* ExecuteEffect = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    USoundBase* PrepareSound = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Effects|Execute")
-	class USoundBase* ExecuteSound = nullptr;
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    UNiagaraSystem* ExecuteEffect = nullptr;
 
-	// === 델리게이트 ===
-	UPROPERTY(BlueprintAssignable)
-	FOnAbilityPhaseChanged OnPhaseChanged;
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    USoundBase* ExecuteSound = nullptr;
 
-	// === 후속 입력 처리 ===
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	void HandleFollowUpInput(FGameplayTag InputTag);
+    // 델리게이트
+    UPROPERTY(BlueprintAssignable)
+    FOnAbilityStateChanged OnStateChanged;
 
-	UPROPERTY()
-	FOnPrepareAbility OnPrepareAbility;
-	UPROPERTY()
-	FOnEndAbility OnEndAbility;
-	
+    UPROPERTY()
+    FOnPrepareAbility OnPrepareAbility;
+    
+    UPROPERTY()
+    FOnEndAbility OnEndAbility;
+
 protected:
-	// === GameplayAbility 오버라이드 ===
-	virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
-	
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
-	                             const FGameplayAbilityActorInfo* ActorInfo,
-	                             const FGameplayAbilityActivationInfo ActivationInfo,
-	                             const FGameplayEventData* TriggerEventData) override;
+    // GameplayAbility 오버라이드
+    virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+    
+    virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+                                const FGameplayAbilityActorInfo* ActorInfo,
+                                const FGameplayAbilityActivationInfo ActivationInfo,
+                                const FGameplayEventData* TriggerEventData) override;
 
-	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle,
-	                        const FGameplayAbilityActorInfo* ActorInfo,
-	                        const FGameplayAbilityActivationInfo ActivationInfo,
-	                        bool bReplicateEndAbility, bool bWasCancelled) override;
+    virtual void EndAbility(const FGameplayAbilitySpecHandle Handle,
+                           const FGameplayAbilityActorInfo* ActorInfo,
+                           const FGameplayAbilityActivationInfo ActivationInfo,
+                           bool bReplicateEndAbility, bool bWasCancelled) override;
 
-	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
-	                                const FGameplayAbilityActorInfo* ActorInfo,
-	                                const FGameplayTagContainer* SourceTags = nullptr,
-	                                const FGameplayTagContainer* TargetTags = nullptr,
-	                                FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+    virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+                                   const FGameplayAbilityActorInfo* ActorInfo,
+                                   const FGameplayTagContainer* SourceTags = nullptr,
+                                   const FGameplayTagContainer* TargetTags = nullptr,
+                                   FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 
-	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	                           const FGameplayAbilityActivationInfo ActivationInfo,
-	                           bool bReplicateCancelAbility) override;
+    virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, 
+                              const FGameplayAbilityActorInfo* ActorInfo,
+                              const FGameplayAbilityActivationInfo ActivationInfo,
+                              bool bReplicateCancelAbility) override;
 
-	// === 어빌리티 실행 흐름 ===
-	virtual void StartAbilityExecution();
-	virtual void HandlePreparePhase();
-	virtual void HandleWaitingPhase();
-	virtual void HandleExecutePhase();
+    // 상태 전환
+    UFUNCTION(BlueprintCallable, Category = "Ability|State")
+    void TransitionToState(EAbilityState NewState);
 
-	// == 어빌리티 동작 로직 ===
+    // 어빌리티 동작 - 서브클래스에서 오버라이드
+    UFUNCTION(BlueprintCallable, Category = "Ability")
+    virtual void PrepareAbility();
+    
+    UFUNCTION(BlueprintCallable, Category = "Ability")
+    virtual void WaitAbility();
+    
+    UFUNCTION(BlueprintCallable, Category = "Ability")
+    virtual void ExecuteAbility();
 
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual void PrepareAbility();
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual void WaitAbility();
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual void ExecuteAbility();
+    // 후속 입력 핸들러 - 서브클래스에서 오버라이드
+    UFUNCTION(BlueprintCallable, Category = "Ability")
+    virtual bool OnLeftClickInput();
 
-	// === 후속 입력 처리 ===
-	// 상속받아서 처리할경우, return 값 주의! 어빌리티를 실행 페이즈로 전이하려면 return true
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual bool OnLeftClickInput();
+    UFUNCTION(BlueprintCallable, Category = "Ability")
+    virtual bool OnRightClickInput();
 
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual bool OnRightClickInput();
+    // 유틸리티
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Ability")
+    bool SpawnProjectile(FVector LocationOffset = FVector::ZeroVector, FRotator RotationOffset = FRotator::ZeroRotator);
 
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual bool OnRepeatInput();
+    UFUNCTION(BlueprintCallable, Category = "Effects")
+    void PlayCommonEffects(UNiagaraSystem* NiagaraEffect, USoundBase* SoundEffect, FVector Location = FVector::ZeroVector);
 
-	// === 애니메이션 ===
-	UFUNCTION(BlueprintCallable, Category = "Animation")
-	void PlayMontages(UAnimMontage* Montage1P, UAnimMontage* Montage3P, bool bStopAllMontages = true);
+    UFUNCTION(BlueprintCallable, Category = "Ability")
+    bool ReduceAbilityStack();
 
-	UFUNCTION()
-	void OnMontageCompleted();
+    UFUNCTION(BlueprintPure, Category = "Ability")
+    int32 GetAbilityStack() const;
 
-	UFUNCTION()
-	void OnMontageBlendOut();
+    UPROPERTY(BlueprintReadWrite, Category = "Ability", EditAnywhere)
+    UNiagaraSystem* ProjectileLaunchEffect;
+    UPROPERTY(BlueprintReadWrite, Category = "Ability", EditAnywhere)
+    USoundBase* ProjectileLaunchSound;
 
-	// === 유틸리티 ===
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Ability")
-	bool SpawnProjectile(FVector LocationOffset = FVector::ZeroVector, FRotator RotationOffset = FRotator::ZeroRotator);
+    // 애니메이션
+    void PlayMontages(UAnimMontage* Montage1P, UAnimMontage* Montage3P, bool bStopAllMontages = true);
+    void StopAllMontages();
 
-	// 공통 효과 재생
-	UFUNCTION(BlueprintCallable, Category = "Effects")
-	void PlayCommonEffects(class UNiagaraSystem* NiagaraEffect, class USoundBase* SoundEffect, FVector Location = FVector::ZeroVector);
+    // 몽타주 콜백
+    UFUNCTION()
+    void OnMontageCompleted();
 
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	void SetAbilityPhase(FGameplayTag NewPhase);
+    UFUNCTION()
+    void OnMontageBlendOut();
 
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	bool ReduceAbilityStack();
+    // Actor를 통한 네트워크 동기화
+    void NotifyStateChanged(EAbilityState NewState);
+    void NotifyAbilityExecuted(bool bSuccess);
 
-	UFUNCTION(BlueprintPure, Category = "Ability")
-	int32 GetAbilityStack() const;
+    // 캐시된 정보
+    UPROPERTY()
+    FGameplayAbilityActorInfo CachedActorInfo;
 
-	// === 멀티플레이 ===
-	UFUNCTION()
-	void StopAllMontages() const;
+    UPROPERTY()
+    UAgentAbilitySystemComponent* CachedASC = nullptr;
 
-	UPROPERTY()
-	ABaseProjectile* SpawnedProjectile = nullptr;
-
-	UPROPERTY()
-	FGameplayAbilityActorInfo CachedActorInfo;
-
-	// 어빌리티 실행 전 무기 상태 저장
-	UPROPERTY()
-	EInteractorType PreviousEquipmentState = EInteractorType::None;
+    UPROPERTY()
+    ABaseProjectile* SpawnedProjectile = nullptr;
 
 private:
-	UPROPERTY()
-	FGameplayTag CurrentPhase;
+    // 현재 상태
+    UPROPERTY()
+    EAbilityState CurrentState = EAbilityState::None;
 
-	FTimerHandle WaitingTimeoutHandle;
+    // 이전 장비 상태
+    UPROPERTY()
+    EInteractorType PreviousEquipmentState = EInteractorType::None;
 
-	UFUNCTION()
-	void OnRep_CurrentPhase();
+    // 타이머
+    FTimerHandle WaitingTimeoutHandle;
+    FTimerHandle CleanupDelayHandle;
 
-	void RegisterFollowUpInputs();
-	void UnregisterFollowUpInputs();
+    // 상태별 처리 함수
+    void EnterState_Preparing();
+    void EnterState_Waiting();
+    void EnterState_Executing();
+    void ExitCurrentState();
 
-	UFUNCTION()
-	void OnWaitingTimeout();
+    // 정리 함수
+    void CleanupAbility();
+    void PerformFinalCleanup();
 
-	// 어빌리티 상태 플래그
-	bool bIsCanceling;
-	bool bIsEnding;
+    // 타임아웃 핸들러
+    UFUNCTION()
+    void OnWaitingTimeout();
+
+    // 헬퍼 함수
+    FGameplayTag ConvertStateToTag(EAbilityState State) const;
+    void UpdateAbilityTags(EAbilityState NewState);
+    bool IsValidFollowUpInput(FGameplayTag InputTag) const;
 };

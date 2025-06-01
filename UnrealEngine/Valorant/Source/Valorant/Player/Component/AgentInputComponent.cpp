@@ -144,7 +144,7 @@ void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 	if (Agent)
 	{
 		// 스킬을 실행했다면, 리턴
-		if (Agent->GetASC()->TrySkillInput(LeftClickTag))
+		if (Agent->GetASC()->TryActivateAbilityByTag(LeftClickTag))
 		{
 			return;
 		}

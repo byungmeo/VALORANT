@@ -20,20 +20,6 @@ AStimBeaconGround::AStimBeaconGround()
     // 버프 파티클 효과
     BuffParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("BuffParticle"));
     BuffParticle->SetupAttachment(RootComponent);
-    
-    // 데칼 머티리얼 설정
-    static ConstructorHelpers::FObjectFinder<UMaterial> DecalMaterial(TEXT("/Script/Engine.Material'/Game/Materials/M_StimBeaconRange.M_StimBeaconRange'"));
-    if (DecalMaterial.Succeeded())
-    {
-        RangeDecal->SetDecalMaterial(DecalMaterial.Object);
-    }
-    
-    // 파티클 설정
-    static ConstructorHelpers::FObjectFinder<UParticleSystem> ParticleAsset(TEXT("/Script/Engine.ParticleSystem'/Game/Effects/StimBeacon/P_StimBeaconBuff.P_StimBeaconBuff'"));
-    if (ParticleAsset.Succeeded())
-    {
-        BuffParticle->SetTemplate(ParticleAsset.Object);
-    }
 }
 
 void AStimBeaconGround::BeginPlay()

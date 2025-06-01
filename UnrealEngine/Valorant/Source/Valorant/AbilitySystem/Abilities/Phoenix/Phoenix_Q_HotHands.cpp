@@ -226,6 +226,8 @@ void UPhoenix_Q_HotHands::EndAbility(const FGameplayAbilitySpecHandle Handle,
                                      const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
                                      bool bWasCancelled)
 {
+	// 오브 정리
+	DestroyFireOrb();
 	// 상태 초기화
 	CurrentThrowType = EPhoenixQThrowType::None;
 

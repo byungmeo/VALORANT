@@ -186,6 +186,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Die")
 	UCurveVector* DieCameraCurve;
 
+	// 어빌리티 초기화 플래그 
+	bool bAbilityInitialized = false;
+
 	// 네트워크 복제 속성 설정 - (언리얼 네트워크 이용)
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -548,7 +551,7 @@ protected:
 	UFUNCTION()
 	void UpdateEffectSpeed(float newEffectSpeed);
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
 	void MulticastRPC_OnDamaged(const FVector& HitOrg, const EAgentDamagedPart DamagedPart, const EAgentDamagedDirection DamagedDirection, const bool bDie, const bool bLarge = false, const bool bLowState = false);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_OnHealed(const bool bHighState = false);

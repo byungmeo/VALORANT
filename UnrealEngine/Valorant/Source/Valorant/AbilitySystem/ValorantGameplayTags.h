@@ -20,6 +20,8 @@ struct FValorantGameplayTags
     FGameplayTag State_Ability_Preparing;    // 준비 애니메이션 재생 중
     FGameplayTag State_Ability_Waiting;      // 입력 대기 중
     FGameplayTag State_Ability_Executing;    // 실행 중
+    FGameplayTag State_Ability_Ending;       // 종료 중
+    FGameplayTag State_Ability_Canceling;    // 캔슬 중
     
     // 어빌리티 차단 태그들
     FGameplayTag Block_Ability_Input;              // "Block.Ability.Input"

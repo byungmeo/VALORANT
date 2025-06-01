@@ -23,6 +23,12 @@ ABaseWeapon::ABaseWeapon()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	Mesh->SetUseCCD(true);
+
+	ConstructorHelpers::FObjectFinder<UNiagaraSystem> agentHitTracerEffect(TEXT("/Script/Niagara.NiagaraSystem'/Game/Resource/Fab/Bullet_Impact_Hit/Prefabs/Wall/Fx_Bullet_Impact_Agent.Fx_Bullet_Impact_Agent'"));
+	if (agentHitTracerEffect.Succeeded())
+	{
+		AgentHitTracerEffect = agentHitTracerEffect.Object;
+	}
 }
 
 void ABaseWeapon::BeginPlay()
@@ -246,6 +252,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 	ActorsToIgnore.Add(GetOwner());
 	ActorsToIgnore.Add(OwnerAgent);
 	FHitResult OutHit;
+	bool bAgentHit = false;
 	const bool bHit = UKismetSystemLibrary::LineTraceSingle(
 		WorldContext,
 		Start,
@@ -265,6 +272,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		// 팀킬 방지 로직 추가
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
+			bAgentHit = true;
 			// 공격자와 피격자가 같은 팀인지 확인
 			if (OwnerAgent && HitAgent->IsBlueTeam() == OwnerAgent->IsBlueTeam())
 			{
@@ -322,17 +330,17 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		}
 		else
 		{
+			// 세이지 벽, 케이오 나이프 등 데미지 처리
 			FPointDamageEvent DamageEvent;
 			DamageEvent.HitInfo = OutHit;
 			OutHit.GetActor()->TakeDamage(WeaponData->BaseDamage,DamageEvent, nullptr,this);
 		}
 		// DrawDebugPoint(WorldContext, OutHit.ImpactPoint, 5, FColor::Green, false, 30);
-
-		// 벽이든 캐릭터든 항상 임팩트 이펙트/사운드 호출
+		
 		Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
 		//Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
 	}
-	Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
+	Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End, bAgentHit);
 }
 
 void ABaseWeapon::EndFire()
@@ -713,7 +721,7 @@ void ABaseWeapon::Multicast_SpawnMuzzleFlash_Implementation()
 	}
 }
 
-void ABaseWeapon::Multicast_SpawnTracer_Implementation(const FVector& Start, const FVector& End)
+void ABaseWeapon::Multicast_SpawnTracer_Implementation(const FVector& Start, const FVector& End, bool bHitAgent)
 {
 	if (WeaponData && WeaponData->TracerEffect && Mesh)
 	{
@@ -722,10 +730,13 @@ void ABaseWeapon::Multicast_SpawnTracer_Implementation(const FVector& Start, con
 		FVector Dir = End - MuzzleLoc;
 		float Length = Dir.Size();
 		FRotator Rot = Dir.Rotation();
+
+		UNiagaraSystem* TracerEffect = WeaponData->TracerEffect;
+		if (bHitAgent) TracerEffect = AgentHitTracerEffect;
 		
 		UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 			GetWorld(),
-			WeaponData->TracerEffect,
+			TracerEffect,
 			MuzzleLoc,
 			Rot
 		);
