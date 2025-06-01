@@ -19,25 +19,6 @@ AStimBeacon::AStimBeacon()
 	Sphere->SetSphereRadius(20.0f);
 	Mesh->SetRelativeScale3D(FVector(1.0f));
 	
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> BeaconMeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Projectiles/Brimstone_Ability_SpeedStim/AB_Sarge_S0_E_Skelmesh.AB_Sarge_S0_E_Skelmesh'"));
-	if (BeaconMeshAsset.Succeeded())
-	{
-		Mesh->SetSkeletalMeshAsset(BeaconMeshAsset.Object);
-	}
-
-	static ConstructorHelpers::FClassFinder<UAnimInstance> AnimInstanceClass(TEXT("/Script/Engine.AnimBlueprint'/Game/Resource/Props/Projectiles/Brimstone_Ability_SpeedStim/ABP_StimBeacon.ABP_StimBeacon_C'"));
-	if (AnimInstanceClass.Succeeded())
-	{
-		Mesh->SetAnimInstanceClass(AnimInstanceClass.Class);
-	}
-	
-	// StimBeaconGround 클래스 찾기
-	static ConstructorHelpers::FClassFinder<AStimBeaconGround> GroundClass(TEXT("/Script/Engine.Blueprint'/Game/Blueprints/AgentAbility/Brimstone/BP_StimBeaconGround.BP_StimBeaconGround_C'"));
-	if (GroundClass.Succeeded())
-	{
-		StimBeaconGroundClass = GroundClass.Class;
-	}
-	
 	ProjectileMovement->InitialSpeed = Speed;
 	ProjectileMovement->MaxSpeed = Speed;
 	ProjectileMovement->ProjectileGravityScale = Gravity;
