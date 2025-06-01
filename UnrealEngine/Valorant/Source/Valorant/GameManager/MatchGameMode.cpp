@@ -208,7 +208,14 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, All Players Completed Lock In"), __FUNCTION__);
-		StartPreRound();
+		GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
+		RemainRoundStateTime = 5.0f;
+		AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
+		if (MatchGameState)
+		{
+			MatchGameState->SetRemainRoundStateTime(RemainRoundStateTime);
+		}
+		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartPreRound, RemainRoundStateTime);
 	}
 }
 
