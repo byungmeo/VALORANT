@@ -25,6 +25,7 @@ AThirdPersonInteractor::AThirdPersonInteractor()
 	SetRootComponent(Mesh);
 	Mesh->SetCollisionProfileName(TEXT("NoCollision"), false);
 	Mesh->SetOwnerNoSee(true);
+	Mesh->SetCastShadow(false);
 }
 
 void AThirdPersonInteractor::SetXraySetting() const

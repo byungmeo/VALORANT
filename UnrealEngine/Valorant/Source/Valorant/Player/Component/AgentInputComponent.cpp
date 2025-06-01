@@ -7,6 +7,7 @@
 #include "EnhancedInputComponent.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "Player/AgentPlayerController.h"
 #include "Player/Agent/BaseAgent.h"
 
 
@@ -131,6 +132,15 @@ void UAgentInputComponent::OnLook(const FInputActionValue& value)
 
 void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 {
+	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
+	{
+		if (PC->ShopUI)
+		{
+			// 상점 열려있으면 쏘지마라
+			return;
+		}
+	}
+	
 	if (Agent)
 	{
 		// 스킬을 실행했다면, 리턴
@@ -146,6 +156,15 @@ void UAgentInputComponent::StartFire(const FInputActionValue& InputActionValue)
 
 void UAgentInputComponent::EndFire(const FInputActionValue& InputActionValue)
 {
+	if (const auto* PC = GetWorld()->GetFirstPlayerController<AAgentPlayerController>())
+	{
+		if (PC->ShopUI)
+		{
+			// 상점 열려있으면 쏘지마라
+			return;
+		}
+	}
+	
 	if (Agent)
 	{
 		// NET_LOG(LogTemp, Warning, TEXT("파이어 종료"));

@@ -59,6 +59,7 @@ void ABaseWeapon::BeginPlay()
 
 	Mesh->SetSkeletalMeshAsset(WeaponMeshAsset);
 	Mesh->SetRelativeScale3D(FVector(0.34f));
+	Mesh->SetCastShadow(false);
 
 	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, WeaponId: %d"), __FUNCTION__, WeaponData->WeaponID);
 	if (WeaponData->GunABPClass)
