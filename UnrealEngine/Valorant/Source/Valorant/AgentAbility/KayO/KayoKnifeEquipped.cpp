@@ -27,14 +27,14 @@ AKayoKnifeEquipped::AKayoKnifeEquipped()
     KnifeMesh->SetIsReplicated(true);
 
     // 메시 에셋 설정
-    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Knife/AB_Grenadier_S0_E_Knife_Skelmesh.AB_Grenadier_S0_E_Knife_Skelmesh'"));
+    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Agent/KayO/Ability/KayO_AbilityE_ZeroPoint/AB_Grenadier_S0_E_Knife_Skelmesh.AB_Grenadier_S0_E_Knife_Skelmesh'"));
     if (MeshAsset.Succeeded())
     {
         KnifeMesh->SetSkeletalMesh(MeshAsset.Object);
     }
 
     // 애니메이션 블루프린트 설정
-    static ConstructorHelpers::FClassFinder<UAnimInstance> AnimInstanceClass(TEXT("/Script/Engine.AnimBlueprint'/Game/Resource/Props/Projectiles/KAYO_Ability_Knife/ABP_Knife.ABP_Knife_C'"));
+    static ConstructorHelpers::FClassFinder<UAnimInstance> AnimInstanceClass(TEXT("/Script/Engine.AnimBlueprint'/Game/Resource/Agent/KayO/Ability/KayO_AbilityE_ZeroPoint/ABP_Knife.ABP_Knife_C'"));
     if (AnimInstanceClass.Succeeded())
     {
         KnifeMesh->SetAnimInstanceClass(AnimInstanceClass.Class);

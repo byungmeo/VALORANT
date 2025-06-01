@@ -25,14 +25,14 @@ AKayoGrenade::AKayoGrenade()
 	Mesh->SetRelativeScale3D(FVector(0.15f));
 
 	// 메시 에셋 설정
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> GrenadeMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/KayoGrenade.KayoGrenade'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> GrenadeMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Agent/KayO/Ability/KayO_AbilityC_Fragment/KayoGrenade.KayoGrenade'"));
 	if (GrenadeMeshAsset.Succeeded())
 	{
 		Mesh->SetStaticMesh(GrenadeMeshAsset.Object);
 	}
 	
 	// 머티리얼 설정
-	static ConstructorHelpers::FObjectFinder<UMaterial> GrenadeMaterial(TEXT("/Script/Engine.Material'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/M_KayoGrenade.M_KayoGrenade'"));
+	static ConstructorHelpers::FObjectFinder<UMaterial> GrenadeMaterial(TEXT("/Script/Engine.Material'/Game/Resource/Agent/KayO/Ability/KayO_AbilityC_Fragment/M_KayoGrenade.M_KayoGrenade'"));
 	if (GrenadeMaterial.Succeeded())
 	{
 		Mesh->SetMaterial(0, GrenadeMaterial.Object);

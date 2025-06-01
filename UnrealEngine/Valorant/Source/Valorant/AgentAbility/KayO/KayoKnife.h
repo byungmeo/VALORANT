@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "AgentAbility/BaseProjectile.h"
-#include "NiagaraSystem.h"
 #include "KayoKnife.generated.h"
 
 class UKayoKnifeAnim;

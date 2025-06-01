@@ -32,6 +32,8 @@ void UJett_Q_Updraft::ExecuteAbility()
 			MoveComp->GravityScale = GravityScale;
 			MoveComp->BrakingDecelerationFalling = BrakingDecelerationFalling;
 
+			PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
+
 			// 0.3초 후 원래 값 복구
 			FTimerHandle TimerHandle;
 			Character->GetWorldTimerManager().SetTimer(TimerHandle, [MoveComp, OriginalGravity, OriginalBraking]()

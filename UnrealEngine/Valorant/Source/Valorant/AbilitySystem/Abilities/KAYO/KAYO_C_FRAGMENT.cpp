@@ -24,10 +24,13 @@ void UKAYO_C_FRAGMENT::PrepareAbility()
 {
 	Super::PrepareAbility();
 	
-	// 준비 효과 재생
-	if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+	// 1인칭 준비 효과 재생
+	if (IsLocallyControlled())
 	{
-		PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+		if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+		{
+			PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
+		}
 	}
 	
 	// 장착된 수류탄 생성
