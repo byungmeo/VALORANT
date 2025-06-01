@@ -56,15 +56,13 @@ void UKAYO_C_FRAGMENT::WaitAbility()
 
 bool UKAYO_C_FRAGMENT::OnLeftClickInput()
 {
-	// 좌클릭으로 언더핸드 던지기
-	CurrentThrowType = EGrenadeThrowType::Underhand;
+	CurrentThrowType = EGrenadeThrowType::Overhand;
 	return ThrowGrenade(CurrentThrowType);
 }
 
 bool UKAYO_C_FRAGMENT::OnRightClickInput()
 {
-	// 우클릭으로 오버핸드 던지기
-	CurrentThrowType = EGrenadeThrowType::Overhand;
+	CurrentThrowType = EGrenadeThrowType::Underhand;
 	return ThrowGrenade(CurrentThrowType);
 }
 
@@ -208,7 +206,7 @@ bool UKAYO_C_FRAGMENT::SpawnProjectileByType(EGrenadeThrowType ThrowType)
 	}
 
 	// 수류탄 스폰 위치 계산
-	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f + FVector(0, 0, 50.0f);
+	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f + FVector(0, 0, (ThrowType == EGrenadeThrowType::Underhand) ? 50.f : 150.0f);
 	FRotator SpawnRotation = Character->GetControlRotation();
 
 	// 언더핸드의 경우 각도 조정 (아래쪽으로)
