@@ -149,7 +149,8 @@ void AMatchGameMode::PostLogin(APlayerController* NewPlayer)
 void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname)
 {
 	FMatchPlayer PlayerInfo;
-	PlayerInfo.Controller = Cast<AAgentPlayerController>(Controller);
+	auto* AgentPC = Cast<AAgentPlayerController>(Controller);
+	PlayerInfo.Controller = AgentPC;
 	PlayerInfo.Nickname = Nickname;
 	PlayerInfo.bIsBlueTeam = RequiredPlayerCount / 2 > MatchPlayers.Num();
 	if (PlayerInfo.bIsBlueTeam)
@@ -170,7 +171,13 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	}
 	MatchPlayers.Add(PlayerInfo);
 	++LoggedInPlayerNum;
-
+	
+	// Log 데이터 추가
+	FLogData NewLog;
+	NewLog.Controller = AgentPC;
+	NewLog.Nickname = Nickname;
+	PlayerLog.Add(AgentPC, NewLog);
+	
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Nickname: %s, bIsBlueTeam: %hs"), __FUNCTION__, *Nickname, PlayerState->bIsBlueTeam?"True":"False");
 }
 
@@ -388,6 +395,8 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 	MaxTime = BuyPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
 	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartInRound, BuyPhaseTime);
+
+	//TODO: 로그 데이터 보내고, 초기화
 }
 
 void AMatchGameMode::HandleRoundSubState_InRound()
@@ -402,7 +411,7 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 		MatchGameState->MulticastRPC_CloseAllShops();
 	}
 
-	// 배리어 해제를 위한 브로드캐스트
+	// 배리어 해제 및 로깅 시작을 위한 브로드캐스트
 	OnStartInRound.Broadcast();
 
 	// 일정 시간 후에 라운드 종료
@@ -430,6 +439,9 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 		}
 		return;
 	}
+
+	// 로깅 종료를 위한 브로드캐스트
+	OnEndRound.Broadcast();
 
 	// 일정 시간 후에 라운드 재시작
 	MaxTime = EndPhaseTime;
@@ -1019,4 +1031,14 @@ void AMatchGameMode::DestroySpikeInWorld()
 	{
 		Spike->Destroy();
 	}
+}
+
+void AMatchGameMode::SubmitShotLog(AAgentPlayerController* pc, int32 fireCount, int32 hitCount,
+	int32 headshotCount)
+{
+	NET_LOG(LogTemp,Error,TEXT("로그 제출, Fire: %d / Hit: %d / Head: %d"), fireCount, hitCount, headshotCount);
+	FLogData& Data = PlayerLog[pc];
+	Data.FireCount += fireCount;
+	Data.HitCount += hitCount;
+	Data.HeadshotCount += headshotCount;
 }

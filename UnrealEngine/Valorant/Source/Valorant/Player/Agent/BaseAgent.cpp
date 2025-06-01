@@ -3,6 +3,7 @@
 
 #include "BaseAgent.h"
 #include "AbilitySystemComponent.h"
+#include "NiagaraComponent.h"
 #include "Engine/World.h"
 #include "Valorant.h"
 #include "AbilitySystem/Abilities/BaseGameplayAbility.h"
@@ -337,15 +338,19 @@ void ABaseAgent::BeginPlay()
 			FTimerDelegate TimerDel;
 			TimerDel.BindLambda([this, World]()
 			{
-				if (AMatchGameMode* gm = World->GetAuthGameMode<AMatchGameMode>())
+				m_GameMode = World->GetAuthGameMode<AMatchGameMode>();
+				if (m_GameMode)
 				{
-					gm->SpawnDefaultWeapon(this);
+					m_GameMode->SpawnDefaultWeapon(this);
+					m_GameMode->OnStartInRound.AddDynamic(this,&ABaseAgent::StartLogging);
+					m_GameMode->OnEndRound.AddDynamic(this,&ABaseAgent::StopLogging);
 				}
 			});
             
 			World->GetTimerManager().SetTimer(SpawnWeaponTimerHandle,TimerDel,1.0f,false);
 		}
 	}
+	
 	
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             LCH             ♣
@@ -554,10 +559,24 @@ void ABaseAgent::EndFire()
 	{
 		return;
 	}
-
+	
 	if (auto* weapon = Cast<ABaseWeapon>(CurrentInteractor))
 	{
 		weapon->EndFire();
+
+		if (bIsLogMode)
+		{
+			if (HasAuthority())
+			{
+				m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+				InitLog();
+			}
+			else
+			{
+				ServerRPC_SubmitLog();
+			}
+		}
+		
 		return;
 	}
 
@@ -1382,6 +1401,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
+	DOREPLIFETIME(ABaseAgent, bIsLogMode);
 }
 
 
@@ -2194,4 +2214,43 @@ void ABaseAgent::Multicast_PlayNiagaraEffectAttached_Implementation(AActor* Atta
 			}
 		}, Duration, false);
 	}
+}
+
+void ABaseAgent::InitLog()
+{
+	NET_LOG(LogTemp,Warning,TEXT("Temp 로그 초기화"));
+	CachedFireCount = 0;
+	CachedHitCount = 0;
+	CachedHeadshotCount = 0;
+}
+
+void ABaseAgent::LogShotResult(const bool bHit)
+{
+	if (!bIsLogMode)
+	{
+		return;
+	}
+
+	CachedFireCount++;
+	
+	if (bHit)
+	{
+		CachedHitCount++;
+	}
+}
+
+void ABaseAgent::LogHeadshot()
+{
+	if (!bIsLogMode)
+	{
+		return;
+	}
+
+	CachedHeadshotCount++;
+}
+
+void ABaseAgent::ServerRPC_SubmitLog_Implementation()
+{
+	m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+	InitLog();
 }

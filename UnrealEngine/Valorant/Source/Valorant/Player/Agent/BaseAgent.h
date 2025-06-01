@@ -6,11 +6,9 @@
 #include "Player/Component/FlashComponent.h"
 #include "Player/Component/FlashPostProcessComponent.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
-#include "NiagaraSystem.h"
 #include "BaseAgent.generated.h"
 
+class AMatchGameMode;
 struct FKillFeedInfo;
 enum class EKillFeedReason : uint8;
 enum class EKillFeedSubReason : uint8;
@@ -416,10 +414,28 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void AdjustFlashEffectDirect(float BlindDuration, float RecoveryDuration);
+
+	// Log 관련 함수
+	UFUNCTION(Category = "Log")
+	void StartLogging() { bIsLogMode = true; }
+	UFUNCTION(Category = "Log")  
+	void StopLogging() { bIsLogMode = false; }
+	UFUNCTION(Category = "Log")
+	void InitLog();
+	UFUNCTION(Category = "Log")
+	void LogShotResult(const bool bHit);
+	UFUNCTION(Category = "Log")
+	void LogHeadshot();
+	UFUNCTION(Server, Reliable, Category = "Log")
+	void ServerRPC_SubmitLog();
+	
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	AMatchGameMode* m_GameMode = nullptr;
 
 	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	// AAgentPlayerState* PS = nullptr;
@@ -494,6 +510,13 @@ protected:
 	UPROPERTY(Replicated)
 	int PoseIdx = 0;
 	int PoseIdxOffset = 0;
+
+	//Log용 변수
+	UPROPERTY(Replicated)
+	bool bIsLogMode = false;
+	int CachedFireCount = 0;
+	int CachedHitCount = 0;
+	int CachedHeadshotCount = 0;
 
 public:
 	FKillFeedInfo LastKillFeedInfo;

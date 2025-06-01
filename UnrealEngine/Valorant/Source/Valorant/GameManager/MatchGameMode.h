@@ -50,8 +50,22 @@ struct FMatchPlayer
 	bool bIsDead = false;
 };
 
+USTRUCT(BlueprintType)
+struct FLogData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<AAgentPlayerController> Controller = nullptr;
+	FString Nickname = "UNKNOWN";
+	int FireCount = 0;
+	int HitCount = 0;
+	int HeadshotCount = 0;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartInRound);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartPreRound);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndRound);
 
 UCLASS()
 class VALORANT_API AMatchGameMode : public AGameMode
@@ -83,6 +97,7 @@ private:
 	int LoggedInPlayerNum = 0;
 	UPROPERTY(BlueprintReadOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TArray<FMatchPlayer> MatchPlayers;
+	TMap<AAgentPlayerController*,FLogData> PlayerLog;
 	int LockedInPlayerNum = 0;
 	TArray<FString> RedTeamPlayerNameArray;
 	TArray<FString> BlueTeamPlayerNameArray;
@@ -188,9 +203,15 @@ public:
 	UFUNCTION()
 	void DestroySpikeInWorld();
 
+	UFUNCTION(Category = "Log")
+	void SubmitShotLog(AAgentPlayerController* pc, int32 fireCount, int32 hitCount,
+	int32 headshotCount);
+
+
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ASpike> SpikeClass;
 
 	FOnStartPreRound OnStartPreRound;
 	FOnStartInRound OnStartInRound;
+	FOnEndRound OnEndRound;
 };

@@ -267,6 +267,10 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		FLinearColor::Green,
 		2.5f
 	);
+
+	// 데이터 로그
+	OwnerAgent->LogShotResult(bHit);
+	
 	if (bHit)
 	{
 		// 팀킬 방지 로직 추가
@@ -290,6 +294,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 					break;
 				case EAgentDamagedPart::Head:
 					FinalDamage *= WeaponData->HeadshotMultiplier;
+					OwnerAgent->LogHeadshot();
 					break;
 				case EAgentDamagedPart::Body:
 					break;
