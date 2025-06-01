@@ -1057,7 +1057,7 @@ void AMatchGameMode::DestroySpikeInWorld()
 void AMatchGameMode::SubmitShotLog(AAgentPlayerController* pc, int32 fireCount, int32 hitCount,
 	int32 headshotCount)
 {
-	NET_LOG(LogTemp,Error,TEXT("로그 제출, Fire: %d / Hit: %d / Head: %d"), fireCount, hitCount, headshotCount);
+	// NET_LOG(LogTemp,Error,TEXT("로그 제출, Fire: %d / Hit: %d / Head: %d"), fireCount, hitCount, headshotCount);
 	FLogData& Data = PlayerLog[pc];
 	Data.FireCount += fireCount;
 	Data.HitCount += hitCount;
