@@ -62,7 +62,7 @@ void UKAYO_E_ZEROPOINT::SpawnEquippedKnives()
 	// 서버에서 3인칭 나이프 생성 (모든 클라이언트에 자동 복제)
 	if (HasAuthority(&CurrentActivationInfo))
 	{
-		FVector HandLocation3P = OwnerAgent->GetMesh()->GetSocketLocation(FName("R_WeaponPoint"));
+		FVector HandLocation3P = OwnerAgent->GetMesh()->GetSocketLocation(FName("R_Hand"));
 		FRotator HandRotation = FRotator::ZeroRotator;
 
 		
@@ -81,7 +81,7 @@ void UKAYO_E_ZEROPOINT::SpawnEquippedKnives()
 			
 			// 3인칭 메쉬에 부착
 			SpawnedKnife3P->AttachToComponent(OwnerAgent->GetMesh(), 
-				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_Hand"));
 				
 			// 장착 애니메이션 실행
 			SpawnedKnife3P->OnEquip();
