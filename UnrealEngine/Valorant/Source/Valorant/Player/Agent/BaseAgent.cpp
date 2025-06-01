@@ -2216,9 +2216,27 @@ void ABaseAgent::Multicast_PlayNiagaraEffectAttached_Implementation(AActor* Atta
 	}
 }
 
+void ABaseAgent::StartLogging()
+{
+	bIsLogMode = true;
+}
+
+void ABaseAgent::StopLogging()
+{
+	bIsLogMode = false;
+	if (HasAuthority())
+	{
+		m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+		InitLog();
+	}
+	else
+	{
+		ServerRPC_SubmitLog();
+	}
+}
+
 void ABaseAgent::InitLog()
 {
-	NET_LOG(LogTemp,Warning,TEXT("Temp 로그 초기화"));
 	CachedFireCount = 0;
 	CachedHitCount = 0;
 	CachedHeadshotCount = 0;

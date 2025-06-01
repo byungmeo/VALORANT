@@ -395,8 +395,6 @@ void AMatchGameMode::HandleRoundSubState_BuyPhase()
 	MaxTime = BuyPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
 	GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartInRound, BuyPhaseTime);
-
-	//TODO: 로그 데이터 보내고, 초기화
 }
 
 void AMatchGameMode::HandleRoundSubState_InRound()
@@ -423,6 +421,32 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 
 void AMatchGameMode::HandleRoundSubState_EndPhase()
 {
+	// 로깅 종료를 위한 브로드캐스트
+	OnEndRound.Broadcast();
+	
+	// UE_LOG(LogTemp, Warning, TEXT("=========== Log 목록 출력 ==========="));
+	// for (const auto& Pair : PlayerLog)
+	// {
+	// 	const AAgentPlayerController* PC = Pair.Key;
+	// 	const FLogData& Data            = Pair.Value;
+	//
+	// 	// 플레이어 컨트롤러로부터 닉네임 가져오기
+	// 	FString Nick = Data.Nickname;
+	// 	if (Nick.IsEmpty() && PC && PC->PlayerState)
+	// 	{
+	// 		Nick = PC->PlayerState->GetPlayerName();
+	// 	}
+	//
+	// 	// 현재 카운트 출력
+	// 	UE_LOG(LogTemp, Warning, TEXT("%s: FireCount=%d, HitCount=%d, HeadshotCount=%d"),
+	// 		*Nick,
+	// 		Data.FireCount,
+	// 		Data.HitCount,
+	// 		Data.HeadshotCount
+	// 	);
+	// }
+	// UE_LOG(LogTemp, Warning, TEXT("=========== 출력 끝 ==========="));
+	
 	// TODO: 라운드 상황에 따라 BuyPhase로 전환할 것인지 InRound로 전환할 것인지 아예 매치가 끝난 상태로 전환할 것인지 판단
 	// 공수교대(->InRound) 조건: 3라운드가 끝나고 4라운드 시작되는 시점
 	// 매치 종료 조건: 4승을 먼저 달성한 팀이 있는 경우 (6전 4선승제, 만약 3:3일 경우 단판 승부전)
@@ -439,10 +463,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 		}
 		return;
 	}
-
-	// 로깅 종료를 위한 브로드캐스트
-	OnEndRound.Broadcast();
-
+	
 	// 일정 시간 후에 라운드 재시작
 	MaxTime = EndPhaseTime;
 	GetWorld()->GetTimerManager().ClearTimer(RoundTimerHandle);
@@ -458,7 +479,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	{
 		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartBuyPhase, EndPhaseTime);
 	}
-
+	
 	// 라운드 종료 시 크레딧 보상 지급
 	AwardRoundEndCredits();
 }
