@@ -1,6 +1,5 @@
-﻿#include "KayoKnifeEquipped.h"
-#include "KayoKnifeAnim.h"
-#include "Components/SkeletalMeshComponent.h"
+﻿#include "KayoGrenadeEquipped.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/AudioComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -10,7 +9,7 @@
 #include "Engine/Engine.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
-AKayoKnifeEquipped::AKayoKnifeEquipped()
+AKayoGrenadeEquipped::AKayoGrenadeEquipped()
 {
     PrimaryActorTick.bCanEverTick = true;
     bReplicates = true;
@@ -20,57 +19,57 @@ AKayoKnifeEquipped::AKayoKnifeEquipped()
     USceneComponent* Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     SetRootComponent(Root);
     
-    // 나이프 메시 설정
-    KnifeMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("KnifeMesh"));
-    KnifeMesh->SetupAttachment(GetRootComponent());
-    KnifeMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    KnifeMesh->SetIsReplicated(true);
-
+    // 수류탄 메시 설정
+    GrenadeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GrenadeMesh"));
+    GrenadeMesh->SetupAttachment(GetRootComponent());
+    GrenadeMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GrenadeMesh->SetIsReplicated(true);
+    
     // 메시 에셋 설정
-    static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(TEXT("/Script/Engine.SkeletalMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Knife/AB_Grenadier_S0_E_Knife_Skelmesh.AB_Grenadier_S0_E_Knife_Skelmesh'"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/KayoGrenade.KayoGrenade'"));
     if (MeshAsset.Succeeded())
     {
-        KnifeMesh->SetSkeletalMesh(MeshAsset.Object);
+        GrenadeMesh->SetStaticMesh(MeshAsset.Object);
     }
-
-    // 애니메이션 블루프린트 설정
-    static ConstructorHelpers::FClassFinder<UAnimInstance> AnimInstanceClass(TEXT("/Script/Engine.AnimBlueprint'/Game/Resource/Props/Projectiles/KAYO_Ability_Knife/ABP_Knife.ABP_Knife_C'"));
-    if (AnimInstanceClass.Succeeded())
+    
+    // 머티리얼 설정
+    static ConstructorHelpers::FObjectFinder<UMaterial> GrenadeMaterial(TEXT("/Script/Engine.Material'/Game/Resource/Props/Projectiles/KAYO_Ability_Grenade/M_KayoGrenade.M_KayoGrenade'"));
+    if (GrenadeMaterial.Succeeded())
     {
-        KnifeMesh->SetAnimInstanceClass(AnimInstanceClass.Class);
+        GrenadeMesh->SetMaterial(0, GrenadeMaterial.Object);
     }
-
+    
     // 상대적 위치 및 회전 설정
-    KnifeMesh->SetRelativeScale3D(FVector(1.0f));
-    KnifeMesh->SetRelativeLocation(FVector(0, 0, 0));
-    KnifeMesh->SetRelativeRotation(FRotator(0, 0, 0));
+    GrenadeMesh->SetRelativeScale3D(FVector(0.15f));
+    GrenadeMesh->SetRelativeLocation(FVector(10, 0, 0));
+    GrenadeMesh->SetRelativeRotation(FRotator(0, 0, 0));
     
     // 글로우 이펙트 컴포넌트
     GlowEffectComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("GlowEffect"));
-    GlowEffectComponent->SetupAttachment(KnifeMesh);
+    GlowEffectComponent->SetupAttachment(GrenadeMesh);
     GlowEffectComponent->bAutoActivate = false;
     GlowEffectComponent->SetIsReplicated(true);
 }
 
-void AKayoKnifeEquipped::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void AKayoGrenadeEquipped::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     
-    DOREPLIFETIME(AKayoKnifeEquipped, KnifeViewType);
-    DOREPLIFETIME(AKayoKnifeEquipped, bIsEquipped);
+    DOREPLIFETIME(AKayoGrenadeEquipped, GrenadeViewType);
+    DOREPLIFETIME(AKayoGrenadeEquipped, bIsEquipped);
+    DOREPLIFETIME(AKayoGrenadeEquipped, bIsOverhand);
 }
 
-void AKayoKnifeEquipped::BeginPlay()
+void AKayoGrenadeEquipped::BeginPlay()
 {
     Super::BeginPlay();
     
-    BaseScale = KnifeMesh->GetRelativeScale3D();
-    AnimInstance = Cast<UKayoKnifeAnim>(KnifeMesh->GetAnimInstance());
+    BaseScale = GrenadeMesh->GetRelativeScale3D();
     
-    // 나이프 글로우 이펙트 설정
-    if (KnifeGlowEffect && GlowEffectComponent)
+    // 수류탄 글로우 이펙트 설정
+    if (GrenadeGlowEffect && GlowEffectComponent)
     {
-        GlowEffectComponent->SetAsset(KnifeGlowEffect);
+        GlowEffectComponent->SetAsset(GrenadeGlowEffect);
     }
     
     // Owner가 이미 설정되어 있으면 가시성 업데이트
@@ -80,7 +79,7 @@ void AKayoKnifeEquipped::BeginPlay()
     }
 }
 
-void AKayoKnifeEquipped::OnRep_Owner()
+void AKayoGrenadeEquipped::OnRep_Owner()
 {
     Super::OnRep_Owner();
     
@@ -88,23 +87,23 @@ void AKayoKnifeEquipped::OnRep_Owner()
     UpdateVisibilitySettings();
 }
 
-void AKayoKnifeEquipped::SetKnifeViewType(EKnifeViewType ViewType)
+void AKayoGrenadeEquipped::SetGrenadeViewType(EGrenadeViewType ViewType)
 {
-    KnifeViewType = ViewType;
+    GrenadeViewType = ViewType;
     
     // 서버에서 타입 변경
     if (HasAuthority())
     {
-        OnRep_KnifeViewType();
+        OnRep_GrenadeViewType();
     }
 }
 
-void AKayoKnifeEquipped::OnRep_KnifeViewType()
+void AKayoGrenadeEquipped::OnRep_GrenadeViewType()
 {
     UpdateVisibilitySettings();
 }
 
-void AKayoKnifeEquipped::UpdateVisibilitySettings()
+void AKayoGrenadeEquipped::UpdateVisibilitySettings()
 {
     if (!GetOwner())
         return;
@@ -117,58 +116,58 @@ void AKayoKnifeEquipped::UpdateVisibilitySettings()
     APlayerController* LocalPC = GEngine ? GEngine->GetFirstLocalPlayerController(GetWorld()) : nullptr;
     bool bIsLocalOwner = LocalPC && LocalPC->GetPawn() == OwnerPawn;
     
-    if (KnifeViewType == EKnifeViewType::FirstPerson)
+    if (GrenadeViewType == EGrenadeViewType::FirstPerson)
     {
-        // 1인칭 나이프 - 오직 오너만 볼 수 있음
+        // 1인칭 수류탄 - 오직 오너만 볼 수 있음
         if (bIsLocalOwner)
         {
             // 로컬 오너인 경우 - 보이게 설정
-            KnifeMesh->SetVisibility(true, true);
+            GrenadeMesh->SetVisibility(true, true);
             GlowEffectComponent->SetVisibility(true, true);
             
             // Owner만 보기 설정
-            KnifeMesh->SetOnlyOwnerSee(true);
+            GrenadeMesh->SetOnlyOwnerSee(true);
             GlowEffectComponent->SetOnlyOwnerSee(true);
         }
         else
         {
             // 로컬 오너가 아닌 경우 - 숨김
-            KnifeMesh->SetVisibility(false, true);
+            GrenadeMesh->SetVisibility(false, true);
             GlowEffectComponent->SetVisibility(false, true);
         }
     }
     else  // ThirdPerson
     {
-        // 3인칭 나이프 - 오너는 볼 수 없음
+        // 3인칭 수류탄 - 오너는 볼 수 없음
         if (bIsLocalOwner)
         {
             // 로컬 오너인 경우 - 숨김
-            KnifeMesh->SetVisibility(false, true);
+            GrenadeMesh->SetVisibility(false, true);
             GlowEffectComponent->SetVisibility(false, true);
         }
         else
         {
             // 로컬 오너가 아닌 경우 - 보이게 설정
-            KnifeMesh->SetVisibility(true, true);
+            GrenadeMesh->SetVisibility(true, true);
             GlowEffectComponent->SetVisibility(true, true);
             
             // Owner는 못보게 설정
-            KnifeMesh->SetOwnerNoSee(true);
+            GrenadeMesh->SetOwnerNoSee(true);
             GlowEffectComponent->SetOwnerNoSee(true);
         }
     }
     
     // 사운드 처리 (처음 한 번만)
-    if (!bVisibilityInitialized && KnifeIdleSound && bIsEquipped)
+    if (!bVisibilityInitialized && GrenadeIdleSound && bIsEquipped)
     {
-        bool bShouldPlaySound = (KnifeViewType == EKnifeViewType::FirstPerson && bIsLocalOwner) ||
-                               (KnifeViewType == EKnifeViewType::ThirdPerson && !bIsLocalOwner);
+        bool bShouldPlaySound = (GrenadeViewType == EGrenadeViewType::FirstPerson && bIsLocalOwner) ||
+                               (GrenadeViewType == EGrenadeViewType::ThirdPerson && !bIsLocalOwner);
         
         if (bShouldPlaySound)
         {
             IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
-                KnifeIdleSound, 
-                KnifeMesh, 
+                GrenadeIdleSound, 
+                GrenadeMesh, 
                 NAME_None, 
                 FVector::ZeroVector, 
                 EAttachLocation::KeepRelativeOffset, 
@@ -180,7 +179,7 @@ void AKayoKnifeEquipped::UpdateVisibilitySettings()
     }
 }
 
-void AKayoKnifeEquipped::Tick(float DeltaTime)
+void AKayoGrenadeEquipped::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
@@ -191,7 +190,7 @@ void AKayoKnifeEquipped::Tick(float DeltaTime)
     }
 }
 
-void AKayoKnifeEquipped::OnEquip()
+void AKayoGrenadeEquipped::OnEquip()
 {
     if (HasAuthority())
     {
@@ -199,15 +198,9 @@ void AKayoKnifeEquipped::OnEquip()
         OnRep_IsEquipped();
         MulticastPlayEquipSound();
     }
-    
-    // 애니메이션 실행
-    if (AnimInstance)
-    {
-        AnimInstance->OnKnifeEquip();
-    }
 }
 
-void AKayoKnifeEquipped::OnUnequip()
+void AKayoGrenadeEquipped::OnUnequip()
 {
     if (HasAuthority())
     {
@@ -215,23 +208,40 @@ void AKayoKnifeEquipped::OnUnequip()
         OnRep_IsEquipped();
         MulticastPlayUnequipSound();
     }
-    
-    // 애니메이션 실행 (필요시 구현)
-    // if (AnimInstance)
-    // {
-    //     AnimInstance->OnKnifeUnequip();
-    // }
 }
 
-void AKayoKnifeEquipped::OnRep_IsEquipped()
+void AKayoGrenadeEquipped::SetThrowType(bool bIsOverhandThrow)
+{
+    if (HasAuthority())
+    {
+        bIsOverhand = bIsOverhandThrow;
+        OnRep_IsOverhand();
+    }
+}
+
+void AKayoGrenadeEquipped::OnRep_IsEquipped()
 {
     UpdateEquipVisuals();
 }
 
-void AKayoKnifeEquipped::UpdateEquipVisuals()
+void AKayoGrenadeEquipped::OnRep_IsOverhand()
+{
+    // 던지기 타입에 따른 시각적 효과 변경 (필요시 구현)
+    // 예: 다른 각도로 수류탄 회전
+    if (bIsOverhand)
+    {
+        GrenadeMesh->SetRelativeRotation(FRotator(-45, 0, 0));
+    }
+    else
+    {
+        GrenadeMesh->SetRelativeRotation(FRotator(0, 0, 0));
+    }
+}
+
+void AKayoGrenadeEquipped::UpdateEquipVisuals()
 {
     // 보이는 경우에만 장착 시각 효과 업데이트
-    if (!KnifeMesh || !KnifeMesh->IsVisible())
+    if (!GrenadeMesh || !GrenadeMesh->IsVisible())
         return;
     
     // 글로우 이펙트 활성화/비활성화
@@ -247,33 +257,31 @@ void AKayoKnifeEquipped::UpdateEquipVisuals()
             GlowEffectComponent->Deactivate();
         }
     }
-    
-    // 장착/해제 사운드 재생은 Multicast 함수에서 처리
 }
 
-void AKayoKnifeEquipped::MulticastPlayEquipSound_Implementation()
+void AKayoGrenadeEquipped::MulticastPlayEquipSound_Implementation()
 {
-    if (KnifeEquipSound)
+    if (GrenadeEquipSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), KnifeEquipSound, GetActorLocation());
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), GrenadeEquipSound, GetActorLocation());
     }
 }
 
-void AKayoKnifeEquipped::MulticastPlayUnequipSound_Implementation()
+void AKayoGrenadeEquipped::MulticastPlayUnequipSound_Implementation()
 {
-    if (KnifeUnequipSound)
+    if (GrenadeUnequipSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), KnifeUnequipSound, GetActorLocation());
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), GrenadeUnequipSound, GetActorLocation());
     }
 }
 
-void AKayoKnifeEquipped::MulticastPlayIdleSound_Implementation()
+void AKayoGrenadeEquipped::MulticastPlayIdleSound_Implementation()
 {
-    if (KnifeIdleSound && !IdleAudioComponent)
+    if (GrenadeIdleSound && !IdleAudioComponent)
     {
         IdleAudioComponent = UGameplayStatics::SpawnSoundAttached(
-            KnifeIdleSound, 
-            KnifeMesh, 
+            GrenadeIdleSound, 
+            GrenadeMesh, 
             NAME_None, 
             FVector::ZeroVector, 
             EAttachLocation::KeepRelativeOffset, 
