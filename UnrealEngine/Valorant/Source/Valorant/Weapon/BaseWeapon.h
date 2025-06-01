@@ -64,6 +64,9 @@ protected:
 	UPROPERTY()
 	UAnimMontage* AM_Reload;
 
+	UPROPERTY(EditAnywhere, Blueprintable)
+	UNiagaraSystem* AgentHitTracerEffect;
+
 public:
 	// 탄창 내 남은 탄약
 	UPROPERTY(ReplicatedUsing=OnRep_Ammo, BlueprintReadOnly)
@@ -178,7 +181,7 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SpawnMuzzleFlash();
 	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_SpawnTracer(const FVector& Start, const FVector& End);
+	void Multicast_SpawnTracer(const FVector& Start, const FVector& End, bool bHitAgent);
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SpawnImpactEffect(const FVector& Location, const FRotator& Rotation);
 };
