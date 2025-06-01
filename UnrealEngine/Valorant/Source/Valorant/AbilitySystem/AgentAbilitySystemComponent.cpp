@@ -44,13 +44,6 @@ void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
         NET_LOG(LogTemp, Error, TEXT("InitializeByAgentData는 서버에서만 호출되어야 합니다"));
         return;
     }
-
-    // 이미 초기화되었는지 확인
-    if (m_AgentID == agentID && GetActivatableAbilities().Num() > 0)
-    {
-        NET_LOG(LogTemp, Warning, TEXT("에이전트(%d)가 이미 초기화되어 있습니다."), agentID);
-        return;
-    }
     
     m_GameInstance = Cast<UValorantGameInstance>(GetWorld()->GetGameInstance());
     FAgentData* data = m_GameInstance->GetAgentData(agentID);
