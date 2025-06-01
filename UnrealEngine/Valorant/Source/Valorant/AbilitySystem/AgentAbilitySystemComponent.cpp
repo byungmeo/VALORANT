@@ -167,9 +167,8 @@ bool UAgentAbilitySystemComponent::TryActivateAbilityByTag(const FGameplayTag& I
     if (HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
     {
         // 후속 입력 처리를 위해 GameplayEvent 전송
-        FGameplayEventData EventData;
-        EventData.EventTag = InputTag;
-        HandleGameplayEvent(InputTag, &EventData);
+        ServerRPC_HandleGameplayEvent(InputTag);
+        //HandleGameplayEvent(InputTag, &EventData);
         return true;
     }
     
@@ -231,6 +230,7 @@ int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, c
             if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
             {
                 // 후속 입력 처리
+                Client_HandleGameplayEvent(EventTag);
                 Ability->HandleFollowUpInput(EventTag);
             }
         }
@@ -254,5 +254,31 @@ void UAgentAbilitySystemComponent::MulticastRPC_OnAbilityExecuted_Implementation
         }
         
         OnAbilityStateChanged.Broadcast(AbilityTag);
+    }
+}
+
+void UAgentAbilitySystemComponent::ServerRPC_HandleGameplayEvent_Implementation(const FGameplayTag& inputTag)
+{
+    FGameplayEventData data;
+    data.EventTag = inputTag;
+    HandleGameplayEvent(inputTag, &data);
+}
+
+void UAgentAbilitySystemComponent::Client_HandleGameplayEvent_Implementation(FGameplayTag EventTag)
+{
+    if (1)
+    {
+        // 활성 어빌리티 찾기
+        for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+        {
+            if (Spec.IsActive())
+            {
+                if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
+                {
+                    Ability->HandleFollowUpInput(EventTag);
+                    break;
+                }
+            }
+        }
     }
 }

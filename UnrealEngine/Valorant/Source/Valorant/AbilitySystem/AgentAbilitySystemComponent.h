@@ -62,6 +62,12 @@ public:
     // 네트워크 동기화 개선
     UFUNCTION(NetMulticast, Reliable)
     void MulticastRPC_OnAbilityExecuted(FGameplayTag AbilityTag, bool bSuccess);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRPC_HandleGameplayEvent(const FGameplayTag& inputTag);
+    
+    UFUNCTION(Client,Reliable)
+    virtual void Client_HandleGameplayEvent(FGameplayTag EventTag);
     
 protected:
     virtual void BeginPlay() override;
