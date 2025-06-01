@@ -201,12 +201,7 @@ void ABaseAgent::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	//국룰 위치
-	// 약간의 딜레이를 두고 초기화 (PlayerState가 완전히 준비될 때까지 대기)
-	FTimerHandle InitAbilityTimer;
-	GetWorld()->GetTimerManager().SetTimer(InitAbilityTimer, [this]()
-	{
-		InitAgentAbility();
-	}, 0.1f, false);
+	InitAgentAbility();
 
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(NewController);
 	if (pc)
@@ -251,12 +246,7 @@ void ABaseAgent::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	//국룰 위치
-	// 클라이언트도 약간의 딜레이를 두고 초기화
-	FTimerHandle InitAbilityTimer;
-	GetWorld()->GetTimerManager().SetTimer(InitAbilityTimer, [this]()
-	{
-		InitAgentAbility();
-	}, 0.1f, false);
+	InitAgentAbility();
 
 	AAgentPlayerController* pc = Cast<AAgentPlayerController>(GetController());
 	if (pc)
