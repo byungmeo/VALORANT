@@ -19,7 +19,7 @@ AIncendiaryBomb::AIncendiaryBomb()
 	Mesh->SetRelativeScale3D(FVector(0.34f));
 	Mesh->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
 	
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> BombMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Props/Projectiles/Brimstone_Ability_Incendiary/AB_Sarge_S0_Q_Shell_Skelmesh.AB_Sarge_S0_Q_Shell_Skelmesh'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> BombMeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Resource/Agent/Brimstone/Ability/Brimstone_AbilityQ_Incendiary/AB_Sarge_S0_Q_Shell_Skelmesh.AB_Sarge_S0_Q_Shell_Skelmesh'"));
 	if (BombMeshAsset.Succeeded())
 	{
 		Mesh->SetStaticMesh(BombMeshAsset.Object);
