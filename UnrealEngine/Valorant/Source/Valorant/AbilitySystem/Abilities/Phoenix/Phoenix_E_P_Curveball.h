@@ -23,11 +23,7 @@ protected:
 
 	// 곡선 관련 설정 - 발로란트 실제 수치
 	UPROPERTY(EditAnywhere, Category = "Curveball Settings")
-	float InitialSpeed = 2900.0f;
-	
-	// 폭발까지의 최대 시간
-	UPROPERTY(EditAnywhere, Category = "Curveball Settings")
-	float MaxAirTime = 1.2f;
+	float InitialSpeed = 1600.0f;
 	
 	// 곡선이 시작되기까지의 지연 시간
 	UPROPERTY(EditAnywhere, Category = "Curveball Settings")
@@ -35,7 +31,7 @@ protected:
 
 	// 최대 곡선 지속 시간
 	UPROPERTY(EditAnywhere, Category = "Curveball Settings")
-	float MaxCurveTime = 0.8f;
+	float MaxCurveTime = 0.4f;
 
 private:
 	UPROPERTY(EditDefaultsOnly)
@@ -50,5 +46,5 @@ private:
 	FRotator SpinRate = FRotator(0, 900, 0);  // Y축 회전
 
 	// 곡선 강도 - 발로란트 실제 곡선 정도
-	float CurveStrength = 2000.0f;  // 곡선의 강도 (더 급격한 곡선)
+	float CurveStrength = 5000.0f;  // 곡선의 강도 (더 급격한 곡선)
 };
