@@ -620,7 +620,7 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 void AMatchGameMode::ResetAgentGAS(AAgentPlayerState* AgentPS)
 {
 	AgentPS->GetBaseAttributeSet()->ResetAttributeData();
-	AgentPS->GetAbilitySystemComponent()->CleanupAbilityState();
+	AgentPS->GetAbilitySystemComponent()->ForceCleanupAllAbilities();
 }
 
 void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)

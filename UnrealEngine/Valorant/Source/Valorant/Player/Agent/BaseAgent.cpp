@@ -743,39 +743,24 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 	// 어빌리티 상태 확인
 	if (ASC.IsValid())
 	{
-		// 어빌리티 실행 중 체크
-		if (ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing))
-		{
-			NET_LOG(LogTemp, Warning, TEXT("어빌리티 실행 중에는 무기 전환 불가"));
-			return;
-		}
-        
 		// 무기 전환 차단 태그 체크
 		if (ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch))
 		{
-			NET_LOG(LogTemp, Warning, TEXT("무기 전환이 차단된 상태"));
+			NET_LOG(LogTemp, Warning, TEXT("어빌리티 사용 중 무기 전환 차단됨"));
 			return;
 		}
-        
-		// 어빌리티 준비/대기 중이면 취소
-		bool bNeedCancel = ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing) ||
-						  ASC->HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-        
-		if (bNeedCancel)
+
+		// 어빌리티 강제 취소
+		NET_LOG(LogTemp, Display, TEXT("무기 전환을 위해 활성 어빌리티 취소"));
+		ASC->ForceCleanupAllAbilities();
+		
+		// 약간의 딜레이 후 무기 전환
+		FTimerHandle DelayedSwitchTimer;
+		GetWorld()->GetTimerManager().SetTimer(DelayedSwitchTimer, [this, EquipmentType]()
 		{
-			NET_LOG(LogTemp, Display, TEXT("무기 전환을 위해 활성 어빌리티 취소"));
-            
-			// 모든 활성 어빌리티 취소
-			CancelActiveAbilities();
-            
-			// 취소 완료 후 무기 전환 (약간의 딜레이)
-			FTimerHandle DelayedSwitchTimer;
-			GetWorld()->GetTimerManager().SetTimer(DelayedSwitchTimer, [this, EquipmentType]()
-			{
-				PerformWeaponSwitch(EquipmentType);
-			}, 0.1f, false);
-			return;
-		}
+			PerformWeaponSwitch(EquipmentType);
+		}, 0.1f, false);
+		return;
 	}
     
 	// 정상적인 무기 전환
@@ -1686,7 +1671,7 @@ void ABaseAgent::CancelActiveAbilities()
 	NET_LOG(LogTemp, Display, TEXT("모든 활성 어빌리티 취소"));
     
 	// ASC의 통합 정리 함수 호출
-	ASC->CleanupAbilityState();
+	ASC->ForceCleanupAllAbilities();
 }
 
 bool ABaseAgent::HasGameplayTag(const FGameplayTag& TagToCheck) const

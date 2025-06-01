@@ -1,20 +1,16 @@
 #include "AgentAbilitySystemComponent.h"
-
-#include <GameManager/SubsystemSteamManager.h>
-
 #include "GameplayTagsManager.h"
 #include "Valorant.h"
 #include "Abilities/BaseGameplayAbility.h"
 #include "Attributes/BaseAttributeSet.h"
+#include "GameManager/SubsystemSteamManager.h"
 #include "Net/UnrealNetwork.h"
 #include "Valorant/GameManager/ValorantGameInstance.h"
 #include "Valorant/Player/Agent/BaseAgent.h"
 
-class UBaseGameplayAbility;
-
 UAgentAbilitySystemComponent::UAgentAbilitySystemComponent()
 {
-    PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.bCanEverTick = false; // Tick 불필요
     SetIsReplicated(true);
 }
 
@@ -22,6 +18,7 @@ void UAgentAbilitySystemComponent::BeginPlay()
 {
     Super::BeginPlay();
     
+    // 스킬 태그 초기화
     auto& tagManager = UGameplayTagsManager::Get();
     SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.Q"));
     SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.E"));
@@ -29,13 +26,7 @@ void UAgentAbilitySystemComponent::BeginPlay()
     SkillTags.Add(tagManager.RequestGameplayTag("Input.Skill.C"));
 }
 
-void UAgentAbilitySystemComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-                                                 FActorComponentTickFunction* ThisTickFunction)
-{
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-}
-
-void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     
@@ -46,67 +37,22 @@ void UAgentAbilitySystemComponent::GetLifetimeReplicatedProps(TArray<class FLife
     DOREPLIFETIME(UAgentAbilitySystemComponent, m_Ability_X);
 }
 
-int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
-{
-    // 부모 처리
-    int32 Result = Super::HandleGameplayEvent(EventTag, Payload);
-    
-    // 후속 입력 대기 중인 경우
-    if (IsWaitingForFollowUp() && CurrentFollowUpInputs.Contains(EventTag))
-    {
-        // 활성 어빌리티 찾기
-        for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
-        {
-            if (Spec.IsActive())
-            {
-                if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
-                {
-                    Client_HandleGameplayEvent(EventTag);
-                    Ability->HandleFollowUpInput(EventTag);
-                    break;
-                }
-            }
-        }
-    }
-    
-    return Result;
-}
-
-void UAgentAbilitySystemComponent::Client_HandleGameplayEvent_Implementation(FGameplayTag EventTag)
-{
-    if (IsWaitingForFollowUp() && CurrentFollowUpInputs.Contains(EventTag))
-    {
-        // 활성 어빌리티 찾기
-        for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
-        {
-            if (Spec.IsActive())
-            {
-                if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
-                {
-                    Ability->HandleFollowUpInput(EventTag);
-                    break;
-                }
-            }
-        }
-    }
-}
-
-void UAgentAbilitySystemComponent::ServerRPC_HandleGameplayEvent_Implementation(const FGameplayTag& inputTag)
-{
-    FGameplayEventData data;
-    data.EventTag = inputTag;
-    HandleGameplayEvent(inputTag, &data);
-}
-
-void UAgentAbilitySystemComponent::ServerRPC_SetAbilityState_Implementation(FGameplayTag StateTag, bool bApply)
-{
-    SetAbilityState(StateTag, bApply);
-}
-
 void UAgentAbilitySystemComponent::InitializeByAgentData(int32 agentID)
 {
+    if (!GetOwner()->HasAuthority())
+    {
+        NET_LOG(LogTemp, Error, TEXT("InitializeByAgentData는 서버에서만 호출되어야 합니다"));
+        return;
+    }
+    
     m_GameInstance = Cast<UValorantGameInstance>(GetWorld()->GetGameInstance());
     FAgentData* data = m_GameInstance->GetAgentData(agentID);
+    
+    if (!data)
+    {
+        NET_LOG(LogTemp, Error, TEXT("AgentData를 찾을 수 없습니다. ID: %d"), agentID);
+        return;
+    }
     
     InitializeAttribute(data);
     RegisterAgentAbilities(data);
@@ -116,13 +62,16 @@ void UAgentAbilitySystemComponent::InitializeAttribute(const FAgentData* agentDa
 {
     SetNumericAttributeBase(UBaseAttributeSet::GetHealthAttribute(), agentData->BaseHealth);
     SetNumericAttributeBase(UBaseAttributeSet::GetMaxHealthAttribute(), agentData->MaxHealth);
-    SetNumericAttributeBase(UBaseAttributeSet::GetArmorAttribute(),agentData->BaseArmor);
+    SetNumericAttributeBase(UBaseAttributeSet::GetArmorAttribute(), agentData->BaseArmor);
     SetNumericAttributeBase(UBaseAttributeSet::GetMaxArmorAttribute(), agentData->MaxArmor);
 }
 
 void UAgentAbilitySystemComponent::RegisterAgentAbilities(const FAgentData* agentData)
 {
-    NET_LOG(LogTemp,Warning,TEXT("Ability ID : %d(C), %d(E), %d(Q), %d(X)"), agentData->AbilityID_C, agentData->AbilityID_E,agentData->AbilityID_Q, agentData->AbilityID_X);
+    NET_LOG(LogTemp, Warning, TEXT("어빌리티 등록: C(%d), E(%d), Q(%d), X(%d)"), 
+            agentData->AbilityID_C, agentData->AbilityID_E, 
+            agentData->AbilityID_Q, agentData->AbilityID_X);
+    
     SetAgentAbility(agentData->AbilityID_C, 1);
     SetAgentAbility(agentData->AbilityID_E, 1);
     SetAgentAbility(agentData->AbilityID_Q, 1);
@@ -131,236 +80,179 @@ void UAgentAbilitySystemComponent::RegisterAgentAbilities(const FAgentData* agen
 
 void UAgentAbilitySystemComponent::SetAgentAbility(int32 abilityID, int32 level)
 {
-    FAbilityData* abilityData = m_GameInstance->GetAbilityData(abilityID);
-    TSubclassOf<UGameplayAbility> abilityClass = abilityData->AbilityClass;
+    if (!m_GameInstance)
+    {
+        NET_LOG(LogTemp, Error, TEXT("GameInstance가 없습니다"));
+        return;
+    }
     
+    FAbilityData* abilityData = m_GameInstance->GetAbilityData(abilityID);
+    if (!abilityData || !abilityData->AbilityClass)
+    {
+        NET_LOG(LogTemp, Error, TEXT("어빌리티 데이터를 찾을 수 없습니다. ID: %d"), abilityID);
+        return;
+    }
+    
+    TSubclassOf<UGameplayAbility> abilityClass = abilityData->AbilityClass;
     UGameplayAbility* ga = abilityClass->GetDefaultObject<UGameplayAbility>();
     const FGameplayTagContainer& tagCon = ga->GetAssetTags();
-
+    
     if (tagCon.IsEmpty())
     {
-        UE_LOG(LogTemp, Error, TEXT("Ability [%s]에 태그가 없습니다."), *GetNameSafe(ga));
-        return;
-    }
-
-    bool bIsSkill = false;
-    FGameplayTag skillTag;
-
-    for (const FGameplayTag& tag : tagCon)
-    {
-        const FGameplayTag* foundTag = SkillTags.Find(tag);
-        if (foundTag)
-        {
-            if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_C)
-            {
-                m_Ability_C = *abilityData;
-                AbilityDataMap.Add(*foundTag, *abilityData);
-            }
-            else if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_E)
-            {
-                m_Ability_E = *abilityData;
-                AbilityDataMap.Add(*foundTag, *abilityData);
-            }
-            else if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_Q)
-            {
-                m_Ability_Q = *abilityData;
-                AbilityDataMap.Add(*foundTag, *abilityData);
-            }
-            else if (*foundTag == FValorantGameplayTags::Get().InputTag_Ability_X)
-            {
-                m_Ability_X = *abilityData;
-                AbilityDataMap.Add(*foundTag, *abilityData);
-            }
-            bIsSkill = true;
-            skillTag = *foundTag;
-        }
-    }
-
-    if (bIsSkill == false)
-    {
-        UE_LOG(LogTemp, Error, TEXT("%s는 Input.Skill.~ 태그를 지닌 어빌리티가 아니므로, 등록할 수 없습니다."), *abilityClass->GetName());
+        UE_LOG(LogTemp, Error, TEXT("어빌리티 [%s]에 태그가 없습니다"), *GetNameSafe(ga));
         return;
     }
     
+    // 스킬 슬롯 확인 및 데이터 저장
+    bool bIsSkill = false;
+    FGameplayTag skillTag;
+    
+    for (const FGameplayTag& tag : tagCon)
+    {
+        if (SkillTags.Contains(tag))
+        {
+            skillTag = tag;
+            bIsSkill = true;
+            
+            // 데이터 저장
+            if (tag == FValorantGameplayTags::Get().InputTag_Ability_C)
+                m_Ability_C = *abilityData;
+            else if (tag == FValorantGameplayTags::Get().InputTag_Ability_E)
+                m_Ability_E = *abilityData;
+            else if (tag == FValorantGameplayTags::Get().InputTag_Ability_Q)
+                m_Ability_Q = *abilityData;
+            else if (tag == FValorantGameplayTags::Get().InputTag_Ability_X)
+                m_Ability_X = *abilityData;
+            
+            break;
+        }
+    }
+    
+    if (!bIsSkill)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%s는 스킬 태그가 없습니다"), *abilityClass->GetName());
+        return;
+    }
+    
+    // 어빌리티 부여
     FGameplayAbilitySpec spec(abilityClass, level);
     spec.GetDynamicSpecSourceTags().AddTag(skillTag);
     GiveAbility(spec);
+    
+    NET_LOG(LogTemp, Warning, TEXT("%s 스킬 등록 완료"), *skillTag.ToString());
 }
 
 void UAgentAbilitySystemComponent::ResetAgentAbilities()
 {
-    UE_LOG(LogTemp,Warning,TEXT("모든 스킬 리셋"));
+    NET_LOG(LogTemp, Warning, TEXT("모든 어빌리티 리셋"));
     
-    for (const FGameplayAbilitySpec& spec: GetActivatableAbilities())
+    // 활성 어빌리티 강제 취소
+    ForceCleanupAllAbilities();
+    
+    // 모든 어빌리티 제거
+    for (const FGameplayAbilitySpec& spec : GetActivatableAbilities())
     {
         ClearAbility(spec.Handle);
     }
-    
-    AbilityDataMap.Empty();
 }
 
-// === 태그 기반 상태 관리 함수들 ===
-
-bool UAgentAbilitySystemComponent::IsAbilityPreparing() const
+bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& InputTag)
 {
-    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+    return TryActivateAbilityByTag(InputTag);
 }
 
-bool UAgentAbilitySystemComponent::IsAbilityExecuting() const
+bool UAgentAbilitySystemComponent::TryActivateAbilityByTag(const FGameplayTag& InputTag)
 {
-    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
-}
-
-bool UAgentAbilitySystemComponent::IsWaitingForFollowUp() const
-{
-    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
-}
-
-bool UAgentAbilitySystemComponent::CanActivateAbilities() const
-{
-    // 차단 태그가 없고, 실행 중이 아닐 때만 활성화 가능
-    return !HasMatchingGameplayTag(FValorantGameplayTags::Get().Block_Ability_Activation) &&
-           !IsAbilityExecuting();
-}
-
-void UAgentAbilitySystemComponent::SetAbilityState(FGameplayTag StateTag, bool bApply)
-{
-    if (bApply)
+    // 활성 어빌리티가 있는지 확인
+    if (HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting))
     {
-        AddLooseGameplayTag(StateTag);
-    }
-    else
-    {
-        RemoveLooseGameplayTag(StateTag);
-    }
-    
-    BroadcastStateChange(StateTag);
-    
-    // 서버에서 클라이언트로 동기화
-    if (GetOwnerRole() == ROLE_Authority)
-    {
-        MulticastRPC_NotifyAbilityStateChanged(StateTag, bApply);
-    }
-}
-
-void UAgentAbilitySystemComponent::RegisterFollowUpInputs(const TSet<FGameplayTag>& InputTags, FGameplayTag AbilityTag)
-{
-    CurrentFollowUpInputs = InputTags;
-    CurrentExecutingAbility = AbilityTag;
-    
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting, true);
-    
-    for (FGameplayTag tag: InputTags)
-    {
-        UE_LOG(LogTemp,Warning,TEXT("%s 후속 입력 키로 등록"), *tag.GetTagName().ToString());
-    }
-    
-    OnAbilityStateChanged.Broadcast(FValorantGameplayTags::Get().State_Ability_Waiting);
-}
-
-void UAgentAbilitySystemComponent::ClearFollowUpInputs()
-{
-    CurrentFollowUpInputs.Empty();
-    CurrentExecutingAbility = FGameplayTag();
-    
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting, false);
-    
-    OnAbilityStateChanged.Broadcast(FGameplayTag());
-}
-
-void UAgentAbilitySystemComponent::CleanupAbilityState()
-{
-    //NET_LOG(LogTemp,Warning,TEXT("어빌리티 클린업"));
-    if (GetOwner()->HasAuthority())
-    {
-        NetMultiCast_CleanupAbilityState();
-    }
-    else
-    {
-        Server_CleanupAbilityState();
-    }
-
-}
-
-void UAgentAbilitySystemComponent::NetMultiCast_CleanupAbilityState_Implementation()
-{
-    // 모든 어빌리티 상태 정리
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Preparing, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Executing, false);
-    SetAbilityState(FValorantGameplayTags::Get().State_Ability_Waiting, false);
-
-    RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
-    
-    ClearFollowUpInputs();
-}
-
-void UAgentAbilitySystemComponent::Server_CleanupAbilityState_Implementation()
-{
-    NetMultiCast_CleanupAbilityState();
-}
-
-bool UAgentAbilitySystemComponent::TrySkillInput(const FGameplayTag& inputTag)
-{
-    if (!IsWaitingForFollowUp())
-    {
-        NET_LOG(LogTemp,Warning,TEXT("일반 입력 시도: [%s]"), *inputTag.ToString());
-        
-        if (IsAbilityExecuting())
-        {
-            // UE_LOG(LogTemp,Error,TEXT("이전 스킬 실행중..."));
-            return true;
-        }
-        
-        FGameplayTagContainer tagCon(inputTag);
-        if (TryActivateAbilitiesByTag(tagCon))
-        {
-            NET_LOG(LogTemp,Warning,TEXT("스킬 일반 입력 성공"));
-            return true;
-        }
-    }
-    else
-    { 
-        NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 시도: [%s]"), *inputTag.ToString());
-        
-        if (IsValidFollowUpInput(inputTag))
-        {
-            NET_LOG(LogTemp,Warning,TEXT("스킬 후속 입력 성공"));
-            
-            ServerRPC_HandleGameplayEvent(inputTag);
-        }
-        else
-        {
-            NET_LOG(LogTemp, Warning, TEXT("후속 입력 대기 중이라 일반 입력 [%s] 무시됨"), *inputTag.ToString());
-        }
+        // 후속 입력 처리를 위해 GameplayEvent 전송
+        FGameplayEventData EventData;
+        EventData.EventTag = InputTag;
+        HandleGameplayEvent(InputTag, &EventData);
         return true;
     }
     
-    return false;
+    // 일반 어빌리티 활성화
+    FGameplayTagContainer TagContainer(InputTag);
+    return TryActivateAbilitiesByTag(TagContainer);
 }
 
-bool UAgentAbilitySystemComponent::IsValidFollowUpInput(const FGameplayTag& InputTag) const
+bool UAgentAbilitySystemComponent::IsAbilityActive() const
 {
-    return CurrentFollowUpInputs.Contains(InputTag);
+    // 어빌리티 관련 상태 태그 확인
+    return HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing) ||
+           HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting) ||
+           HasMatchingGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
 }
 
-void UAgentAbilitySystemComponent::BroadcastStateChange(FGameplayTag NewState)
+void UAgentAbilitySystemComponent::ForceCleanupAllAbilities()
 {
-    OnAbilityStateChanged.Broadcast(NewState);
-}
-
-void UAgentAbilitySystemComponent::MulticastRPC_NotifyAbilityStateChanged_Implementation(FGameplayTag StateTag, bool bApply)
-{
-    // 클라이언트에서 상태 동기화 (서버에서는 이미 설정됨)
-    if (GetOwnerRole() != ROLE_Authority)
+    NET_LOG(LogTemp, Warning, TEXT("모든 어빌리티 강제 정리"));
+    
+    // 모든 활성 어빌리티 취소
+    TArray<FGameplayAbilitySpec*> ActiveSpecs;
+    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
     {
-        if (bApply)
+        if (Spec.IsActive())
         {
-            AddLooseGameplayTag(StateTag);
+            ActiveSpecs.Add(&Spec);
+        }
+    }
+    
+    for (FGameplayAbilitySpec* Spec : ActiveSpecs)
+    {
+        if (Spec && Spec->Ability)
+        {
+            NET_LOG(LogTemp, Warning, TEXT("어빌리티 강제 취소: %s"), *Spec->Ability->GetName());
+            CancelAbilitySpec(*Spec, nullptr);
+        }
+    }
+    
+    // 모든 어빌리티 관련 태그 제거
+    RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Preparing);
+    RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Waiting);
+    RemoveLooseGameplayTag(FValorantGameplayTags::Get().State_Ability_Executing);
+    RemoveLooseGameplayTag(FValorantGameplayTags::Get().Block_WeaponSwitch);
+    
+    // 상태 변경 알림
+    OnAbilityStateChanged.Broadcast(FGameplayTag());
+}
+
+int32 UAgentAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
+{
+    int32 Result = Super::HandleGameplayEvent(EventTag, Payload);
+    
+    // 활성 어빌리티에 이벤트 전달
+    for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+    {
+        if (Spec.IsActive())
+        {
+            if (UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec.GetPrimaryInstance()))
+            {
+                // 후속 입력 처리
+                Ability->HandleFollowUpInput(EventTag);
+            }
+        }
+    }
+    
+    return Result;
+}
+
+void UAgentAbilitySystemComponent::MulticastRPC_OnAbilityExecuted_Implementation(FGameplayTag AbilityTag, bool bSuccess)
+{
+    // 클라이언트에서 어빌리티 실행 결과 처리
+    if (!GetOwner()->HasAuthority())
+    {
+        if (bSuccess)
+        {
+            NET_LOG(LogTemp, Display, TEXT("어빌리티 실행 성공: %s"), *AbilityTag.ToString());
         }
         else
         {
-            RemoveLooseGameplayTag(StateTag);
+            NET_LOG(LogTemp, Warning, TEXT("어빌리티 실행 실패: %s"), *AbilityTag.ToString());
         }
-        BroadcastStateChange(StateTag);
+        
+        OnAbilityStateChanged.Broadcast(AbilityTag);
     }
 }
