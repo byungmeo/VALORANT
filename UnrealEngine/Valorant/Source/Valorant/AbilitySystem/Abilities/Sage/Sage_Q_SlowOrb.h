@@ -14,5 +14,6 @@ class VALORANT_API USage_Q_SlowOrb : public UBaseGameplayAbility
     USage_Q_SlowOrb();
 
 protected:
+    virtual void WaitAbility() override;
     virtual bool OnLeftClickInput() override;
 }; 
