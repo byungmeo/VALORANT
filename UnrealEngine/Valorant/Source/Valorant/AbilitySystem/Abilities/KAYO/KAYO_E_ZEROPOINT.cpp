@@ -33,14 +33,15 @@ void UKAYO_E_ZEROPOINT::PrepareAbility()
 	// 장착된 나이프 생성
 	SpawnEquippedKnives();
 	
-	// 나이프 위치 업데이트 타이머 시작
-	if (GetWorld())
-	{
-		GetWorld()->GetTimerManager().SetTimer(KnifeUpdateTimer, this, 
-			&UKAYO_E_ZEROPOINT::UpdateKnifePositions, 0.01f, true);
-	}
-	
 	UE_LOG(LogTemp, Warning, TEXT("KAYO E - ZERO/point 준비 중"));
+}
+
+void UKAYO_E_ZEROPOINT::WaitAbility()
+{
+	Super::WaitAbility();
+
+	// 장착 애니메이션 실행
+	SpawnedKnife1P->OnEquip();
 }
 
 bool UKAYO_E_ZEROPOINT::OnLeftClickInput()
@@ -62,7 +63,6 @@ void UKAYO_E_ZEROPOINT::SpawnEquippedKnives()
 	if (HasAuthority(&CurrentActivationInfo))
 	{
 		FVector HandLocation3P = OwnerAgent->GetMesh()->GetSocketLocation(FName("R_Hand"));
-		// FRotator HandRotation = OwnerAgent->GetControlRotation();
 		FRotator HandRotation = FRotator::ZeroRotator;
 
 		
@@ -91,9 +91,7 @@ void UKAYO_E_ZEROPOINT::SpawnEquippedKnives()
 	// 로컬 플레이어인 경우에만 1인칭 나이프 생성
 	if (OwnerAgent->IsLocallyControlled())
 	{
-		//FVector HandLocation1P = OwnerAgent->GetMesh1P()->GetSocketLocation(FName("R_WeaponPoint"));
-		FVector HandLocation1P = OwnerAgent->GetMesh1P()->GetSocketLocation(FName("R_Hand"));
-		//FRotator HandRotation = OwnerAgent->GetControlRotation();
+		FVector HandLocation1P = OwnerAgent->GetMesh1P()->GetSocketLocation(FName("R_WeaponPoint"));
 		FRotator HandRotation = FRotator::ZeroRotator;
 		
 		FActorSpawnParameters SpawnParams1P;
@@ -114,11 +112,7 @@ void UKAYO_E_ZEROPOINT::SpawnEquippedKnives()
 			
 			// 1인칭 메쉬에 부착
 			SpawnedKnife1P->AttachToComponent(OwnerAgent->GetMesh1P(), 
-				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_Hand"));
-				//FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
-				
-			// 장착 애니메이션 실행
-			SpawnedKnife1P->OnEquip();
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("R_WeaponPoint"));
 		}
 	}
 }

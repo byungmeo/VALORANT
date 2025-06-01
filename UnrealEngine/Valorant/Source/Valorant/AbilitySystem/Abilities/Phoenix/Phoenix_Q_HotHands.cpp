@@ -20,8 +20,9 @@ UPhoenix_Q_HotHands::UPhoenix_Q_HotHands() : UBaseGameplayAbility()
 	FollowUpTime = 15.0f; // 15초 대기 시간
 }
 
-void UPhoenix_Q_HotHands::WaitAbility()
+void UPhoenix_Q_HotHands::PrepareAbility()
 {
+	Super::PrepareAbility();
 	// 화염 오브 생성
 	SpawnFireOrb();
 }
@@ -118,7 +119,7 @@ void UPhoenix_Q_HotHands::SpawnFireOrb()
 			// 3인칭 메쉬에 부착
 			SpawnedFireOrb->AttachToComponent(OwnerAgent->GetMesh(),
 			                                  FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-			                                  FName("R_Hand"));
+			                                  FName("R_WeaponPoint"));
 		}
 	}
 
@@ -147,7 +148,7 @@ void UPhoenix_Q_HotHands::SpawnFireOrb()
 			// 1인칭 메쉬에 부착
 			SpawnedFireOrb1P->AttachToComponent(OwnerAgent->GetMesh1P(),
 			                                    FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-			                                    FName("R_WeaponPointSocket"));
+			                                    FName("R_WeaponPoint"));
 		}
 	}
 }

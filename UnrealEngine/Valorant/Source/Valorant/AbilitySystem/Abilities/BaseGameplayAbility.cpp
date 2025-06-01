@@ -488,7 +488,6 @@ void UBaseGameplayAbility::NotifyAbilityExecuted(bool bSuccess)
     }
 }
 
-// 기존 함수들 (변경 없음)
 void UBaseGameplayAbility::PrepareAbility()
 {
     FGameplayTag inputTag;
