@@ -5,6 +5,7 @@
 #include "SlowOrb.generated.h"
 
 class ABaseGround;
+class UParticleSystem;
 
 UCLASS()
 class VALORANT_API ASlowOrb : public ABaseProjectile
@@ -27,13 +28,25 @@ public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "SlowField")
 	TSubclassOf<ABaseGround> BaseGroundClass = nullptr;
+	
+	// 파괴 효과 (벽/천장 충돌 시)
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	UParticleSystem* DestroyEffect = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	class USoundBase* DestroySound = nullptr;
 
 protected:
 	virtual void BeginPlay() override;
+	
 	UFUNCTION()
 	virtual void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	
+	// 벽/천장 충돌 시 파괴 효과
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulti_DestroyEffects(const FVector& Location);
 	
 private:
 	void SpawnSlowField(const FHitResult& ImpactResult);
