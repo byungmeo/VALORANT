@@ -3,6 +3,8 @@
 
 #include "BaseAgent.h"
 #include "AbilitySystemComponent.h"
+#include "HttpModule.h"
+#include "JsonObjectConverter.h"
 #include "NiagaraComponent.h"
 #include "Engine/World.h"
 #include "Valorant.h"
@@ -36,6 +38,8 @@
 #include "Weapon/BaseWeapon.h"
 #include "NiagaraFunctionLibrary.h"
 #include "AgentAbility/FlashProjectile.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
@@ -2373,4 +2377,99 @@ void ABaseAgent::ServerRPC_SubmitLog_Implementation()
 {
 	m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount,CachedDamage);
 	InitLog();
+}
+
+void ABaseAgent::LoadWavFileBinary(const FString& FilePath, TArray<uint8>& BinaryData)
+{
+	// WAV 파일을 로드
+	if (!FFileHelper::LoadFileToArray(BinaryData, *FilePath))
+	{
+		// 로드 실패 시 로그 출력
+		UE_LOG(LogTemp, Error, TEXT("Failed to load WAV file from path: %s"), *FilePath);
+		return;
+	}
+
+	// 로드 성공 시 로그 출력
+	UE_LOG(LogTemp, Log, TEXT("Successfully loaded WAV file: %s"), *FilePath);
+}
+
+void ABaseAgent::SendWavFileAsFormData(const TArray<uint8>& BinaryData)
+{
+	// boundary 설정
+	FString Boundary = "---------------------------boundary";
+	FString FileName = TEXT("UserVoiceInput.wav"); // WAV 파일 이름
+
+	// TODO: key 이름 설정
+	FString Key = TEXT("file");
+
+	// 요청 본문 생성
+	FString Body;
+	Body += TEXT("--") + Boundary + TEXT("\r\n");
+	Body += TEXT("Content-Disposition: form-data; name=\"") + Key + TEXT("\"; filename=\"") + FileName + TEXT("\"\r\n");
+	Body += TEXT("Content-Type: audio/wav\r\n\r\n");
+
+	// WAV 파일 바이너리 데이터 추가
+	TArray<uint8> FullData;
+	FullData.Append(FStringToUint8(Body));
+	FullData.Append(BinaryData);
+
+	// boundary 끝 표시
+	FString EndBoundary = TEXT("\r\n--") + Boundary + TEXT("--\r\n");
+	FullData.Append(FStringToUint8(EndBoundary));
+
+	// 요청 생성
+	FHttpRequestRef Request = FHttpModule::Get().CreateRequest();
+	// TODO: 서버 URL 설정
+	Request->SetURL(TEXT("192.168.20.56:72/convert-audio"));
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("multipart/form-data; boundary=") + Boundary);
+	Request->SetContent(FullData);
+
+	// 요청 완료 콜백 설정
+	Request->OnProcessRequestComplete().BindLambda(
+		[](FHttpRequestPtr Req, FHttpResponsePtr Res, bool bWasSuccessful)
+		{
+			if (bWasSuccessful && Res.IsValid())
+			{
+				UE_LOG(LogTemp, Log, TEXT("Wav 파일 전송 성공"));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Wav 파일 전송 실패 Response Code: %d"), Res.IsValid() ? Res->GetResponseCode() : -1);
+			}
+		});
+
+	// 요청 실행
+	Request->ProcessRequest();
+}
+
+void ABaseAgent::SendWavFileDirectly()
+{
+	// Wav 파일 전송 로직
+	UE_LOG(LogTemp, Log, TEXT("Wav 파일 전송 시작!"));
+
+	FString BaseSavedDir = FPaths::ProjectSavedDir();
+
+	FString SubFolder = TEXT("UserVoiceInput");
+	FString FileName = TEXT("UserVoiceInput.wav");
+
+	FString FilePath = FPaths::Combine(BaseSavedDir, SubFolder, FileName);
+	
+	TArray<uint8> BinaryData;
+	LoadWavFileBinary(FilePath, BinaryData);
+
+	if (BinaryData.Num() > 0)
+	{
+		SendWavFileAsFormData(BinaryData);
+	}
+}
+
+TArray<uint8> ABaseAgent::FStringToUint8(FString str)
+{
+	TArray<uint8> outBytes;
+
+	FTCHARToUTF8 converted(*str);
+	outBytes.Append(reinterpret_cast<const uint8*>(converted.Get()), converted.Length());
+
+	return outBytes;
 }
