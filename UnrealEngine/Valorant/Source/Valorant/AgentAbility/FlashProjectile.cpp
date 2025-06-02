@@ -29,14 +29,6 @@ void AFlashProjectile::BeginPlay()
 void AFlashProjectile::OnProjectileBounced(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
 {
     Super::OnProjectileBounced(ImpactResult, ImpactVelocity);
-    
-    // if (bIsScheduledToExplode)
-    //     return;
-    //
-    // bIsScheduledToExplode = true;
-    //
-    // FTimerHandle TimerHandle;
-    // GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &AFlashProjectile::ExplodeFlash, DetonationDelay, false);
 }
 
 void AFlashProjectile::ExplodeFlash()
@@ -61,6 +53,9 @@ void AFlashProjectile::ExplodeFlash()
 
     bool bHasValidTargets = false;
     float MaxBlindDurationFound = 0.0f;
+    
+    // 섬광 위치 저장
+    FVector FlashLocation = GetActorLocation();
 
     for (AActor* Actor : FoundActors)
     {
@@ -80,9 +75,10 @@ void AFlashProjectile::ExplodeFlash()
         }
     }
     
+    // 섬광 위치와 타입 정보를 함께 전달
     if (bHasValidTargets)
     {
-        MulticastApplyFlashEffect(MaxBlindDurationFound);
+        MulticastApplyFlashEffect(MaxBlindDurationFound, FlashLocation, FlashType);
     }
 
     // 디버그 표시
@@ -134,8 +130,14 @@ bool AFlashProjectile::HasLineOfSight(ABaseAgent* Player)
     return !bHit;
 }
 
-void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDuration)
+void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDuration, FVector FlashLocation, EFlashType InFlashType)
 {
+    // 기존 코드와의 호환성을 위해 FlashLocation이 Zero이면 GetActorLocation() 사용
+    if (FlashLocation.IsZero())
+    {
+        FlashLocation = GetActorLocation();
+    }
+
     for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
     {
         if (APlayerController* PC = Iterator->Get())
@@ -150,14 +152,52 @@ void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDurat
                 if (!IsPlayerInFlashRange(LocalPlayer, LocalBlindDuration) || !HasLineOfSight(LocalPlayer))
                     continue;
 
-                // 로컬 플레이어에 대해서만 섬광 적용
+                // 로컬 플레이어에 대해서만 섬광 적용 - 위치와 타입 정보 전달
                 if (UFlashComponent* FlashComp = LocalPlayer->FindComponentByClass<UFlashComponent>())
                 {
-                    FlashComp->CheckViewAngleAndApplyFlash(GetActorLocation(), LocalBlindDuration, RecoveryDuration);
+                    FlashComp->CheckViewAngleAndApplyFlash(FlashLocation, LocalBlindDuration, RecoveryDuration, InFlashType);
                 }
                 
                 // 로컬 플레이어를 찾았으므로 루프 종료
                 break;
+            }
+        }
+    }
+
+    // 섬광에 걸린 모든 대상에게 VFX 적용 (서버와 클라이언트 모두에서)
+    if (FlashedTargetVFX)
+    {
+        TArray<AActor*> FoundActors;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), FoundActors);
+
+        for (AActor* Actor : FoundActors)
+        {
+            if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
+            {
+                if (Agent->IsDead())
+                    continue;
+
+                BlindDuration = 0.0f;
+                if (IsPlayerInFlashRange(Agent, BlindDuration) && HasLineOfSight(Agent))
+                {
+                    // 1인칭 시점에서는 자신의 VFX가 안보이도록
+                    if (!Agent->IsLocallyControlled())
+                    {
+                        // 실제 적용된 지속시간 계산 (시야각 고려)
+                        if (UFlashComponent* FlashComp = Agent->FindComponentByClass<UFlashComponent>())
+                        {
+                            float ViewAngleMultiplier = FlashComp->CalculateViewAngleMultiplier(FlashLocation);
+                            float ActualDuration = BlindDuration * ViewAngleMultiplier;
+                            
+                            // 최소 효과도 적용되는 경우에만 VFX 표시
+                            if (ViewAngleMultiplier > 0.1f || ActualDuration > 0.0f)
+                            {
+                                float VFXDuration = FMath::Max(ActualDuration, MinimumFlashDuration);
+                                Agent->Multicast_PlayNiagaraEffectAttached(Agent, FlashedTargetVFX, VFXDuration);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

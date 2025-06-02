@@ -407,7 +407,7 @@ public:
 
 	// 섬광 관련 함수들
 	UFUNCTION(BlueprintCallable, Category = "Flash")
-	void OnFlashIntensityChanged(float NewIntensity);
+	void OnFlashIntensityChanged(float NewIntensity, FVector FlashSourceLocation);
     
 	UFUNCTION(BlueprintCallable, Category = "Flash")
 	void CreateFlashWidget();
