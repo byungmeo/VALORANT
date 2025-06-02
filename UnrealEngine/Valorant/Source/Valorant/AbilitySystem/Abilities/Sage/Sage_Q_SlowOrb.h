@@ -21,7 +21,6 @@ protected:
     
     // 후속 입력 처리
     virtual bool OnLeftClickInput() override;
-    virtual bool OnRightClickInput() override;
     
     // 어빌리티 종료
     virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
