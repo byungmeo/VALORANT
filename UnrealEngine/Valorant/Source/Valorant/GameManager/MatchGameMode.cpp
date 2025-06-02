@@ -669,6 +669,11 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 	FString KillerName = Killer ? Killer->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
 	FString VictimName = Victim ? Victim->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
 	NET_LOG(LogTemp, Warning, TEXT("OnKill 호출: 킬러=%s, 희생자=%s"), *KillerName, *VictimName);
+	
+	FLogData& KillerData = PlayerLog[Cast<AAgentPlayerController>(Killer)];
+	KillerData.Kill++;
+	FLogData& VictimData = PlayerLog[Cast<AAgentPlayerController>(Victim)];
+	VictimData.Death++;
 
 	// 킬러에게 크레딧 보상
 	if (Killer)

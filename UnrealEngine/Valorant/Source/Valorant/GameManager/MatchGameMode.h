@@ -58,6 +58,8 @@ struct FLogData
 	UPROPERTY()
 	TObjectPtr<AAgentPlayerController> Controller = nullptr;
 	FString Nickname = "UNKNOWN";
+	int Kill = 0;
+	int Death = 0;
 	int FireCount = 0;
 	int HitCount = 0;
 	int HeadshotCount = 0;
