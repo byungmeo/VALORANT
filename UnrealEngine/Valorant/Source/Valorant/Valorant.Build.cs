@@ -8,6 +8,32 @@ public class Valorant : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		PublicIncludePaths.AddRange(new string[] {
+			"Valorant" // Organizes the project into folders
+		});
+		
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core", 
+			"CoreUObject", 
+			"Engine", 
+			"InputCore", 
+			"EnhancedInput", 
+			"GameplayAbilities", 
+			"GameplayTags", 
+			"GameplayTasks", 
+			"UMG",
+			"OnlineSubsystem",
+			"OnlineSubsystemSteam",
+			"OnlineSubsystemUtils",
+			"PhysicsCore",
+			"HTTP",
+			"Json",
+			"JsonUtilities",
+			"MoviePlayer",
+			"Slate", 
+			"SlateCore",
+			"Niagara"
+		});
 	}
 }
