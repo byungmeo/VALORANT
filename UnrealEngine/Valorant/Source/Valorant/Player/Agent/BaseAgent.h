@@ -402,8 +402,14 @@ public:
 	// 어빌리티 관련 함수
 	UFUNCTION()
 	void OnAbilityPrepare(FGameplayTag slotTag, EFollowUpInputType inputType);
+
 	UFUNCTION()
-	void OnAbilityEnd();
+	void OnEndAbility(EFollowUpInputType inputType);
+	UFUNCTION()
+	void OnCancelAbility(EFollowUpInputType inputType);
+	
+	UFUNCTION()
+	void OnAbilityFollowupInput();
 
 	// 섬광 관련 함수들
 	UFUNCTION(BlueprintCallable, Category = "Flash")

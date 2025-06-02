@@ -446,16 +446,12 @@ void AAgentPlayerController::Client_ReceivePurchaseResult_Implementation(
 	OnServerPurchaseResult.Broadcast(bSuccess, ItemID, ItemType, FailureReason);
 }
 
-void AAgentPlayerController::DisplayFollowUpInputUI(FGameplayTag slotTag, EFollowUpInputType inputType)
+void AAgentPlayerController::HideFollowUpInputUI()
 {
-	UE_LOG(LogTemp, Display, TEXT("후속 입력키 UI 보여줄게!"));
-	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
-	{
-		MatchMapHud->DisplayFollowUpInputUI(slotTag, inputType);
-	}
+	Client_HideFollowUpInputUI();
 }
 
-void AAgentPlayerController::HideFollowUpInputUI()
+void AAgentPlayerController::Client_HideFollowUpInputUI_Implementation()
 {
 	if (auto* MatchMapHud = Cast<UMatchMapHUD>(GetMatchMapHud()))
 	{

@@ -792,6 +792,7 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 		// 어빌리티 강제 취소
 		NET_LOG(LogTemp, Display, TEXT("무기 전환을 위해 활성 어빌리티 취소"));
 		ASC->ForceCleanupAllAbilities();
+		PC->HideFollowUpInputUI();
 		
 		// 약간의 딜레이 후 무기 전환
 		FTimerHandle DelayedSwitchTimer;
@@ -1745,9 +1746,24 @@ void ABaseAgent::OnAbilityPrepare(FGameplayTag slotTag, EFollowUpInputType input
 	// NET_LOG(LogTemp,Display,TEXT("어빌리티 준비"));
 }
 
-void ABaseAgent::OnAbilityEnd()
+void ABaseAgent::OnEndAbility(EFollowUpInputType inputType)
 {
-	// NET_LOG(LogTemp,Display,TEXT("어빌리티 종료"));
+	auto* pc = Cast<AMatchPlayerController>(GetController());
+	if (pc)
+	{
+		if (auto* MatchMapHud = Cast<UMatchMapHUD>(pc->GetMatchMapHud()))
+		{
+			MatchMapHud->HideFollowUpInputUI();
+		}
+	}
+}
+
+void ABaseAgent::OnCancelAbility(EFollowUpInputType inputType)
+{
+}
+
+void ABaseAgent::OnAbilityFollowupInput()
+{
 	auto* pc = Cast<AMatchPlayerController>(GetController());
 	if (pc)
 	{

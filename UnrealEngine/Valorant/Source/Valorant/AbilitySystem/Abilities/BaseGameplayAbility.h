@@ -40,7 +40,9 @@ enum class EAbilityState : uint8
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAbilityStateChanged, FGameplayTag, StateTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPrepareAbility, FGameplayTag, SlotTag, EFollowUpInputType, InputType);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndAbility);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFollowUpInput);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEndAbility, EFollowUpInputType, InputType);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCancelAbility ,EFollowUpInputType, InputType);
 
 UCLASS()
 class VALORANT_API UBaseGameplayAbility : public UGameplayAbility
@@ -136,10 +138,17 @@ public:
     FOnAbilityStateChanged OnStateChanged;
 
     UPROPERTY()
-    FOnPrepareAbility OnPrepareAbility;
+    FOnPrepareAbility OnWaitAbility;
     
     UPROPERTY()
     FOnEndAbility OnEndAbility;
+    UPROPERTY()
+    FOnCancelAbility OnCancelAbility;
+    
+    UPROPERTY()
+    FOnFollowUpInput OnFollowUpInput;
+
+    
 
 protected:
     // GameplayAbility 오버라이드
