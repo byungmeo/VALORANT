@@ -20,6 +20,13 @@ class UGameplayAbility;
 // 언리얼 리플렉션 시스템과 통합하기 위해 UENUM() 매크로를 사용
 
 UENUM(BlueprintType)
+enum class EViewType : uint8
+{
+	FirstPerson,
+	ThirdPerson
+};
+
+UENUM(BlueprintType)
 enum class EValorantMap : uint8
 {
 	None UMETA(DisplayName = "None"),

@@ -35,6 +35,14 @@ void USage_E_HealingOrb::WaitAbility()
 	// 	GetWorld()->GetTimerManager().SetTimer(OrbUpdateTimer, this,
 	// 	                                       &USage_E_HealingOrb::UpdateHealingOrbPosition, 0.01f, true);
 	// }
+	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
+	if (OwnerAgent && OwnerAgent->IsLocallyControlled())
+	{
+		if (GetWorld() && PrepareSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), PrepareSound);
+		}
+	}
 }
 
 bool USage_E_HealingOrb::OnLeftClickInput()

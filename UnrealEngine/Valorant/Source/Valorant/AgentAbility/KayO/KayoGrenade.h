@@ -54,8 +54,8 @@ private:
 	const float ActiveTime = 0.5f;
 	
 	// 폭발 설정
-	const float InnerRadius = 300.0f;  // 3m 내부 최대 데미지
 	const float OuterRadius = 700.0f;  // 7m 외부 최소 데미지
+	const float InnerRadius = 100.0f;  // 1m 내부 최대 데미지
 	int32 DeterrentCount = 4;          // 4번의 폭발 펄스
 	const float DeterrentInterval = 1.0f;
 	const float MinDamage = 25.0f;

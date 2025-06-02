@@ -41,6 +41,11 @@ void USage_C_BarrierOrb::WaitAbility()
 			GetWorld()->GetTimerManager().SetTimer(PreviewUpdateTimer, this, 
 				&USage_C_BarrierOrb::UpdateBarrierPreview, 0.01f, true);
 		}
+
+		if (GetWorld() && PrepareSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), PrepareSound);
+		}
 	}
 }
 

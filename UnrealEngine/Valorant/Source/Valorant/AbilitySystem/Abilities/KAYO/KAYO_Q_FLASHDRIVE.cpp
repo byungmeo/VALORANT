@@ -187,7 +187,7 @@ bool UKAYO_Q_FLASHDRIVE::ThrowFlashbang(bool bAltFire)
 	}
 
 	// 플래시뱅 스폰 위치 계산
-	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f + FVector(0, 0, 50.0f);
+	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f + FVector(0, 0, bAltFire ? 50.0f : 150.0f);
 	FRotator SpawnRotation = Character->GetControlRotation();
 
 	FActorSpawnParameters SpawnParams;

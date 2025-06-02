@@ -44,10 +44,10 @@ APhoenix_E_P_Curveball::APhoenix_E_P_Curveball()
 	SetLifeSpan(0.65f);  // 실제 폭발까지 시간
     
 	// 피닉스 커브볼 섬광 시간 설정 
-	MaxBlindDuration = 1.1f;   // 최대 1.1초 완전 실명
-	MinBlindDuration = 0.3f;   // 최소 0.3초 완전 실명
-	RecoveryDuration = 0.6f;   // 0.6초 회복
-	DetonationDelay = 0.5f;    // 0.5초 후 폭발
+	MaxBlindDuration = 1.5f;   // 최대 1.1초 완전 실명
+	MinBlindDuration = 1.1f;   // 최소 0.3초 완전 실명
+	RecoveryDuration = 1.1f;   // 0.6초 회복
+	DetonationDelay = 0.7f;    // 1.1초 후 폭발
 	FlashRadius = 3300.0f;     // 33미터 반경
 }
 
@@ -62,10 +62,6 @@ void APhoenix_E_P_Curveball::BeginPlay()
 		FVector InitialVelocity = GetActorForwardVector() * InitialSpeed;
 		ProjectileMovement->Velocity = InitialVelocity;
 	}
-    
-	// 최대 공중 시간 후 자동 폭발
-	FTimerHandle ExplosionTimer;
-	GetWorld()->GetTimerManager().SetTimer(ExplosionTimer, this, &APhoenix_E_P_Curveball::ExplodeFlash, MaxAirTime, false);
 }
 
 // Called every frame
