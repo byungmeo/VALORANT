@@ -13,12 +13,6 @@ UJett_C_Cloudburst::UJett_C_Cloudburst(): UBaseGameplayAbility()
 }
 
 void UJett_C_Cloudburst::ExecuteAbility()
-{
-	ACharacter* Character = Cast<ACharacter>(CachedActorInfo.AvatarActor.Get());
-	if (Character)
-	{
-		PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
-	}
-	
+{	
 	SpawnProjectile();
 }

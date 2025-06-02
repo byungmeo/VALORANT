@@ -24,15 +24,6 @@ void UKAYO_E_ZEROPOINT::PrepareAbility()
 {
 	Super::PrepareAbility();
 	
-	// 준비 효과 재생
-	if (IsLocallyControlled())
-	{
-		if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
-		{
-			PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
-		}
-	}
-	
 	// 장착된 나이프 생성
 	SpawnEquippedKnives();
 	
@@ -52,6 +43,9 @@ void UKAYO_E_ZEROPOINT::WaitAbility()
 
 bool UKAYO_E_ZEROPOINT::OnLeftClickInput()
 {
+	// 먼저 장착된 나이프들 제거
+	DestroyEquippedKnives();
+	
 	// 좌클릭으로 나이프 던지기
 	return ThrowKnife();
 }
@@ -184,9 +178,6 @@ bool UKAYO_E_ZEROPOINT::ThrowKnife()
 		return false;
 	}
 
-	// 먼저 장착된 나이프들 제거
-	DestroyEquippedKnives();
-
 	// 실제 투사체 나이프 스폰 위치 계산
 	FVector SpawnLocation = Character->GetActorLocation() + Character->GetActorForwardVector() * 100.0f + FVector(0, 0, 50.0f);
 	FRotator SpawnRotation = Character->GetControlRotation();
@@ -207,9 +198,6 @@ bool UKAYO_E_ZEROPOINT::ThrowKnife()
 		
 		// 발사 효과 재생
 		PlayCommonEffects(ProjectileLaunchEffect, ProjectileLaunchSound, SpawnLocation);
-		
-		// 실행 효과 재생
-		PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
 		
 		UE_LOG(LogTemp, Warning, TEXT("KAYO E - 억제 나이프 생성 및 던지기 성공"));
 		return true;

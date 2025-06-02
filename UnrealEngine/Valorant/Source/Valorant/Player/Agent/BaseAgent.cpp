@@ -2182,6 +2182,7 @@ void ABaseAgent::CheckMinimapVisibility(const float DeltaTime)
 		UpdateVisibilityState(Observer, EVisibilityState::Hidden);
 	}
 }
+
 #pragma endregion "Minimap"
 
 void ABaseAgent::ServerApplyHealthGE_Implementation(TSubclassOf<UGameplayEffect> geClass, float Value, ABaseAgent* DamageInstigator)
@@ -2241,6 +2242,53 @@ void ABaseAgent::Multicast_PlayNiagaraEffectAttached_Implementation(AActor* Atta
 			}
 		}, Duration, false);
 	}
+}
+
+void ABaseAgent::Multicast_PlayNiagaraEffectAtLocation_Implementation(FVector Location, UNiagaraSystem* NiagaraEffect,
+	float Duration)
+{
+	if (!NiagaraEffect)
+	{	
+		return;
+	}
+
+	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		NiagaraEffect,
+		Location
+	);
+
+	if (NiagaraComp && Duration > 0.f)
+	{
+		FTimerHandle TimerHandle;
+		// 타이머 람다에서 NiagaraComp를 안전하게 파괴
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [NiagaraComp]() {
+			if (IsValid(NiagaraComp))
+			{
+				NiagaraComp->DestroyComponent();
+			}
+		}, Duration, false);
+	}
+}
+
+void ABaseAgent::Multicast_PlaySoundAtLocation_Implementation(FVector Location, USoundBase* SoundEffect)
+{
+	if (!SoundEffect)
+	{	
+		return;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), SoundEffect, Location);
+}
+
+void ABaseAgent::Multicast_PlaySound_Implementation(USoundBase* SoundEffect)
+{
+	if (!SoundEffect)
+	{	
+		return;
+	}
+
+	UGameplayStatics::PlaySound2D(GetWorld(), SoundEffect);
 }
 
 void ABaseAgent::StartLogging()
