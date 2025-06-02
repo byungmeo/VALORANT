@@ -201,13 +201,10 @@ void UBaseGameplayAbility::EnterState_Executing()
     if (HasAuthority(&CurrentActivationInfo))
     {
         ReduceAbilityStack();
-
         // 실행 VFX / SFX 재생
         PlayCommonEffects(ExecuteEffect, ExecuteSound, FVector(0));
-        
         // 실행 결과를 클라이언트에 알림
         NotifyAbilityExecuted(true);
-        
         // ASC에 실행 알림
         if (CachedASC)
         {
@@ -219,15 +216,33 @@ void UBaseGameplayAbility::EnterState_Executing()
     OnFollowUpInput.Broadcast();
     
     ExecuteAbility();
-    
-    // 실행 애니메이션 재생
-    if (ExecuteMontage_1P || ExecuteMontage_3P)
+
+    // 입력 타입에 따라 몽타주 재생
+    UAnimMontage* Montage1P = nullptr;
+    UAnimMontage* Montage3P = nullptr;
+    if (LastExecuteInputType == EFollowUpInputType::LeftClick)
     {
-        PlayMontages(ExecuteMontage_1P, nullptr);
-        
+        Montage1P = ExecuteLeftMouseButtonMontage_1P ? ExecuteLeftMouseButtonMontage_1P : ExecuteMontage_1P;
+        Montage3P = ExecuteLeftMouseButtonMontage_3P ? ExecuteLeftMouseButtonMontage_3P : ExecuteMontage_3P;
+    }
+    else if (LastExecuteInputType == EFollowUpInputType::RightClick)
+    {
+        Montage1P = ExecuteRightMouseButtonMontage_1P ? ExecuteRightMouseButtonMontage_1P : ExecuteMontage_1P;
+        Montage3P = ExecuteRightMouseButtonMontage_3P ? ExecuteRightMouseButtonMontage_3P : ExecuteMontage_3P;
+    }
+    else
+    {
+        Montage1P = ExecuteMontage_1P;
+        Montage3P = ExecuteMontage_3P;
+    }
+
+    LastExecuteInputType = EFollowUpInputType::None;
+
+    if (Montage1P || Montage3P)
+    {
+        PlayMontages(Montage1P, nullptr);
         UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-            this, NAME_None, ExecuteMontage_3P, 1.0f);
-        
+            this, NAME_None, Montage3P, 1.0f);
         if (Task)
         {
             Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnMontageCompleted);
@@ -271,10 +286,18 @@ void UBaseGameplayAbility::HandleFollowUpInput(FGameplayTag InputTag)
     if (InputTag == FValorantGameplayTags::Get().InputTag_Default_LeftClick)
     {
         bShouldExecute = OnLeftClickInput();
+        if (bShouldExecute)
+        {
+            LastExecuteInputType = EFollowUpInputType::LeftClick;
+        }
     }
     else if (InputTag == FValorantGameplayTags::Get().InputTag_Default_RightClick)
     {
         bShouldExecute = OnRightClickInput();
+        if (bShouldExecute)
+        {
+            LastExecuteInputType = EFollowUpInputType::RightClick;
+        }
     }
     
     if (bShouldExecute)
