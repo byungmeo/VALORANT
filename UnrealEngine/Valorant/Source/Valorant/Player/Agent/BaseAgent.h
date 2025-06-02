@@ -710,5 +710,14 @@ public:
 #pragma endregion "Minimap"
 
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_PlayNiagaraEffectAttached(AActor* AttachTarget, UNiagaraSystem* NiagaraEffect, float Duration);
+	void Multicast_PlayNiagaraEffectAttached(AActor* AttachTarget, UNiagaraSystem* NiagaraEffect, float Duration = 0.f);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayNiagaraEffectAtLocation(FVector Location, UNiagaraSystem* NiagaraEffect, float Duration = 0.f);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySoundAtLocation(FVector Location, USoundBase* SoundEffect);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlaySound(USoundBase* SoundEffect);
 };

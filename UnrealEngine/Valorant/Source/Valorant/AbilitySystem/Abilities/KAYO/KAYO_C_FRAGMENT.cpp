@@ -24,15 +24,6 @@ void UKAYO_C_FRAGMENT::PrepareAbility()
 {
 	Super::PrepareAbility();
 	
-	// 1인칭 준비 효과 재생
-	if (IsLocallyControlled())
-	{
-		if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
-		{
-			PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
-		}
-	}
-	
 	// 장착된 수류탄 생성
 	SpawnEquippedGrenades();
 	
@@ -233,9 +224,6 @@ bool UKAYO_C_FRAGMENT::SpawnProjectileByType(EGrenadeThrowType ThrowType)
 		
 		// 발사 효과 재생
 		PlayCommonEffects(ProjectileLaunchEffect, ProjectileLaunchSound, SpawnLocation);
-		
-		// 실행 효과 재생
-		PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
 		
 		UE_LOG(LogTemp, Warning, TEXT("KAYO C - %s 수류탄 생성 및 설정 완료"), 
 			(ThrowType == EGrenadeThrowType::Underhand) ? TEXT("언더핸드") : TEXT("오버핸드"));

@@ -110,6 +110,12 @@ public:
     USoundBase* PrepareSound = nullptr;
 
     UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    UNiagaraSystem* WaitEffect = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    USoundBase* WaitSound = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
     UNiagaraSystem* ExecuteEffect = nullptr;
 
     UPROPERTY(EditDefaultsOnly, Category = "Effects")
