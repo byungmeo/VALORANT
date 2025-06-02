@@ -23,12 +23,6 @@ void USage_Q_SlowOrb::PrepareAbility()
 {
 	Super::PrepareAbility();
 	
-	// 준비 효과 재생
-	if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
-	{
-		PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
-	}
-	
 	// 장착된 슬로우 오브 생성
 	SpawnEquippedSlowOrbs();
 	
@@ -46,16 +40,6 @@ void USage_Q_SlowOrb::WaitAbility()
 	// {
 	// 	SpawnedSlowOrb3P->OnEquip();
 	// }
-	
-	// 준비 사운드 재생 (로컬만)
-	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
-	if (OwnerAgent && OwnerAgent->IsLocallyControlled())
-	{
-		if (GetWorld() && PrepareSound)
-		{
-			UGameplayStatics::PlaySound2D(GetWorld(), PrepareSound);
-		}
-	}
 }
 
 bool USage_Q_SlowOrb::OnLeftClickInput()

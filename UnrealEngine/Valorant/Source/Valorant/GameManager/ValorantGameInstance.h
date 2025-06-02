@@ -34,6 +34,7 @@ public:
 	void OnMatchHasStarted();
 
 protected:
+	virtual void OnStart() override;
 	UFUNCTION()
 	virtual void BeginLoadingScreen(const FString& MapName);
 	UFUNCTION()

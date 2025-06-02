@@ -26,8 +26,12 @@ void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInf
     // 델리게이트 연결
     if (ABaseAgent* Agent = Cast<ABaseAgent>(ActorInfo->AvatarActor.Get()))
     {
-        OnPrepareAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityPrepare);
-        OnEndAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityEnd);
+        OnWaitAbility.RemoveDynamic(Agent, &ABaseAgent::OnAbilityPrepare);
+        OnWaitAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityPrepare);
+        OnFollowUpInput.RemoveDynamic(Agent, &ABaseAgent::OnAbilityFollowupInput);
+        OnFollowUpInput.AddDynamic(Agent, &ABaseAgent::OnAbilityFollowupInput);
+        OnEndAbility.RemoveDynamic(Agent, &ABaseAgent::OnEndAbility);
+        OnEndAbility.AddDynamic(Agent, &ABaseAgent::OnEndAbility);
     }
 }
 
@@ -124,6 +128,12 @@ void UBaseGameplayAbility::EnterState_Preparing()
 {
     PrepareAbility();
     
+    // 준비 VFX / SFX 재생
+    if (HasAuthority(&CurrentActivationInfo))
+    {
+        PlayCommonEffects(PrepareEffect, PrepareSound, FVector(0));
+    }
+    
     // 준비 애니메이션 재생
     if (PrepareMontage_1P || PrepareMontage_3P)
     {
@@ -151,7 +161,25 @@ void UBaseGameplayAbility::EnterState_Preparing()
 
 void UBaseGameplayAbility::EnterState_Waiting()
 {
+    FGameplayTag inputTag;
+    for (const FGameplayTag& Tag : AbilityTags)
+    {
+        if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Input.Skill"))))
+        {
+            inputTag = Tag;
+            break;
+        }
+    }
+    
+    OnWaitAbility.Broadcast(inputTag, FollowUpInputType);
+    
     WaitAbility();
+    
+    if (HasAuthority(&CurrentActivationInfo))
+    {
+        // 대기 VFX / SFX 재생
+        PlayCommonEffects(WaitEffect, WaitSound, FVector(0));
+    }
     
     // 대기 애니메이션 재생 (루프)
     if (WaitingMontage_1P || WaitingMontage_3P)
@@ -173,6 +201,9 @@ void UBaseGameplayAbility::EnterState_Executing()
     if (HasAuthority(&CurrentActivationInfo))
     {
         ReduceAbilityStack();
+
+        // 실행 VFX / SFX 재생
+        PlayCommonEffects(ExecuteEffect, ExecuteSound, FVector(0));
         
         // 실행 결과를 클라이언트에 알림
         NotifyAbilityExecuted(true);
@@ -183,6 +214,9 @@ void UBaseGameplayAbility::EnterState_Executing()
             CachedASC->MulticastRPC_OnAbilityExecuted(GetAssetTags().First(), true);
         }
     }
+
+    // 후속 입력 UI 숨김 처리
+    OnFollowUpInput.Broadcast();
     
     ExecuteAbility();
     
@@ -257,9 +291,6 @@ void UBaseGameplayAbility::CleanupAbility()
     
     // 몽타주 정지
     StopAllMontages();
-    
-    // 어빌리티 종료 알림
-    OnEndAbility.Broadcast();
     
     // 약간의 딜레이 후 최종 정리 (무기 전환 등)
     GetWorld()->GetTimerManager().SetTimer(CleanupDelayHandle, this,
@@ -490,17 +521,6 @@ void UBaseGameplayAbility::NotifyAbilityExecuted(bool bSuccess)
 
 void UBaseGameplayAbility::PrepareAbility()
 {
-    FGameplayTag inputTag;
-    for (const FGameplayTag& Tag : AbilityTags)
-    {
-        if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Input.Skill"))))
-        {
-            inputTag = Tag;
-            break;
-        }
-    }
-    
-    OnPrepareAbility.Broadcast(inputTag, FollowUpInputType);
 }
 
 void UBaseGameplayAbility::WaitAbility() {}
@@ -608,25 +628,25 @@ void UBaseGameplayAbility::PlayCommonEffects(UNiagaraSystem* NiagaraEffect, USou
         return;
     }
     
-    ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
-    if (!Character)
+    ABaseAgent* Agent = Cast<ABaseAgent>(GetAvatarActorFromActorInfo());
+    if (!Agent)
     {
         return;
     }
     
     if (Location.IsZero())
     {
-        Location = Character->GetActorLocation();
+        Location = Agent->GetActorLocation();
     }
     
     if (NiagaraEffect)
     {
-        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), NiagaraEffect, Location);
+        Agent->Multicast_PlayNiagaraEffectAtLocation(Location, NiagaraEffect);
     }
     
     if (SoundEffect)
     {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), SoundEffect, Location);
+        Agent->Multicast_PlaySoundAtLocation(Location, SoundEffect);
     }
 }
 

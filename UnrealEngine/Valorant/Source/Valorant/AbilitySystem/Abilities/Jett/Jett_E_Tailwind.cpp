@@ -45,8 +45,6 @@ void UJett_E_Tailwind::ExecuteAbility()
 			MoveComp->BrakingFrictionFactor = 0.f;
 
 			Character->LaunchCharacter(DashVelocity, true, true);
-			
-			PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
 
 			// 0.2초 후 원래 값 복구
 			FTimerHandle TimerHandle;
