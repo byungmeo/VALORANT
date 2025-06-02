@@ -95,7 +95,19 @@ public:
 
     UPROPERTY(EditDefaultsOnly, Category = "Animation")
     UAnimMontage* ExecuteMontage_3P = nullptr;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* ExecuteLeftMouseButtonMontage_1P = nullptr;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* ExecuteLeftMouseButtonMontage_3P = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* ExecuteRightMouseButtonMontage_1P = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* ExecuteRightMouseButtonMontage_3P = nullptr;
+    
     // 투사체
     UPROPERTY(EditDefaultsOnly, Category = "Projectile")
     TSubclassOf<ABaseProjectile> ProjectileClass;
@@ -222,6 +234,9 @@ private:
     // 현재 상태
     UPROPERTY()
     EAbilityState CurrentState = EAbilityState::None;
+
+    // 마지막 실행 입력 타입
+    EFollowUpInputType LastExecuteInputType = EFollowUpInputType::None;
 
     // 이전 장비 상태
     UPROPERTY()
