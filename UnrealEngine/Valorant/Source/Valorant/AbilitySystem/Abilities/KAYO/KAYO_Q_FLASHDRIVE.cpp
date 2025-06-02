@@ -24,15 +24,6 @@ void UKAYO_Q_FLASHDRIVE::PrepareAbility()
 {
 	Super::PrepareAbility();
 	
-	// 준비 효과 재생
-	if (IsLocallyControlled())
-	{
-		if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
-		{
-			PlayCommonEffects(PrepareEffect, PrepareSound, Character->GetActorLocation());
-		}	
-	}
-	
 	// 장착된 플래시뱅 생성
 	SpawnEquippedFlashbangs();
 	
@@ -211,9 +202,6 @@ bool UKAYO_Q_FLASHDRIVE::ThrowFlashbang(bool bAltFire)
 		
 		// 발사 효과 재생
 		PlayCommonEffects(ProjectileLaunchEffect, ProjectileLaunchSound, SpawnLocation);
-		
-		// 실행 효과 재생
-		PlayCommonEffects(ExecuteEffect, ExecuteSound, Character->GetActorLocation());
 		
 		UE_LOG(LogTemp, Warning, TEXT("KAYO Q - 플래시뱅 생성 성공 (AltFire: %s)"), 
 			bAltFire ? TEXT("true - 포물선") : TEXT("false - 직선"));

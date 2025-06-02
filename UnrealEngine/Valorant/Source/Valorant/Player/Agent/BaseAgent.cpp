@@ -792,6 +792,7 @@ void ABaseAgent::SwitchEquipment(EInteractorType EquipmentType)
 		// 어빌리티 강제 취소
 		NET_LOG(LogTemp, Display, TEXT("무기 전환을 위해 활성 어빌리티 취소"));
 		ASC->ForceCleanupAllAbilities();
+		PC->HideFollowUpInputUI();
 		
 		// 약간의 딜레이 후 무기 전환
 		FTimerHandle DelayedSwitchTimer;
@@ -1745,9 +1746,24 @@ void ABaseAgent::OnAbilityPrepare(FGameplayTag slotTag, EFollowUpInputType input
 	// NET_LOG(LogTemp,Display,TEXT("어빌리티 준비"));
 }
 
-void ABaseAgent::OnAbilityEnd()
+void ABaseAgent::OnEndAbility(EFollowUpInputType inputType)
 {
-	// NET_LOG(LogTemp,Display,TEXT("어빌리티 종료"));
+	auto* pc = Cast<AMatchPlayerController>(GetController());
+	if (pc)
+	{
+		if (auto* MatchMapHud = Cast<UMatchMapHUD>(pc->GetMatchMapHud()))
+		{
+			MatchMapHud->HideFollowUpInputUI();
+		}
+	}
+}
+
+void ABaseAgent::OnCancelAbility(EFollowUpInputType inputType)
+{
+}
+
+void ABaseAgent::OnAbilityFollowupInput()
+{
 	auto* pc = Cast<AMatchPlayerController>(GetController());
 	if (pc)
 	{
@@ -2182,6 +2198,7 @@ void ABaseAgent::CheckMinimapVisibility(const float DeltaTime)
 		UpdateVisibilityState(Observer, EVisibilityState::Hidden);
 	}
 }
+
 #pragma endregion "Minimap"
 
 void ABaseAgent::ServerApplyHealthGE_Implementation(TSubclassOf<UGameplayEffect> geClass, float Value, ABaseAgent* DamageInstigator)
@@ -2241,6 +2258,53 @@ void ABaseAgent::Multicast_PlayNiagaraEffectAttached_Implementation(AActor* Atta
 			}
 		}, Duration, false);
 	}
+}
+
+void ABaseAgent::Multicast_PlayNiagaraEffectAtLocation_Implementation(FVector Location, UNiagaraSystem* NiagaraEffect,
+	float Duration)
+{
+	if (!NiagaraEffect)
+	{	
+		return;
+	}
+
+	UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		NiagaraEffect,
+		Location
+	);
+
+	if (NiagaraComp && Duration > 0.f)
+	{
+		FTimerHandle TimerHandle;
+		// 타이머 람다에서 NiagaraComp를 안전하게 파괴
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [NiagaraComp]() {
+			if (IsValid(NiagaraComp))
+			{
+				NiagaraComp->DestroyComponent();
+			}
+		}, Duration, false);
+	}
+}
+
+void ABaseAgent::Multicast_PlaySoundAtLocation_Implementation(FVector Location, USoundBase* SoundEffect)
+{
+	if (!SoundEffect)
+	{	
+		return;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), SoundEffect, Location);
+}
+
+void ABaseAgent::Multicast_PlaySound_Implementation(USoundBase* SoundEffect)
+{
+	if (!SoundEffect)
+	{	
+		return;
+	}
+
+	UGameplayStatics::PlaySound2D(GetWorld(), SoundEffect);
 }
 
 void ABaseAgent::StartLogging()

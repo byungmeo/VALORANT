@@ -45,10 +45,7 @@ bool UPhoenix_Q_HotHands::OnLeftClickInput()
 		UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 직선 투사체 생성 성공"));
 
 		// 던지기 사운드 재생
-		if (ThrowSound)
-		{
-			UGameplayStatics::PlaySound2D(GetWorld(), ThrowSound);
-		}
+		PlayCommonEffects(nullptr, ThrowSound, FVector(0,0,0));
 	}
 	else
 	{
@@ -75,10 +72,7 @@ bool UPhoenix_Q_HotHands::OnRightClickInput()
 		UE_LOG(LogTemp, Warning, TEXT("Phoenix Q - 포물선 투사체 생성 성공"));
 
 		// 던지기 사운드 재생
-		if (ThrowSound)
-		{
-			UGameplayStatics::PlaySound2D(GetWorld(), ThrowSound);
-		}
+		PlayCommonEffects(nullptr, ThrowSound, FVector(0,0,0));
 	}
 	else
 	{
