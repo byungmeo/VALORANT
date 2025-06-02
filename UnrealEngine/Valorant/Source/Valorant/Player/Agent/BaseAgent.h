@@ -426,6 +426,8 @@ public:
 	void LogShotResult(const bool bHit);
 	UFUNCTION(Category = "Log")
 	void LogHeadshot();
+	UFUNCTION(Category = "Log")
+	void LogFinalDamage(const int damage);
 	UFUNCTION(Server, Reliable, Category = "Log")
 	void ServerRPC_SubmitLog();
 	
@@ -517,6 +519,7 @@ protected:
 	int CachedFireCount = 0;
 	int CachedHitCount = 0;
 	int CachedHeadshotCount = 0;
+	int CachedDamage = 0;
 
 public:
 	FKillFeedInfo LastKillFeedInfo;

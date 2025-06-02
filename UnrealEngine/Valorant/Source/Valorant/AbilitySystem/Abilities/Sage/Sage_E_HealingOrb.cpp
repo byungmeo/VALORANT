@@ -24,11 +24,16 @@ USage_E_HealingOrb::USage_E_HealingOrb()
 	FollowUpTime = 15.0f; // 15초 동안 대기
 }
 
-void USage_E_HealingOrb::WaitAbility()
+void USage_E_HealingOrb::PrepareAbility()
 {
+	Super::PrepareAbility();
+	
 	// 힐링 오브 생성
 	SpawnHealingOrb();
+}
 
+void USage_E_HealingOrb::WaitAbility()
+{
 	// 오브 위치 업데이트 타이머 시작 ToDo : 오류 해결
 	// if (HasAuthority(&CurrentActivationInfo) && GetWorld())
 	// {

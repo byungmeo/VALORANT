@@ -66,6 +66,7 @@ protected:
     TSubclassOf<UGameplayEffect> SelfHealEffect;
 
     // 오버라이드 함수들
+    virtual void PrepareAbility() override;
     virtual void WaitAbility() override;
     virtual bool OnLeftClickInput() override;
     virtual bool OnRightClickInput() override;
