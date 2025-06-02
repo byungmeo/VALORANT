@@ -26,8 +26,12 @@ void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInf
     // 델리게이트 연결
     if (ABaseAgent* Agent = Cast<ABaseAgent>(ActorInfo->AvatarActor.Get()))
     {
-        OnPrepareAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityPrepare);
-        OnEndAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityEnd);
+        OnWaitAbility.RemoveDynamic(Agent, &ABaseAgent::OnAbilityPrepare);
+        OnWaitAbility.AddDynamic(Agent, &ABaseAgent::OnAbilityPrepare);
+        OnFollowUpInput.RemoveDynamic(Agent, &ABaseAgent::OnAbilityFollowupInput);
+        OnFollowUpInput.AddDynamic(Agent, &ABaseAgent::OnAbilityFollowupInput);
+        OnEndAbility.RemoveDynamic(Agent, &ABaseAgent::OnEndAbility);
+        OnEndAbility.AddDynamic(Agent, &ABaseAgent::OnEndAbility);
     }
 }
 
@@ -151,6 +155,18 @@ void UBaseGameplayAbility::EnterState_Preparing()
 
 void UBaseGameplayAbility::EnterState_Waiting()
 {
+    FGameplayTag inputTag;
+    for (const FGameplayTag& Tag : AbilityTags)
+    {
+        if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Input.Skill"))))
+        {
+            inputTag = Tag;
+            break;
+        }
+    }
+    
+    OnWaitAbility.Broadcast(inputTag, FollowUpInputType);
+    
     WaitAbility();
     
     // 대기 애니메이션 재생 (루프)
@@ -183,6 +199,9 @@ void UBaseGameplayAbility::EnterState_Executing()
             CachedASC->MulticastRPC_OnAbilityExecuted(GetAssetTags().First(), true);
         }
     }
+
+    // 후속 입력 UI 숨김 처리
+    OnFollowUpInput.Broadcast();
     
     ExecuteAbility();
     
@@ -257,9 +276,6 @@ void UBaseGameplayAbility::CleanupAbility()
     
     // 몽타주 정지
     StopAllMontages();
-    
-    // 어빌리티 종료 알림
-    OnEndAbility.Broadcast();
     
     // 약간의 딜레이 후 최종 정리 (무기 전환 등)
     GetWorld()->GetTimerManager().SetTimer(CleanupDelayHandle, this,
@@ -490,17 +506,6 @@ void UBaseGameplayAbility::NotifyAbilityExecuted(bool bSuccess)
 
 void UBaseGameplayAbility::PrepareAbility()
 {
-    FGameplayTag inputTag;
-    for (const FGameplayTag& Tag : AbilityTags)
-    {
-        if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Input.Skill"))))
-        {
-            inputTag = Tag;
-            break;
-        }
-    }
-    
-    OnPrepareAbility.Broadcast(inputTag, FollowUpInputType);
 }
 
 void UBaseGameplayAbility::WaitAbility() {}
