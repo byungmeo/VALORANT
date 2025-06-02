@@ -2,7 +2,6 @@
 
 #include "ValorantGameInstance.h"
 
-#include "InterchangeResult.h"
 #include "MoviePlayer.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
@@ -10,6 +9,7 @@
 #include "Valorant.h"
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "Blueprint/UserWidget.h"
+#include "GameFramework/GameUserSettings.h"
 #include "GameFramework/PlayerController.h" 
 #include "ResourceManager/ValorantGameType.h"
 #include "Web/DatabaseManager.h"
@@ -168,6 +168,16 @@ void UValorantGameInstance::OnMatchHasStarted()
 	{
 		CurrentLoadingWidget->RemoveFromParent();
 		CurrentLoadingWidget = nullptr;
+	}
+}
+
+void UValorantGameInstance::OnStart()
+{
+	Super::OnStart();
+	if (UGameUserSettings* Settings = GEngine->GetGameUserSettings())
+	{
+		Settings->SetOverallScalabilityLevel(1);
+		Settings->ApplySettings(false);
 	}
 }
 
