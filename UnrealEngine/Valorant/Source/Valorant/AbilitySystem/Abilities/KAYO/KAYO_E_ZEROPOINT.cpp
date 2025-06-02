@@ -44,7 +44,10 @@ void UKAYO_E_ZEROPOINT::WaitAbility()
 	Super::WaitAbility();
 
 	// 장착 애니메이션 실행
-	SpawnedKnife1P->OnEquip();
+	if (SpawnedKnife1P)
+	{
+		SpawnedKnife1P->OnEquip();
+	}
 }
 
 bool UKAYO_E_ZEROPOINT::OnLeftClickInput()
