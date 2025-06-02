@@ -15,7 +15,7 @@ USage_Q_SlowOrb::USage_Q_SlowOrb()
 
 	m_AbilityID = 1002;
 	ActivationType = EAbilityActivationType::WithPrepare;
-	FollowUpInputType = EFollowUpInputType::LeftOrRight;
+	FollowUpInputType = EFollowUpInputType::LeftClick;
 	FollowUpTime = 8.0f; // 8초 대기 시간
 }
 
@@ -37,17 +37,15 @@ void USage_Q_SlowOrb::PrepareAbility()
 
 void USage_Q_SlowOrb::WaitAbility()
 {
-	Super::WaitAbility();
-	
 	// 장착 애니메이션 실행
 	if (SpawnedSlowOrb1P)
 	{
 		SpawnedSlowOrb1P->OnEquip();
 	}
-	if (SpawnedSlowOrb3P)
-	{
-		SpawnedSlowOrb3P->OnEquip();
-	}
+	// if (SpawnedSlowOrb3P)
+	// {
+	// 	SpawnedSlowOrb3P->OnEquip();
+	// }
 	
 	// 준비 사운드 재생 (로컬만)
 	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
@@ -63,12 +61,6 @@ void USage_Q_SlowOrb::WaitAbility()
 bool USage_Q_SlowOrb::OnLeftClickInput()
 {
 	// 슬로우 오브 던지기
-	return ThrowSlowOrb();
-}
-
-bool USage_Q_SlowOrb::OnRightClickInput()
-{
-	// 세이지 Q는 우클릭도 동일하게 던지기 (언더핸드 없음)
 	return ThrowSlowOrb();
 }
 
