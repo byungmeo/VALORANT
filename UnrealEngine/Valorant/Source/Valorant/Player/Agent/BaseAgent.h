@@ -513,7 +513,7 @@ protected:
 
 	//Log용 변수
 	UPROPERTY(Replicated)
-	bool bIsLogMode = false;
+	bool bIsInRound = false;
 	int CachedFireCount = 0;
 	int CachedHitCount = 0;
 	int CachedHeadshotCount = 0;
