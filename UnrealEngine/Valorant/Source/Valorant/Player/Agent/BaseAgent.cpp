@@ -569,7 +569,7 @@ void ABaseAgent::EndFire()
 		{
 			if (HasAuthority())
 			{
-				m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+				m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount,CachedDamage);
 				InitLog();
 			}
 			else
@@ -2253,7 +2253,7 @@ void ABaseAgent::StopLogging()
 	bIsInRound = false;
 	if (HasAuthority())
 	{
-		m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+		m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount,CachedDamage);
 		InitLog();
 	}
 	else
@@ -2267,6 +2267,7 @@ void ABaseAgent::InitLog()
 	CachedFireCount = 0;
 	CachedHitCount = 0;
 	CachedHeadshotCount = 0;
+	CachedDamage = 0;
 }
 
 void ABaseAgent::LogShotResult(const bool bHit)
@@ -2294,8 +2295,18 @@ void ABaseAgent::LogHeadshot()
 	CachedHeadshotCount++;
 }
 
+void ABaseAgent::LogFinalDamage(const int damage)
+{
+	if (!bIsInRound)
+	{
+		return;
+	}
+	
+	CachedDamage += damage;
+}
+
 void ABaseAgent::ServerRPC_SubmitLog_Implementation()
 {
-	m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+	m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount,CachedDamage);
 	InitLog();
 }

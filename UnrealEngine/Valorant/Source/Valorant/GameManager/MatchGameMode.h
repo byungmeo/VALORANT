@@ -63,6 +63,12 @@ struct FLogData
 	int FireCount = 0;
 	int HitCount = 0;
 	int HeadshotCount = 0;
+	int TotalDamage = 0;
+	int PlantCount = 0;
+	int DefuseCount = 0;
+	bool bWin = false;
+	TArray<int> WinRound;
+	TArray<int> DefeatRound;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartInRound);
@@ -207,7 +213,7 @@ public:
 
 	UFUNCTION(Category = "Log")
 	void SubmitShotLog(AAgentPlayerController* pc, int32 fireCount, int32 hitCount,
-	int32 headshotCount);
+	int32 headshotCount, int damage);
 
 
 	UPROPERTY(EditAnywhere)
@@ -216,4 +222,7 @@ public:
 	FOnStartPreRound OnStartPreRound;
 	FOnStartInRound OnStartInRound;
 	FOnEndRound OnEndRound;
+
+	UFUNCTION(BlueprintCallable)
+	void PrintAllPlayerLogs() const;
 };

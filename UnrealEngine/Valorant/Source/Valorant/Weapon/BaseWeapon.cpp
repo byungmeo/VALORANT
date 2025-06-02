@@ -314,6 +314,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 					}
 				}
 				FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
+				OwnerAgent->LogFinalDamage(FinalDamage);
 
 				// 피격 방향 판정
 				EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
