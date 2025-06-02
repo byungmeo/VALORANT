@@ -564,7 +564,7 @@ void ABaseAgent::EndFire()
 	{
 		weapon->EndFire();
 
-		if (bIsLogMode)
+		if (bIsInRound)
 		{
 			if (HasAuthority())
 			{
@@ -1265,7 +1265,7 @@ void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 {
 	if (!bIsDamage)
 	{
-		if (HasAuthority())
+		if (HasAuthority() && bIsInRound)
 		{
 			MulticastRPC_OnHealed(true);
 		}
@@ -1401,7 +1401,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
-	DOREPLIFETIME(ABaseAgent, bIsLogMode);
+	DOREPLIFETIME(ABaseAgent, bIsInRound);
 }
 
 
@@ -2218,12 +2218,12 @@ void ABaseAgent::Multicast_PlayNiagaraEffectAttached_Implementation(AActor* Atta
 
 void ABaseAgent::StartLogging()
 {
-	bIsLogMode = true;
+	bIsInRound = true;
 }
 
 void ABaseAgent::StopLogging()
 {
-	bIsLogMode = false;
+	bIsInRound = false;
 	if (HasAuthority())
 	{
 		m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
@@ -2244,7 +2244,7 @@ void ABaseAgent::InitLog()
 
 void ABaseAgent::LogShotResult(const bool bHit)
 {
-	if (!bIsLogMode)
+	if (!bIsInRound)
 	{
 		return;
 	}
@@ -2259,7 +2259,7 @@ void ABaseAgent::LogShotResult(const bool bHit)
 
 void ABaseAgent::LogHeadshot()
 {
-	if (!bIsLogMode)
+	if (!bIsInRound)
 	{
 		return;
 	}
