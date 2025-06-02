@@ -40,7 +40,7 @@ AFlashbang::AFlashbang()
 	MaxBlindDuration = 2.25f;      // 최대 2.25초 완전 실명
 	MinBlindDuration = 1.5f;        // 최소 1.5초 완전 실명
 	RecoveryDuration = 0.5f;        // 0.5초 회복
-	FlashRadius = 2000.0f;          // 20m 반경
+	FlashRadius = 3500.0f;          // 35m 반경
 	DetonationDelay = 0.0f;         // 폭발 지연 없음 (수동 제어)
 	
 	// 수명 설정 해제 (수동 제어)
@@ -88,7 +88,7 @@ void AFlashbang::Tick(float DeltaSeconds)
 	// 회전 애니메이션
 	if (ProjectileMovement->IsActive())
 	{
-		FRotator RotationPerTick(240.f * DeltaSeconds, 540.f * DeltaSeconds, 480.f * DeltaSeconds);
+		FRotator RotationPerTick(240.f * DeltaSeconds, 720.f * DeltaSeconds, 560.f * DeltaSeconds);
 		Mesh->AddLocalRotation(RotationPerTick);
 	}
 	

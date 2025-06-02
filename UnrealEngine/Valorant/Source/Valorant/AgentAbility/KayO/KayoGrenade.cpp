@@ -93,12 +93,10 @@ void AKayoGrenade::SetThrowType(EKayoGrenadeThrowType ThrowType)
 			UE_LOG(LogTemp, Warning, TEXT("KAYO Grenade - Overhand settings applied (Speed: %.0f, Gravity: %.2f)"), Speed, Gravity);
 			break;
 		}
-		
-		// 속도 벡터 재계산 (이미 날아가고 있는 경우)
-		if (ProjectileMovement->Velocity.Size() > 0)
-		{
-			ProjectileMovement->Velocity = ProjectileMovement->Velocity.GetSafeNormal() * Speed;
-		}
+
+		const FVector LocalDir = (ThrowType == EKayoGrenadeThrowType::Underhand) ? FVector(0.7f, 0.f, 0.3f) : FVector(1.f, 0.f, 0.f);
+		const FVector WorldDir = GetActorRotation().RotateVector(LocalDir).GetSafeNormal();
+		ProjectileMovement->Velocity = WorldDir * Speed;
 	}
 }
 
