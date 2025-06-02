@@ -35,6 +35,7 @@
 #include "UI/MatchMap/MatchMapHUD.h"
 #include "Weapon/BaseWeapon.h"
 #include "NiagaraFunctionLibrary.h"
+#include "AgentAbility/FlashProjectile.h"
 
 /* static */ EAgentDamagedPart ABaseAgent::GetHitDamagedPart(const FName& BoneName)
 {
@@ -564,11 +565,11 @@ void ABaseAgent::EndFire()
 	{
 		weapon->EndFire();
 
-		if (bIsLogMode)
+		if (bIsInRound)
 		{
 			if (HasAuthority())
 			{
-				m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+				m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount,CachedDamage);
 				InitLog();
 			}
 			else
@@ -1265,7 +1266,7 @@ void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 {
 	if (!bIsDamage)
 	{
-		if (HasAuthority())
+		if (HasAuthority() && bIsInRound)
 		{
 			MulticastRPC_OnHealed(true);
 		}
@@ -1401,7 +1402,7 @@ void ABaseAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	DOREPLIFETIME(ABaseAgent, PoseIdx);
 	DOREPLIFETIME(ABaseAgent, IsInPlantZone);
 	DOREPLIFETIME(ABaseAgent, ReplicatedControlRotation);
-	DOREPLIFETIME(ABaseAgent, bIsLogMode);
+	DOREPLIFETIME(ABaseAgent, bIsInRound);
 }
 
 
@@ -1757,7 +1758,7 @@ void ABaseAgent::OnAbilityEnd()
 	}
 }
 
-void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
+void ABaseAgent::OnFlashIntensityChanged(float NewIntensity, FVector FlashSourceLocation)
 {
 	// 로컬 플레이어에게만 시각 효과 적용
 	if (!IsLocallyControlled())
@@ -1765,7 +1766,21 @@ void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
 
 	if (FlashWidget)
 	{
-		FlashWidget->UpdateFlashIntensity(NewIntensity);
+		// 섬광 시작 시 타입 설정
+		if (NewIntensity > 0.01f && FlashComponent)
+		{
+			EFlashType FlashType = FlashComponent->GetFlashType();
+			FlashWidget->StartFlashEffect(0.0f, FlashType);
+		}
+		
+		// 섬광 위치 정보와 함께 업데이트
+		FlashWidget->UpdateFlashIntensity(NewIntensity, FlashSourceLocation);
+		
+		// 섬광 종료 시 위젯 정리
+		if (NewIntensity <= 0.01f)
+		{
+			FlashWidget->StopFlashEffect();
+		}
 	}
     
 	if (PostProcessComponent)
@@ -1779,10 +1794,22 @@ void ABaseAgent::OnFlashIntensityChanged(float NewIntensity)
 		EFlashState State = FlashComp->GetFlashState();
 		FString StateStr = (State == EFlashState::CompleteBlind) ? TEXT("완전실명") :
 						  (State == EFlashState::Recovery) ? TEXT("회복중") : TEXT("정상");
+		
+		EFlashType FlashType = FlashComp->GetFlashType();
+		FString FlashTypeStr;
+		switch(FlashType)
+		{
+		case EFlashType::Phoenix: FlashTypeStr = TEXT("Phoenix"); break;
+		case EFlashType::KayO: FlashTypeStr = TEXT("Kay/O"); break;
+		default: FlashTypeStr = TEXT("Default"); break;
+		}
         
-		UE_LOG(LogTemp, VeryVerbose, TEXT("섬광 강도: %.2f, 상태: %s"), NewIntensity, *StateStr);
+		UE_LOG(LogTemp, VeryVerbose, TEXT("섬광 강도: %.2f, 상태: %s, 타입: %s, 위치: %s"), 
+			NewIntensity, *StateStr, *FlashTypeStr, *FlashSourceLocation.ToString());
 	}
 }
+
+
 
 void ABaseAgent::CreateFlashWidget()
 {
@@ -2218,15 +2245,15 @@ void ABaseAgent::Multicast_PlayNiagaraEffectAttached_Implementation(AActor* Atta
 
 void ABaseAgent::StartLogging()
 {
-	bIsLogMode = true;
+	bIsInRound = true;
 }
 
 void ABaseAgent::StopLogging()
 {
-	bIsLogMode = false;
+	bIsInRound = false;
 	if (HasAuthority())
 	{
-		m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+		m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount,CachedDamage);
 		InitLog();
 	}
 	else
@@ -2240,11 +2267,12 @@ void ABaseAgent::InitLog()
 	CachedFireCount = 0;
 	CachedHitCount = 0;
 	CachedHeadshotCount = 0;
+	CachedDamage = 0;
 }
 
 void ABaseAgent::LogShotResult(const bool bHit)
 {
-	if (!bIsLogMode)
+	if (!bIsInRound)
 	{
 		return;
 	}
@@ -2259,7 +2287,7 @@ void ABaseAgent::LogShotResult(const bool bHit)
 
 void ABaseAgent::LogHeadshot()
 {
-	if (!bIsLogMode)
+	if (!bIsInRound)
 	{
 		return;
 	}
@@ -2267,8 +2295,18 @@ void ABaseAgent::LogHeadshot()
 	CachedHeadshotCount++;
 }
 
+void ABaseAgent::LogFinalDamage(const int damage)
+{
+	if (!bIsInRound)
+	{
+		return;
+	}
+	
+	CachedDamage += damage;
+}
+
 void ABaseAgent::ServerRPC_SubmitLog_Implementation()
 {
-	m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount);
+	m_GameMode->SubmitShotLog(PC,CachedFireCount,CachedHitCount,CachedHeadshotCount,CachedDamage);
 	InitLog();
 }

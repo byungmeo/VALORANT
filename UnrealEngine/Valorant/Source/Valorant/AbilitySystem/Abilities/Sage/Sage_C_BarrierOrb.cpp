@@ -24,11 +24,16 @@ USage_C_BarrierOrb::USage_C_BarrierOrb()
 	FollowUpTime = 30.0f;
 }
 
-void USage_C_BarrierOrb::WaitAbility()
+void USage_C_BarrierOrb::PrepareAbility()
 {
+	Super::PrepareAbility();
+
 	// 장벽 오브 생성
 	SpawnBarrierOrb();
-	
+}
+
+void USage_C_BarrierOrb::WaitAbility()
+{
 	// 로컬 플레이어만 미리보기 장벽 생성
 	ABaseAgent* OwnerAgent = Cast<ABaseAgent>(CachedActorInfo.AvatarActor.Get());
 	if (OwnerAgent && OwnerAgent->IsLocallyControlled())

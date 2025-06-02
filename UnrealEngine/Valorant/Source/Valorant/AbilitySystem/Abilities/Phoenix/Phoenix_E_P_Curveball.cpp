@@ -41,7 +41,7 @@ APhoenix_E_P_Curveball::APhoenix_E_P_Curveball()
 	}
 
 	// 섬광 설정 - 발로란트 실제 수치
-	SetLifeSpan(0.65f);  // 실제 폭발까지 시간
+	SetLifeSpan(0.8f);  // 실제 폭발까지 시간
     
 	// 피닉스 커브볼 섬광 시간 설정 
 	MaxBlindDuration = 1.5f;   // 최대 1.1초 완전 실명

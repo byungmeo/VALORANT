@@ -2,11 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "AgentAbility/BaseProjectile.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "FlashProjectile.generated.h"
 
 class ABaseAgent;
 class UParticleSystem;
 class USoundBase;
+class UNiagaraSystem;
 
 UCLASS()
 class VALORANT_API AFlashProjectile : public ABaseProjectile
@@ -30,9 +32,9 @@ protected:
     // 시야 차단 체크 (벽 뒤에 있으면 섬광 안됨)
     bool HasLineOfSight(ABaseAgent* Player);
 
-    // 각 클라이언트에서 시야 각도 체크하도록 RPC 호출
+    // 각 클라이언트에서 시야 각도 체크하도록 RPC 호출 - 섬광 위치 정보 추가
     UFUNCTION(NetMulticast, Reliable)
-    void MulticastApplyFlashEffect(float BlindDuration);
+    void MulticastApplyFlashEffect(float BlindDuration, FVector FlashLocation, EFlashType InFlashType);
     
     // 섬광 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
@@ -47,7 +49,7 @@ protected:
 
     // 회복 시간 (항상 고정)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
-    float RecoveryDuration = 0.5f;  // 항상 0.3초 회복
+    float RecoveryDuration = 0.5f;  // 항상 0.5초 회복
 
     // 시야 각도 체크 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
@@ -57,12 +59,27 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
     float DetonationDelay = 0.5f;
 
+    // 섬광 타입
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
+    EFlashType FlashType = EFlashType::Default;
+
+    // 최소 섬광 효과 설정 (각도로 인해 지속시간이 0이어도 적용)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
+    float MinimumFlashDuration = 0.2f;  // 최소 0.2초
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
+    float MinimumFlashIntensity = 0.8f;  // 최소 80% 강도
+
     // 이펙트 및 사운드
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects", meta = (AllowPrivateAccess = "true"))
     UParticleSystem* ExplosionEffect;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects", meta = (AllowPrivateAccess = "true"))
     USoundBase* ExplosionSound;
+
+    // 섬광에 걸린 대상 머리에 표시할 VFX
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects", meta = (AllowPrivateAccess = "true"))
+    UNiagaraSystem* FlashedTargetVFX;
 
     bool bIsScheduledToExplode = false;
 };

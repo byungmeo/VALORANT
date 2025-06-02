@@ -8,6 +8,7 @@ UFlashComponent::UFlashComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
     PrimaryComponentTick.bStartWithTickEnabled = false;
+    CurrentFlashType = EFlashType::Default;
 }
 
 void UFlashComponent::BeginPlay()
@@ -25,7 +26,7 @@ void UFlashComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
     }
 }
 
-void UFlashComponent::CheckViewAngleAndApplyFlash(FVector FlashLocation, float BlindDuration, float RecoveryDuration)
+void UFlashComponent::CheckViewAngleAndApplyFlash(FVector InFlashLocation, float BlindDuration, float RecoveryDuration, EFlashType InFlashType)
 {
     // 로컬 플레이어만 시야 각도 체크
     ABaseAgent* Owner = Cast<ABaseAgent>(GetOwner());
@@ -33,17 +34,23 @@ void UFlashComponent::CheckViewAngleAndApplyFlash(FVector FlashLocation, float B
         return;
 
     // 시야 각도 계산
-    ViewAngleMultiplier = CalculateViewAngleMultiplier(FlashLocation);
+    ViewAngleMultiplier = CalculateViewAngleMultiplier(InFlashLocation);
     
-    // 시야 각도가 임계값을 넘으면 효과 적용 안함
+    // 시야 각도가 임계값을 넘어도 최소 효과 적용
     if (ViewAngleMultiplier <= 0.1f)
+    {
+        // 각도로 인해 섬광이 거의 안보이지만, 최소한의 효과는 적용
+        bIsMinimumFlash = true;
+        FlashEffect(MinimumFlashDuration, MinimumFlashDuration, MinimumFlashIntensity, InFlashType, InFlashLocation);
         return;
+    }
 
-    // 섬광 적용
-    FlashEffect(BlindDuration, RecoveryDuration, ViewAngleMultiplier);
+    bIsMinimumFlash = false;
+    // 정상적인 섬광 적용
+    FlashEffect(BlindDuration, RecoveryDuration, ViewAngleMultiplier, InFlashType, InFlashLocation);
 }
 
-float UFlashComponent::CalculateViewAngleMultiplier(FVector FlashLocation)
+float UFlashComponent::CalculateViewAngleMultiplier(FVector InFlashLocation)
 {
     ABaseAgent* Owner = Cast<ABaseAgent>(GetOwner());
     if (!Owner)
@@ -55,7 +62,7 @@ float UFlashComponent::CalculateViewAngleMultiplier(FVector FlashLocation)
     Owner->GetActorEyesViewPoint(CameraLocation, CameraRotation);
     
     FVector CameraForward = CameraRotation.Vector();
-    FVector ToFlash = (FlashLocation - CameraLocation).GetSafeNormal();
+    FVector ToFlash = (InFlashLocation - CameraLocation).GetSafeNormal();
     
     // 내적으로 각도 계산
     float DotProduct = FVector::DotProduct(CameraForward, ToFlash);
@@ -91,32 +98,49 @@ float UFlashComponent::CalculateViewAngleMultiplier(FVector FlashLocation)
     return FMath::Clamp(Multiplier, 0.0f, 1.0f);
 }
 
-void UFlashComponent::FlashEffect(float InBlindDuration, float InRecoveryDuration, float InViewAngleMultiplier)
+void UFlashComponent::FlashEffect(float InBlindDuration, float InRecoveryDuration, float InViewAngleMultiplier, EFlashType InFlashType, FVector InFlashLocation)
 {
+    // 섬광 타입과 위치 저장
+    CurrentFlashType = InFlashType;
+    FlashLocation = InFlashLocation;
+    
     // 시야 각도에 따라 지속 시간 조절
     m_BlindDuration = InBlindDuration * InViewAngleMultiplier;
     m_RecoveryDuration = InRecoveryDuration; // 회복 시간은 고정
     ViewAngleMultiplier = InViewAngleMultiplier;
     
-    if (m_BlindDuration <= 0.1f)
+    // 최소 효과 적용 시
+    if (bIsMinimumFlash)
+    {
+        m_BlindDuration = MinimumFlashDuration;
+        m_RecoveryDuration = 0.0f; // 최소 효과는 즉시 회복
+        CurrentFlashIntensity = MinimumFlashIntensity;
+        FlashState = EFlashState::Recovery; // 바로 회복 상태로
+        ElapsedTime = 0.0f;
+    }
+    else if (m_BlindDuration <= 0.1f)
+    {
         return;
-
-    // 완전 실명 상태로 시작
-    FlashState = EFlashState::CompleteBlind;
-    CurrentFlashIntensity = 1.0f; // 완전 실명
-    ElapsedTime = 0.0f;
+    }
+    else
+    {
+        // 정상적인 섬광 효과
+        FlashState = EFlashState::CompleteBlind;
+        CurrentFlashIntensity = 1.0f; // 완전 실명
+        ElapsedTime = 0.0f;
+        
+        // 완전 실명 → 회복 전환 타이머 설정
+        GetWorld()->GetTimerManager().SetTimer(BlindToRecoveryTimer, this, &UFlashComponent::StartRecoveryPhase, m_BlindDuration, false);
+    }
 
     // 틱 활성화
     SetComponentTickEnabled(true);
 
-    // 완전 실명 → 회복 전환 타이머 설정
-    GetWorld()->GetTimerManager().SetTimer(BlindToRecoveryTimer, this, &UFlashComponent::StartRecoveryPhase, m_BlindDuration, false);
-
-    // 델리게이트 호출
-    OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity);
+    // 델리게이트 호출 - 섬광 위치 정보도 함께 전달
+    OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity, FlashLocation);
     
-    UE_LOG(LogTemp, Warning, TEXT("섬광 시작: 완전실명 %.1f초, 회복 %.1f초, 각도배율 %.2f"), 
-           m_BlindDuration, m_RecoveryDuration, ViewAngleMultiplier);
+    UE_LOG(LogTemp, Warning, TEXT("섬광 시작: 완전실명 %.1f초, 회복 %.1f초, 각도배율 %.2f, 타입: %d, 최소효과: %s"), 
+           m_BlindDuration, m_RecoveryDuration, ViewAngleMultiplier, (int32)CurrentFlashType, bIsMinimumFlash ? TEXT("Yes") : TEXT("No"));
 }
 
 void UFlashComponent::StartRecoveryPhase()
@@ -134,7 +158,19 @@ void UFlashComponent::UpdateFlashEffect()
 {
     ElapsedTime += GetWorld()->GetDeltaSeconds();
 
-    if (FlashState == EFlashState::CompleteBlind)
+    if (bIsMinimumFlash)
+    {
+        // 최소 효과는 빠르게 감소
+        float RecoveryRatio = FMath::Clamp(ElapsedTime / MinimumFlashDuration, 0.0f, 1.0f);
+        CurrentFlashIntensity = MinimumFlashIntensity * (1.0f - RecoveryRatio);
+        
+        if (RecoveryRatio >= 1.0f)
+        {
+            StopFlashEffect();
+            return;
+        }
+    }
+    else if (FlashState == EFlashState::CompleteBlind)
     {
         // 완전 실명 상태: 강도 1.0 유지
         CurrentFlashIntensity = 1.0f;
@@ -156,8 +192,8 @@ void UFlashComponent::UpdateFlashEffect()
         }
     }
 
-    // 델리게이트 호출
-    OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity);
+    // 델리게이트 호출 - 섬광 위치 정보도 함께 전달
+    OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity, FlashLocation);
 }
 
 void UFlashComponent::StopFlashEffect()
@@ -166,6 +202,9 @@ void UFlashComponent::StopFlashEffect()
     CurrentFlashIntensity = 0.0f;
     ElapsedTime = 0.0f;
     ViewAngleMultiplier = 1.0f;
+    bIsMinimumFlash = false;
+    CurrentFlashType = EFlashType::Default;
+    FlashLocation = FVector::ZeroVector;
 
     // 타이머 정리
     if (BlindToRecoveryTimer.IsValid())
@@ -177,7 +216,7 @@ void UFlashComponent::StopFlashEffect()
     SetComponentTickEnabled(false);
 
     // 델리게이트 호출
-    OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity);
+    OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity, FlashLocation);
     
     UE_LOG(LogTemp, Warning, TEXT("섬광 효과 종료"));
 }

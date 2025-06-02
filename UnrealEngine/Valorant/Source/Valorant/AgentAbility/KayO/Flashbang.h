@@ -21,8 +21,8 @@ public:
 private:
 	// KAYO 플래시뱅 고유 설정
 	const bool bAutoActivate = false;
-	const float Speed = 1800;
-	const float SpeedAltFire = 630;
+	const float Speed = 2200;
+	const float SpeedAltFire = 830;
 	const float Gravity = 0.3f;
 	const bool bShouldBounce = true;
 	const float Bounciness = 0.8f;

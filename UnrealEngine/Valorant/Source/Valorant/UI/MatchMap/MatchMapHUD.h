@@ -249,6 +249,9 @@ public:
 	UFUNCTION()
 	void HideFollowUpInputUI();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSuppressed(FGameplayTag GameplayTag, int num);
+	
 public:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UWidgetSwitcher> WidgetSwitcherAnnouncement = nullptr;

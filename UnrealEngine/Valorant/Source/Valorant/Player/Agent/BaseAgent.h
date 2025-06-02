@@ -407,7 +407,7 @@ public:
 
 	// 섬광 관련 함수들
 	UFUNCTION(BlueprintCallable, Category = "Flash")
-	void OnFlashIntensityChanged(float NewIntensity);
+	void OnFlashIntensityChanged(float NewIntensity, FVector FlashSourceLocation);
     
 	UFUNCTION(BlueprintCallable, Category = "Flash")
 	void CreateFlashWidget();
@@ -426,6 +426,8 @@ public:
 	void LogShotResult(const bool bHit);
 	UFUNCTION(Category = "Log")
 	void LogHeadshot();
+	UFUNCTION(Category = "Log")
+	void LogFinalDamage(const int damage);
 	UFUNCTION(Server, Reliable, Category = "Log")
 	void ServerRPC_SubmitLog();
 	
@@ -513,10 +515,11 @@ protected:
 
 	//Log용 변수
 	UPROPERTY(Replicated)
-	bool bIsLogMode = false;
+	bool bIsInRound = false;
 	int CachedFireCount = 0;
 	int CachedHitCount = 0;
 	int CachedHeadshotCount = 0;
+	int CachedDamage = 0;
 
 public:
 	FKillFeedInfo LastKillFeedInfo;
