@@ -27,6 +27,14 @@ enum class EViewType : uint8
 };
 
 UENUM(BlueprintType)
+enum class EFlashType : uint8
+{
+	Default     UMETA(DisplayName = "Default"),
+	Phoenix     UMETA(DisplayName = "Phoenix"),     // 빨강
+	KayO        UMETA(DisplayName = "Kay/O"),       // 파랑
+};
+
+UENUM(BlueprintType)
 enum class EValorantMap : uint8
 {
 	None UMETA(DisplayName = "None"),

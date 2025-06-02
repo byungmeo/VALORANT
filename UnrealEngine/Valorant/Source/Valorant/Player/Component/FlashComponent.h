@@ -4,9 +4,13 @@
 #include "Components/ActorComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "ResourceManager/ValorantGameType.h"
 #include "FlashComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFlashIntensityChanged, float, NewIntensity);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnFlashIntensityChanged, float, NewIntensity, FVector, FlashSourceLocation);
+
+// 섬광 타입 전방선언
+enum class EFlashType : uint8;
 
 // 섬광 상태 열거형
 UENUM(BlueprintType)
@@ -27,7 +31,7 @@ public:
 
     // 발로란트 스타일 섬광 효과 시작 (완전 실명 → 빠른 회복)
     UFUNCTION(BlueprintCallable, Category = "Flash")
-    void FlashEffect(float BlindDuration, float RecoveryDuration, float ViewAngleMultiplier = 1.0f);
+    void FlashEffect(float BlindDuration, float RecoveryDuration, float ViewAngleMultiplier = 1.0f, EFlashType InFlashType = EFlashType::Default, FVector InFlashLocation = FVector::ZeroVector);
 
     // 섬광 효과 중지
     UFUNCTION(BlueprintCallable, Category = "Flash")
@@ -45,13 +49,25 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Flash")
     EFlashState GetFlashState() const { return FlashState; }
 
+    // 섬광 타입 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Flash")
+    EFlashType GetFlashType() const { return CurrentFlashType; }
+
+    // 섬광 위치 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Flash")
+    FVector GetFlashLocation() const { return FlashLocation; }
+
     // 섬광 강도 변경 델리게이트
     UPROPERTY(BlueprintAssignable, Category = "Flash")
     FOnFlashIntensityChanged OnFlashIntensityChanged;
 
     // 클라이언트에서 시야 각도 체크 후 섬광 적용
     UFUNCTION(BlueprintCallable, Category = "Flash")
-    void CheckViewAngleAndApplyFlash(FVector FlashLocation, float BlindDuration, float RecoveryDuration);
+    void CheckViewAngleAndApplyFlash(FVector FlashLocation, float BlindDuration, float RecoveryDuration, EFlashType InFlashType = EFlashType::Default);
+
+    // 시야 각도 계산 (공개 함수로 변경)
+    UFUNCTION(BlueprintCallable, Category = "Flash")
+    float CalculateViewAngleMultiplier(FVector FlashLocation);
 
 protected:
     virtual void BeginPlay() override;
@@ -64,9 +80,6 @@ private:
     // 완전 실명 상태 → 회복 상태로 전환
     UFUNCTION()
     void StartRecoveryPhase();
-
-    // 플레이어의 시야 각도 체크 (클라이언트에서만 실행)
-    float CalculateViewAngleMultiplier(FVector FlashLocation);
 
     // 현재 섬광 상태
     EFlashState FlashState = EFlashState::None;
@@ -88,6 +101,15 @@ private:
 
     // 시야 각도 감소 배율
     float ViewAngleMultiplier = 1.0f;
+
+    // 섬광 타입
+    EFlashType CurrentFlashType;
+
+    // 섬광 위치
+    FVector FlashLocation;
+
+    // 최소 섬광 효과 적용 여부
+    bool bIsMinimumFlash = false;
 
     // 시야 각도 체크 설정 (FlashProjectile과 동일하게 설정)
     // 90도 이내에 있어야 효과 적용
@@ -115,4 +137,11 @@ private:
     // 측면 각도 범위
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true", ClampMin = "30.0", ClampMax = "90.0"))
     float SideViewAngle = 60.0f;
+
+    // 최소 섬광 설정
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
+    float MinimumFlashDuration = 0.2f;  // 최소 0.2초
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
+    float MinimumFlashIntensity = 0.8f;  // 최소 80% 강도
 };
