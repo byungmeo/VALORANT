@@ -4,8 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "Web/DatabaseManager.h"
 #include "MatchGameMode.generated.h"
 
+struct FMatchDTO;
+struct FPlayerMatchDTO;
+struct FPlayerDTO;
 class AAgentPlayerState;
 class ASpike;
 class ABaseWeapon;
@@ -50,27 +54,6 @@ struct FMatchPlayer
 	bool bIsDead = false;
 };
 
-USTRUCT(BlueprintType)
-struct FLogData
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	TObjectPtr<AAgentPlayerController> Controller = nullptr;
-	FString Nickname = "UNKNOWN";
-	int Kill = 0;
-	int Death = 0;
-	int FireCount = 0;
-	int HitCount = 0;
-	int HeadshotCount = 0;
-	int TotalDamage = 0;
-	int PlantCount = 0;
-	int DefuseCount = 0;
-	bool bWin = false;
-	TArray<int> WinRound;
-	TArray<int> DefeatRound;
-};
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartInRound);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStartPreRound);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEndRound);
@@ -96,6 +79,22 @@ private:
 	TObjectPtr<UValorantGameInstance> ValorantGameInstance = nullptr;
 	UPROPERTY()
 	TObjectPtr<USubsystemSteamManager> SubsystemManager = nullptr;
+
+	// 플레이어 목록, 매치가 종료되면 전적 갱신을 위해 들고있는다
+	UPROPERTY()
+	TMap<AAgentPlayerController*, FPlayerDTO> PlayerArray;
+	// 현재 매치 정보
+	TSharedPtr<FMatchDTO> CurrentMatchInfo;
+	// 현재 매치에서 플레이어의 기록 저장
+	UPROPERTY()
+	TMap<AAgentPlayerController*, FPlayerMatchDTO> PlayerMatchInfoMap;
+	FOnGetPlayerCompleted OnGetPlayerCompletedDelegate;
+	FOnPostMatchCompleted OnPostMatchCompletedDelegate;
+
+	UFUNCTION()
+	void OnPostMatchCompleted(const bool bIsSuccess, const FMatchDTO& CreatedMatchDto);
+	UFUNCTION()
+	void OnGetPlayerCompleted(const bool bIsSuccess, const FPlayerDTO& PlayerDto);
 	
 	UPROPERTY(Transient)
 	ERoundSubState RoundSubState = ERoundSubState::RSS_None;
@@ -105,7 +104,7 @@ private:
 	int LoggedInPlayerNum = 0;
 	UPROPERTY(BlueprintReadOnly, Category="Gameflow", meta=(AllowPrivateAccess))
 	TArray<FMatchPlayer> MatchPlayers;
-	TMap<AAgentPlayerController*,FLogData> PlayerLog;
+	
 	int LockedInPlayerNum = 0;
 	TArray<FString> RedTeamPlayerNameArray;
 	TArray<FString> BlueTeamPlayerNameArray;
@@ -124,7 +123,7 @@ private:
 	ASpike* Spike;
 
 public:
-	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname);
+	void OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname, const FString& RealNickname);
 	void OnLockIn(AMatchPlayerController* Player, int AgentId);
 	void OnAgentSelected(AMatchPlayerController* MatchPlayerController, int SelectedAgentID);
 	
@@ -196,11 +195,11 @@ public:
 	void RespawnAll();
 	void RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController* pc, FTransform spawnTransform);
 	void ResetAgentGAS(AAgentPlayerState* AgentPS);
-	void OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim);
+	void OnKill(AAgentPlayerController* Killer, AAgentPlayerController* Victim);
 	void OnDie(AMatchPlayerController* Victim);
 	void OnRevive(AMatchPlayerController* Reviver, AMatchPlayerController* Target);
-	void OnSpikePlanted(AMatchPlayerController* Planter);
-	void OnSpikeDefused(AMatchPlayerController* Defuser);
+	void OnSpikePlanted(AAgentPlayerController* Planter);
+	void OnSpikeDefused(AAgentPlayerController* Defuser);
 	
 	// 공격팀에게 스파이크 스폰
 	void SpawnSpikeForAttackers();
@@ -212,8 +211,7 @@ public:
 	void DestroySpikeInWorld();
 
 	UFUNCTION(Category = "Log")
-	void SubmitShotLog(AAgentPlayerController* pc, int32 fireCount, int32 hitCount,
-	int32 headshotCount, int damage);
+	void SubmitShotLog(AAgentPlayerController* pc, int32 fireCount, int32 hitCount, int32 headshotCount, int damage);
 
 
 	UPROPERTY(EditAnywhere)

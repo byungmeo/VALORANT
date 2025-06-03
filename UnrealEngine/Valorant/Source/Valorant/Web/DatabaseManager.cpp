@@ -77,6 +77,13 @@ void UDatabaseManager::PostPlayer(const FString& PlayerId, const FString& Platfo
 	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + TEXT("player/"), TEXT("POST"), JsonString);
 }
 
+void UDatabaseManager::PutPlayer(const FPlayerDTO& PlayerDto)
+{
+	FString JsonString;
+	FJsonObjectConverter::UStructToJsonObjectString(PlayerDto, JsonString);
+	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + TEXT("player/"), TEXT("PUT"), JsonString);
+}
+
 void UDatabaseManager::GetMatch(const int MatchId, const FOnGetMatchCompleted& Callback)
 {
 	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + FString::Printf(TEXT("match/%d"), MatchId), TEXT("GET"), "",

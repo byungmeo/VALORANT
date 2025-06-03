@@ -11,6 +11,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameManager/MatchGameState.h"
+#include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
 #include "Player/MatchPlayerController.h"
 #include "Weapon/ThirdPersonInteractor.h"
@@ -355,7 +356,7 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (GameMode)
 	{
-		AMatchPlayerController* PC = Cast<AMatchPlayerController>(InteractingAgent->GetController());
+		AAgentPlayerController* PC = Cast<AAgentPlayerController>(InteractingAgent->GetController());
 		if (PC)
 		{
 			GameMode->OnSpikePlanted(PC);
@@ -469,7 +470,7 @@ void ASpike::ServerRPC_FinishDefusing_Implementation()
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (GameMode)
 	{
-		AMatchPlayerController* PC = Cast<AMatchPlayerController>(InteractingAgent->GetController());
+		AAgentPlayerController* PC = Cast<AAgentPlayerController>(InteractingAgent->GetController());
 		if (PC)
 		{
 			GameMode->OnSpikeDefused(PC);

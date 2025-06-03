@@ -32,7 +32,7 @@ USubsystemSteamManager::USubsystemSteamManager() :
 	return nullptr;
 }
 
-/* static */  FString USubsystemSteamManager::GetDisplayName(const UObject* WorldContextObj, int LocalUserNum)
+/* static */  FString USubsystemSteamManager::GetDisplayName(const UObject* WorldContextObj, int LocalUserNum, bool bShort)
 {
 	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(WorldContextObj->GetWorld());
 	if (OnlineSubsystem)
@@ -41,7 +41,7 @@ USubsystemSteamManager::USubsystemSteamManager() :
 		if (IdentityInterface.IsValid())
 		{
 			FString Nickname = IdentityInterface->GetPlayerNickname(LocalUserNum);
-			if (OnlineSubsystem->GetSubsystemName() == TEXT("NULL") && Nickname.Len() >= 10) Nickname = Nickname.Right(4);
+			if (bShort && Nickname.Len() >= 10) Nickname = Nickname.Right(4);
 			return Nickname;
 		}
 	}
