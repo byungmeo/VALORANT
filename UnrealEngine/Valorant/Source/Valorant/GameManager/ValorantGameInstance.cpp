@@ -171,6 +171,12 @@ void UValorantGameInstance::OnMatchHasStarted()
 	}
 }
 
+void UValorantGameInstance::SaveMatchResult(const FMatchDTO& MatchDto, const FPlayerMatchDTO& PlayerMatchDto)
+{
+	MatchResult = MatchDto;
+	PlayerMatchResult = PlayerMatchDto;
+}
+
 void UValorantGameInstance::OnStart()
 {
 	Super::OnStart();

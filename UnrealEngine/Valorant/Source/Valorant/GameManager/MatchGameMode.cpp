@@ -29,7 +29,7 @@ AMatchGameMode::AMatchGameMode()
 	RemainRoundStateTime = 0.0f;
 	SelectAgentTime = 60.0f;
 	PreRoundTime = 15.0f; // org: 45.0f
-	BuyPhaseTime = 25.0f; // org: 30.0f
+	BuyPhaseTime = 15.0f; // org: 30.0f
 	InRoundTime = 50.0f; // org: 100.0f
 	EndPhaseTime = 5.0f; // org: 10.0f
 	SpikeActiveTime = 25.0f; // org: 45.0f
@@ -155,56 +155,21 @@ void AMatchGameMode::OnPostMatchCompleted(const bool bIsSuccess, const FMatchDTO
 	CurrentMatchInfo = MakeShared<FMatchDTO>(CreatedMatchDto);
 }
 
-void AMatchGameMode::OnGetPlayerCompleted(const bool bIsSuccess, const FPlayerDTO& PlayerDto)
-{
-	if (bIsSuccess)
-	{
-		for (auto PlayerInfo : MatchPlayers)
-		{
-			if (PlayerInfo.Nickname == PlayerDto.player_id)
-			{
-				FPlayerMatchDTO PlayerMatchInfo;
-				PlayerMatchInfo.player_id = PlayerDto.player_id;
-				PlayerMatchInfo.match_id = CurrentMatchInfo->match_id; // 혹시 모르니까 데이터베이스에 넣기 전에 다시 갱신해야 함
-				PlayerMatchInfoMap.Add(PlayerInfo.Controller, PlayerMatchInfo);
-				return;
-			}
-		}
-	}
-	else
-	{
-		NET_LOG(LogTemp, Warning, TEXT("%hs Called, bIsSuccess: %hs"), __FUNCTION__, bIsSuccess?"True":"False");
-	}
-}
-
 void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname, const FString& RealNickname)
 {
 	auto* AgentPC = Cast<AAgentPlayerController>(Controller);
 
-	if (false == OnGetPlayerCompletedDelegate.IsBound())
-	{
-		OnGetPlayerCompletedDelegate.AddDynamic(this, &AMatchGameMode::OnGetPlayerCompleted);
-	}
-	
-	auto* DatabaseManager = UDatabaseManager::GetInstance();
-	if (const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld()))
-	{
-		const FName SubsystemName = OnlineSubsystem->GetSubsystemName();
-		DatabaseManager->GetPlayer(RealNickname, SubsystemName.ToString(), OnGetPlayerCompletedDelegate);
-	}
-	
-	// FPlayerMatchDTO PlayerMatchInfo;
-	// PlayerInfo.Controller = AgentPC;
-	// PlayerInfo.Nickname = Nickname;
-	// PlayerInfo.bIsBlueTeam = RequiredPlayerCount / 2 > MatchPlayers.Num();
-	// // Log 데이터 추가
-	// FLogData NewLog;
-	// NewLog.Controller = AgentPC;
-	// NewLog.Nickname = Nickname;
-	// PlayerLog.Add(AgentPC, NewLog);
-
 	const bool bIsBlueTeam =  RequiredPlayerCount / 2 > LoggedInPlayerNum;
 	const bool bIsAttacker = bIsBlueTeam;
+	
+	FPlayerMatchDTO PlayerMatchInfo;
+	PlayerMatchInfo.player_id = RealNickname;
+	PlayerMatchInfo.team = bIsBlueTeam ? 0 : 1;
+	PlayerMatchInfoMap.Add(Cast<AAgentPlayerController>(Controller), PlayerMatchInfo);
+
+	FPlayerDTO PlayerDto;
+	PlayerDto.player_id = RealNickname;
+	PlayerMap.Add(Cast<AAgentPlayerController>(Controller), PlayerDto);
 	
 	auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>();
 	if (PlayerState)
@@ -332,11 +297,21 @@ void AMatchGameMode::LeavingMatch()
 	const bool bBlueWin = RequiredScore <= TeamBlueScore;
 	const double TotalPlaySeconds = GetWorld()->GetRealTimeSeconds();
 	
-	for (const auto& PlayerInfo : MatchPlayers)
+	for (auto& Pair : PlayerMatchInfoMap)
 	{
-		FPlayerDTO& PlayerDto = PlayerArray[PlayerInfo.Controller];
+		auto* Controller = Pair.Key;
+		const auto* PlayerState = Controller->GetPlayerState<AAgentPlayerState>();
+		CurrentMatchInfo->blue_score = TeamBlueScore;
+		CurrentMatchInfo->red_score = TeamRedScore;
+		CurrentMatchInfo->map_id = 0;
+
+		FPlayerMatchDTO& PlayerMatchInfo = Pair.Value;
+		PlayerMatchInfo.agent_id = PlayerState ? Controller->GetPlayerState<AAgentPlayerState>()->GetAgentID() : 0;
+		PlayerMatchInfo.match_id = CurrentMatchInfo->match_id;
+		
+		FPlayerDTO& PlayerDto = PlayerMap[Controller];
 		PlayerDto.total_playseconds += TotalPlaySeconds;
-		if (bool bWin = !(PlayerInfo.bIsBlueTeam ^ bBlueWin))
+		if (bool bWin = !((PlayerMatchInfo.team == 0) ^ bBlueWin))
 		{
 			++PlayerDto.win_count;
 		}
@@ -344,12 +319,15 @@ void AMatchGameMode::LeavingMatch()
 		{
 			++PlayerDto.defeat_count;
 		}
+
 		UDatabaseManager::GetInstance()->PutPlayer(PlayerDto);
-		
-		// PlayerInfo.Controller->ClientRPC_CleanUpSession();
-		// PlayerInfo.Controller->ClientTravel("/Game/Maps/MainMap.MainMap", TRAVEL_Absolute);
+		UDatabaseManager::GetInstance()->PutMatch(*CurrentMatchInfo);
+		UDatabaseManager::GetInstance()->PostPlayerMatch(PlayerMatchInfo);
+		Controller->ClientRPC_SaveMatchResult(*CurrentMatchInfo, PlayerMatchInfo);
 	}
+	
 	PrintAllPlayerLogs();
+	GetWorld()->GetFirstPlayerController()->ClientTravel("/Game/Maps/MainMap.MainMap", TRAVEL_Absolute);
 }
 
 void AMatchGameMode::HandleMatchHasEnded()
@@ -746,10 +724,10 @@ void AMatchGameMode::OnKill(AAgentPlayerController* Killer, AAgentPlayerControll
 		const bool bFirstKill = MatchPlayers.Num() - (TeamBlueRemainingAgentNum + TeamRedRemainingAgentNum) == 1;
 		auto& KillerData = PlayerMatchInfoMap[Killer];
 		KillerData.kill_count++;
-		KillerData.first_kill_count = bFirstKill ? 1 : 0;
+		KillerData.first_kill_count += bFirstKill ? 1 : 0;
 		auto& VictimData = PlayerMatchInfoMap[Victim];
 		VictimData.death_count++;
-		VictimData.first_death_count = bFirstKill ? 1 : 0;
+		VictimData.first_death_count += bFirstKill ? 1 : 0;
 	}
 }
 

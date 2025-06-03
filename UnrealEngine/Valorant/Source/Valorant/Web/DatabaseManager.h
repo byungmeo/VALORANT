@@ -88,7 +88,7 @@ public:
 	 */
 	void GetMatch(int MatchId, const FOnGetMatchCompleted& Callback);
 	void PostMatch(const FOnPostMatchCompleted& Callback);
-	void PutMatch(const int MatchId, const FMatchDTO& MatchDto);
+	void PutMatch(const FMatchDTO& MatchDto);
 
 	/*
 	 *	PLAYER_MATCH

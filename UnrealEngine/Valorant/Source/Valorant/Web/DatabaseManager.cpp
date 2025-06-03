@@ -79,9 +79,16 @@ void UDatabaseManager::PostPlayer(const FString& PlayerId, const FString& Platfo
 
 void UDatabaseManager::PutPlayer(const FPlayerDTO& PlayerDto)
 {
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+	JsonObject->SetNumberField("win_count", PlayerDto.win_count);
+	JsonObject->SetNumberField("defeat_count", PlayerDto.defeat_count);
+	JsonObject->SetNumberField("draw_count", PlayerDto.draw_count);
+	JsonObject->SetNumberField("total_playseconds", PlayerDto.total_playseconds);
+	
 	FString JsonString;
-	FJsonObjectConverter::UStructToJsonObjectString(PlayerDto, JsonString);
-	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + TEXT("player/"), TEXT("PUT"), JsonString);
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + FString::Printf(TEXT("player/%s"), *PlayerDto.player_id), TEXT("PUT"), JsonString);
 }
 
 void UDatabaseManager::GetMatch(const int MatchId, const FOnGetMatchCompleted& Callback)
@@ -147,7 +154,7 @@ void UDatabaseManager::PostMatch(const FOnPostMatchCompleted& Callback)
 	});
 }
 
-void UDatabaseManager::PutMatch(const int MatchId, const FMatchDTO& MatchDto)
+void UDatabaseManager::PutMatch(const FMatchDTO& MatchDto)
 {
 	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
 	JsonObject->SetNumberField("map_id", MatchDto.map_id);
@@ -158,7 +165,7 @@ void UDatabaseManager::PutMatch(const int MatchId, const FMatchDTO& MatchDto)
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
 	FJsonSerializer::Serialize(JsonObject, Writer);
 	
-	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + FString::Printf(TEXT("match/%d"), MatchId), TEXT("PUT"), JsonString);
+	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + FString::Printf(TEXT("match/%d"), MatchDto.match_id), TEXT("PUT"), JsonString);
 }
 
 void UDatabaseManager::GetPlayerMatch(const FString& PlayerId, const int MatchId, const FOnGetPlayerMatchCompleted& Callback)

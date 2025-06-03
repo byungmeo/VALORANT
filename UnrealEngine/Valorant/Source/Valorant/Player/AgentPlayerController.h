@@ -8,6 +8,8 @@
 #include "Component/ShopComponent.h"
 #include "AgentPlayerController.generated.h"
 
+struct FMatchDTO;
+struct FPlayerMatchDTO;
 struct FKillFeedInfo;
 class UFlashWidget;
 class UBaseAttributeSet;
@@ -103,6 +105,9 @@ public:
 	UAgentAbilitySystemComponent* GetCacehdASC() { return CachedASC; }
 	UFUNCTION()
 	UBaseAttributeSet* GetCachedABS() { return CachedABS; }
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_SaveMatchResult(const FMatchDTO& MatchDto, const FPlayerMatchDTO& PlayerMatchDto);
 
 	// 상점 UI 관련 기능
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")

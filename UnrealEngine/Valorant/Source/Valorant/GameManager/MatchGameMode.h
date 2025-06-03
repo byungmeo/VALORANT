@@ -82,19 +82,16 @@ private:
 
 	// 플레이어 목록, 매치가 종료되면 전적 갱신을 위해 들고있는다
 	UPROPERTY()
-	TMap<AAgentPlayerController*, FPlayerDTO> PlayerArray;
+	TMap<AAgentPlayerController*, FPlayerDTO> PlayerMap;
 	// 현재 매치 정보
 	TSharedPtr<FMatchDTO> CurrentMatchInfo;
 	// 현재 매치에서 플레이어의 기록 저장
 	UPROPERTY()
 	TMap<AAgentPlayerController*, FPlayerMatchDTO> PlayerMatchInfoMap;
-	FOnGetPlayerCompleted OnGetPlayerCompletedDelegate;
 	FOnPostMatchCompleted OnPostMatchCompletedDelegate;
 
 	UFUNCTION()
 	void OnPostMatchCompleted(const bool bIsSuccess, const FMatchDTO& CreatedMatchDto);
-	UFUNCTION()
-	void OnGetPlayerCompleted(const bool bIsSuccess, const FPlayerDTO& PlayerDto);
 	
 	UPROPERTY(Transient)
 	ERoundSubState RoundSubState = ERoundSubState::RSS_None;
