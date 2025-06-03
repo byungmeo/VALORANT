@@ -33,13 +33,6 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Projectile Settings")
     TSubclassOf<class ABaseProjectile> CurvedProjectileClass;
 
-    // === 애니메이션 ===
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
-    UAnimMontage* ExecutingUnderThrow3pMontage = nullptr;
-    
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
-    UAnimMontage* ExecutingUnderThrow1pMontage = nullptr;
-
     // === 사운드 ===
     UPROPERTY(EditDefaultsOnly, Category = "Sounds")
     class USoundBase* ThrowSound;

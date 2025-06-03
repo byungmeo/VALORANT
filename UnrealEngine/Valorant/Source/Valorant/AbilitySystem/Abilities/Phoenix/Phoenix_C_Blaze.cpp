@@ -22,17 +22,6 @@ bool UPhoenix_C_Blaze::OnLeftClickInput()
     bool bShouldExecute = true;
     
     SpawnBlazeProjectile(EBlazeMovementType::Straight);
-    // // 직선 벽 생성
-    // if (SpawnBlazeProjectile(EBlazeMovementType::Straight))
-    // {
-    //     UE_LOG(LogTemp, Warning, TEXT("Phoenix C - 직선 벽 생성 시작"));
-    // }
-    // else
-    // {
-    //     UE_LOG(LogTemp, Error, TEXT("Phoenix C - 직선 벽 생성 실패"));
-    //     bShouldExecute = false;
-    //     CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-    // }
     
     return bShouldExecute;
 }
@@ -42,17 +31,6 @@ bool UPhoenix_C_Blaze::OnRightClickInput()
     bool bShouldExecute = true;
     
     SpawnBlazeProjectile(EBlazeMovementType::Curved);
-    // // 커브 벽 생성
-    // if (SpawnBlazeProjectile(EBlazeMovementType::Curved))
-    // {
-    //     UE_LOG(LogTemp, Warning, TEXT("Phoenix C - 커브 벽 생성 시작"));
-    // }
-    // else
-    // {
-    //     UE_LOG(LogTemp, Error, TEXT("Phoenix C - 커브 벽 생성 실패"));
-    //     bShouldExecute = false;
-    //     CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-    // }
     
     return bShouldExecute;
 }
