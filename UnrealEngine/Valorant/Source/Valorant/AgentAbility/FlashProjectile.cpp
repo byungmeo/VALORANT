@@ -36,15 +36,18 @@ void AFlashProjectile::ExplodeFlash()
     if (!HasAuthority())
         return;
 
+    // 섬광이 터진 정확한 위치 저장
+    FVector FlashLocation = GetActorLocation();
+
     // 폭발 이펙트 스폰
     if (ExplosionEffect)
     {
-        UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+        UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, FlashLocation);
     }
 
     if (ExplosionSound)
     {
-        UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, FlashLocation);
     }
 
     // 범위 내 플레이어들 확인
@@ -53,9 +56,6 @@ void AFlashProjectile::ExplodeFlash()
 
     bool bHasValidTargets = false;
     float MaxBlindDurationFound = 0.0f;
-    
-    // 섬광 위치 저장
-    FVector FlashLocation = GetActorLocation();
 
     for (AActor* Actor : FoundActors)
     {
@@ -84,7 +84,7 @@ void AFlashProjectile::ExplodeFlash()
     // 디버그 표시
     if (GEngine && GEngine->GetNetMode(GetWorld()) != NM_DedicatedServer)
     {
-        DrawDebugSphere(GetWorld(), GetActorLocation(), FlashRadius, 16, FColor::Yellow, false, 5.0f);
+        DrawDebugSphere(GetWorld(), FlashLocation, FlashRadius, 16, FColor::Yellow, false, 5.0f);
     }
 
     Destroy();
@@ -132,9 +132,10 @@ bool AFlashProjectile::HasLineOfSight(ABaseAgent* Player)
 
 void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDuration, FVector FlashLocation, EFlashType InFlashType)
 {
-    // 기존 코드와의 호환성을 위해 FlashLocation이 Zero이면 GetActorLocation() 사용
+    // 섬광 위치가 유효한지 확인
     if (FlashLocation.IsZero())
     {
+        UE_LOG(LogTemp, Warning, TEXT("경고: 섬광 위치가 Zero입니다. GetActorLocation 사용"));
         FlashLocation = GetActorLocation();
     }
 
@@ -155,7 +156,11 @@ void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDurat
                 // 로컬 플레이어에 대해서만 섬광 적용 - 위치와 타입 정보 전달
                 if (UFlashComponent* FlashComp = LocalPlayer->FindComponentByClass<UFlashComponent>())
                 {
+                    // 정확한 섬광 위치 전달
                     FlashComp->CheckViewAngleAndApplyFlash(FlashLocation, LocalBlindDuration, RecoveryDuration, InFlashType);
+                    
+                    UE_LOG(LogTemp, Warning, TEXT("섬광 적용: 위치=%s, 지속시간=%.2f, 타입=%d"), 
+                        *FlashLocation.ToString(), LocalBlindDuration, (int32)InFlashType);
                 }
                 
                 // 로컬 플레이어를 찾았으므로 루프 종료
@@ -163,6 +168,7 @@ void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDurat
             }
         }
     }
+
 
     // 섬광에 걸린 모든 대상에게 VFX 적용 (서버와 클라이언트 모두에서)
     if (FlashedTargetVFX)

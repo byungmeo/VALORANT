@@ -1300,8 +1300,9 @@ void ABaseAgent::UpdateHealth(float newHealth, bool bIsDamage)
 			}
 		}
 	}
-	
-	if (GetLocalRole() == ROLE_AutonomousProxy)
+
+	// 스킬 데미지일 경우에는 슬로우 효과 적용 X
+	if (GetLocalRole() == ROLE_AutonomousProxy && IsGunDamage())
 	{
 		ServerApplyGE(GE_HitSlow, nullptr);
 	}
@@ -1387,6 +1388,12 @@ void ABaseAgent::UpdateEquipSpeedMultiplier()
 			}
 		}
 	}
+}
+
+// 데미지 방향이 제대로 입력되었다면, 무기 데미지인 것으로 판정
+bool ABaseAgent::IsGunDamage() const
+{
+	return LastDamagedOrg == FVector::ZeroVector ? false : true;
 }
 
 // 네트워크 복제 설정
