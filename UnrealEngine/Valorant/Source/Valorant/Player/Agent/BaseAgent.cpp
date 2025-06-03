@@ -244,6 +244,8 @@ void ABaseAgent::PossessedBy(AController* NewController)
 			SetHighlight(true, true);
 		}
 	}
+
+	DevCameraMode(true);
 }
 
 // 클라이언트 전용. 서버로부터 PlayerState를 최초로 받을 때 호출됨
@@ -288,6 +290,8 @@ void ABaseAgent::OnRep_PlayerState()
 			}
 		}
 	}
+
+	DevCameraMode(true);
 }
 
 void ABaseAgent::BeginPlay()
@@ -1097,7 +1101,8 @@ void ABaseAgent::HandleDieCameraPitch(float newPitch)
 void ABaseAgent::Die()
 {
 	NET_LOG(LogTemp, Display, TEXT("%s 사망 처리 시작"), *GetName());
-    
+
+	DevCameraMode(false);
 	// 1. 어빌리티 정리를 가장 먼저 수행
 	CancelActiveAbilities();
 
@@ -2270,6 +2275,32 @@ void ABaseAgent::CheckMinimapVisibility(const float DeltaTime)
 		ABaseAgent* Observer = VisibilityStateArray[Index].Observer;
 		// 상태 업데이트
 		UpdateVisibilityState(Observer, EVisibilityState::Hidden);
+	}
+}
+
+void ABaseAgent::DevCameraMode_Implementation(bool bIsActive)
+{
+	if (!bIsActive)
+	{
+		if (PC && PC->GetMinimapWidget())
+		{
+			PC->GetMinimapWidget()->SetVisibility(ESlateVisibility::Hidden);
+		}
+		if (PC && PC->GetMatchMapHud())
+		{
+			PC->GetMatchMapHud()->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+	else
+	{
+		if (PC && PC->GetMinimapWidget())
+		{
+			PC->GetMinimapWidget()->SetVisibility(ESlateVisibility::Visible);
+		}
+		if (PC && PC->GetMatchMapHud())
+		{
+			PC->GetMatchMapHud()->SetVisibility(ESlateVisibility::Visible);
+		}
 	}
 }
 

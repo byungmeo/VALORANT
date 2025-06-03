@@ -293,6 +293,7 @@ void UMatchMapShopUI::HandleServerPurchaseResult(bool bSuccess, int32 ItemID, ES
 
 	if (bSuccess)
 	{
+		UpdateWeaponHighlights();
 		UpdateShopItemList(); // 아이템 목록 UI 갱신
 		// 크레딧 표시는 OnCreditChanged 델리게이트를 통해 자동으로 업데이트될 것이므로, 여기서 직접 호출할 필요는 없을 수 있음
 		// 필요하다면 RequestLatestCreditValue(); 호출 고려

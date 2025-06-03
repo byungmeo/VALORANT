@@ -19,6 +19,7 @@
 #include "Player/MatchPlayerState.h"
 #include "Player/Agent/BaseAgent.h"
 #include "Player/Component/CreditComponent.h"
+#include "Player/Widget/MiniMapWidget.h"
 #include "ValorantObject/Spike/Spike.h"
 #include "Weapon/BaseWeapon.h"
 
@@ -659,6 +660,9 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 	{
 		oldPawn->Destroy();
 	}
+
+	// ToDo 삭제!!!!
+	Agent->DevCameraMode(true);
 }
 
 // 체력 정상화, 어빌리티 상태 초기화

@@ -746,4 +746,7 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlaySound(USoundBase* SoundEffect);
+
+	UFUNCTION(Client, Reliable)
+	void DevCameraMode(bool bIsActive);
 };
