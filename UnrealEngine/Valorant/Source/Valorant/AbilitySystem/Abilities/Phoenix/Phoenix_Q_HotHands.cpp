@@ -94,7 +94,7 @@ void UPhoenix_Q_HotHands::SpawnFireOrb()
 	// 서버에서 3인칭 오브 생성 (모든 클라이언트에 자동 복제)
 	if (HasAuthority(&CurrentActivationInfo))
 	{
-		FVector HandLocation3P = OwnerAgent->GetMesh()->GetSocketLocation(FName("R_WeaponPoint"));
+		FVector HandLocation3P = OwnerAgent->GetMesh()->GetSocketLocation(FName("R_Hand"));
 		FRotator HandRotation = OwnerAgent->GetControlRotation();
 
 		FActorSpawnParameters SpawnParams3P;
@@ -113,7 +113,9 @@ void UPhoenix_Q_HotHands::SpawnFireOrb()
 			// 3인칭 메쉬에 부착
 			SpawnedFireOrb->AttachToComponent(OwnerAgent->GetMesh(),
 			                                  FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-			                                  FName("R_WeaponPoint"));
+			                                  FName("R_Hand"));
+			//SpawnedFireOrb->AddActorWorldOffset(FVector(-22.0f, -10.0f, 0.0f));
+			SpawnedFireOrb->SetActorRelativeLocation(FVector(-22.0f, -10.0f, 0.0f));
 		}
 	}
 

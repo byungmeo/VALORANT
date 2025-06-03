@@ -175,14 +175,14 @@ void AFlashProjectile::MulticastApplyFlashEffect_Implementation(float BlindDurat
     {
         TArray<AActor*> FoundActors;
         UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseAgent::StaticClass(), FoundActors);
-
+    
         for (AActor* Actor : FoundActors)
         {
             if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
             {
                 if (Agent->IsDead())
                     continue;
-
+    
                 BlindDuration = 0.0f;
                 if (IsPlayerInFlashRange(Agent, BlindDuration) && HasLineOfSight(Agent))
                 {

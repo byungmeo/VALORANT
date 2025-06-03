@@ -356,7 +356,6 @@ void ABaseAgent::BeginPlay()
 		}
 	}
 	
-	
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 	//             LCH             ♣
 	//ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
@@ -366,6 +365,7 @@ void ABaseAgent::BeginPlay()
 	{
 		FlashComponent->OnFlashIntensityChanged.AddDynamic(this, &ABaseAgent::OnFlashIntensityChanged);
 	}
+	
 }
 
 void ABaseAgent::Tick(float DeltaTime)
@@ -448,6 +448,7 @@ void ABaseAgent::BindToDelegatePC(AAgentPlayerController* pc)
 	pc->OnEffectSpeedChanged_PC.AddDynamic(this, &ABaseAgent::UpdateEffectSpeed);
 
 	PC = pc;
+	m_Hud = Cast<UMatchMapHUD>(pc->GetMatchMapHud());
 }
 
 void ABaseAgent::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -734,6 +735,7 @@ void ABaseAgent::AcquireInteractor(ABaseInteractor* Interactor)
 	if (spike)
 	{
 		Spike = spike;
+
 		Multicast_OnSpikeOwnChanged(true);
 		return;
 	}
@@ -1499,8 +1501,19 @@ void ABaseAgent::OnReload()
 void ABaseAgent::OnSpikeStartPlant()
 {
 	// NET_LOG(LogTemp,Warning,TEXT("baseAgent:: OnSpikeStartPlant"));
+
 	bCanMove = false;
 	OnSpikeActive.Broadcast();
+
+	if (PC != nullptr)
+	{
+		auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		if (hud)
+		{
+			hud->SetSpikeProgressTextToPlant();
+			hud->DisplaySpikeProgress();
+		}
+	}
 }
 
 void ABaseAgent::OnSpikeCancelInteract()
@@ -1521,6 +1534,28 @@ void ABaseAgent::OnSpikeCancelInteract()
 	else
 	{
 		EquipInteractor(MeleeKnife);
+	}
+
+	if (PC != nullptr)
+	{
+		auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		if (hud)
+		{
+			hud->HideSpikeProgress();
+		}
+	}
+}
+
+void ABaseAgent::OnSpikeProgressBarUpdate(const float ratio)
+{
+	//TODO: hud 멤버 변수로 변경
+	if (PC != nullptr)
+	{
+		auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		if (hud)
+		{
+			hud->OnSpikeProgressBarUpdate(ratio);
+		}
 	}
 }
 
@@ -1553,6 +1588,15 @@ void ABaseAgent::OnSpikeFinishPlant()
 	{
 		EquipInteractor(MeleeKnife);
 	}
+
+	if (PC != nullptr)
+	{
+		auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		if (hud)
+		{
+			hud->HideSpikeProgress();
+		}
+	}
 }
 
 void ABaseAgent::OnSpikeStartDefuse()
@@ -1561,6 +1605,16 @@ void ABaseAgent::OnSpikeStartDefuse()
 	
 	bCanMove = false;
 	OnSpikeDeactive.Broadcast();
+
+	if (PC != nullptr)
+	{
+		auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		if (hud)
+		{
+			hud->SetSpikeProgressTextToDefuse();
+			hud->DisplaySpikeProgress();
+		}
+	}
 }
 
 void ABaseAgent::OnSpikeFinishDefuse()
@@ -1581,6 +1635,15 @@ void ABaseAgent::OnSpikeFinishDefuse()
 	else
 	{
 		EquipInteractor(MeleeKnife);
+	}
+
+	if (PC != nullptr)
+	{
+		auto* hud = Cast<UMatchMapHUD>(PC->GetMatchMapHud());
+		if (hud)
+		{
+			hud->HideSpikeProgress();
+		}
 	}
 }
 

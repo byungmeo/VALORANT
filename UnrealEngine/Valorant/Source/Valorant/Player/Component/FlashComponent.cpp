@@ -138,7 +138,7 @@ void UFlashComponent::FlashEffect(float InBlindDuration, float InRecoveryDuratio
 
     // 델리게이트 호출 - 섬광 위치 정보도 함께 전달
     OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity, FlashLocation);
-    
+
     UE_LOG(LogTemp, Warning, TEXT("섬광 시작: 완전실명 %.1f초, 회복 %.1f초, 각도배율 %.2f, 타입: %d, 최소효과: %s"), 
            m_BlindDuration, m_RecoveryDuration, ViewAngleMultiplier, (int32)CurrentFlashType, bIsMinimumFlash ? TEXT("Yes") : TEXT("No"));
 }
