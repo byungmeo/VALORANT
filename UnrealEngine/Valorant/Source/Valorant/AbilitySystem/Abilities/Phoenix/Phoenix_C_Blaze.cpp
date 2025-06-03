@@ -71,10 +71,10 @@ bool UPhoenix_C_Blaze::SpawnBlazeProjectile(EBlazeMovementType MovementType)
     if (GetWorld()->LineTraceSingleByChannel(GroundHit, TraceStart, TraceEnd, 
         ECollisionChannel::ECC_WorldStatic))
     {
-        DrawDebugSphere(GetWorld(),SpawnLocation,20,20,FColor::Red,false, 1.f);
+        //DrawDebugSphere(GetWorld(),SpawnLocation,20,20,FColor::Red,false, 1.f);
         SpawnLocation = GroundHit.Location + FVector(0, 0, 10);  // 지면에서 약간 위
         //SpawnLocation = GroundHit.Location + FVector(0, 0, 100);  // 지면에서 약간 위
-        DrawDebugSphere(GetWorld(),SpawnLocation,20,20,FColor::Green,false, 1.f);
+       // DrawDebugSphere(GetWorld(),SpawnLocation,20,20,FColor::Green,false, 1.f);
     }
     
     FActorSpawnParameters SpawnParams;

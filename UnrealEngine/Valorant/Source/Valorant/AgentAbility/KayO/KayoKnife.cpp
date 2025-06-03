@@ -184,8 +184,8 @@ void AKayoKnife::CreateSuppressionZone()
 		
 		// 디버그 표시
 #if ENABLE_DRAW_DEBUG
-		DrawDebugSphere(GetWorld(), SpawnLocation, SuppressionRadius, 32, FColor::Purple, false, SuppressionDuration);
-		DrawDebugLine(GetWorld(), ImpactLocation, SpawnLocation, FColor::Purple, false, SuppressionDuration, 0, 2.0f);
+		//DrawDebugSphere(GetWorld(), SpawnLocation, SuppressionRadius, 32, FColor::Purple, false, SuppressionDuration);
+		//DrawDebugLine(GetWorld(), ImpactLocation, SpawnLocation, FColor::Purple, false, SuppressionDuration, 0, 2.0f);
 #endif
 	}
 	else

@@ -84,7 +84,7 @@ void AFlashProjectile::ExplodeFlash()
     // 디버그 표시
     if (GEngine && GEngine->GetNetMode(GetWorld()) != NM_DedicatedServer)
     {
-        DrawDebugSphere(GetWorld(), FlashLocation, FlashRadius, 16, FColor::Yellow, false, 5.0f);
+        //DrawDebugSphere(GetWorld(), FlashLocation, FlashRadius, 16, FColor::Yellow, false, 5.0f);
     }
 
     Destroy();
