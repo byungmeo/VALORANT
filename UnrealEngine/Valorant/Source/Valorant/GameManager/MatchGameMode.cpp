@@ -511,7 +511,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	{
 		//
 	}
-	else if (CurrentRound == TotalRound - 1)
+	else if (CurrentRound == ShiftRound - 1)
 	{
 		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::StartPreRound, EndPhaseTime);
 	}
