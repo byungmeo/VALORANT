@@ -131,7 +131,14 @@ void UBaseGameplayAbility::EnterState_Preparing()
     // 준비 VFX / SFX 재생
     if (HasAuthority(&CurrentActivationInfo))
     {
-        PlayCommonEffects(PrepareEffect, PrepareSound, FVector(0));
+        PlayCommonEffects(PrepareEffect, nullptr, FVector(0));
+    }
+    if (IsLocallyControlled())
+    {
+        if (PrepareSound)
+        {
+            UGameplayStatics::PlaySound2D(GetWorld(), PrepareSound);
+        }
     }
     
     // 준비 애니메이션 재생
@@ -178,7 +185,14 @@ void UBaseGameplayAbility::EnterState_Waiting()
     if (HasAuthority(&CurrentActivationInfo))
     {
         // 대기 VFX / SFX 재생
-        PlayCommonEffects(WaitEffect, WaitSound, FVector(0));
+        PlayCommonEffects(WaitEffect, nullptr, FVector(0));
+    }
+    if (IsLocallyControlled())
+    {
+        if (WaitSound)
+        {
+            UGameplayStatics::PlaySound2D(GetWorld(), WaitSound);
+        }
     }
     
     // 대기 애니메이션 재생 (루프)
