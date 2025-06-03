@@ -88,10 +88,13 @@ void UValorantGameInstance::Init()
 				UE_LOG(LogTemp, Warning, TEXT("UniquePlayerId : %s"), *UniquePlayerId->ToString());
 				UE_LOG(LogTemp, Warning, TEXT("Nickname : %s"), *Nickname);
 				UE_LOG(LogTemp, Warning, TEXT("LoginStatus : %s"), ELoginStatus::ToString(LoginStatus));
-				PlayerId = UniquePlayerId->ToString();
+				// PlayerId = UniquePlayerId->ToString();
+				PlayerId = Nickname;
 				Platform = SubsystemName.ToString();
 				OnGetPlayerCompletedDelegate.AddDynamic(this, &UValorantGameInstance::OnGetPlayerCompleted);
-				UDatabaseManager::GetInstance()->GetPlayer(UniquePlayerId->ToString(), SubsystemName.ToString(), OnGetPlayerCompletedDelegate);
+				// TODO: UniquePlayerId로 해야 함
+				// UDatabaseManager::GetInstance()->GetPlayer(UniquePlayerId->ToString(), SubsystemName.ToString(), OnGetPlayerCompletedDelegate);
+				UDatabaseManager::GetInstance()->GetPlayer(Nickname, SubsystemName.ToString(), OnGetPlayerCompletedDelegate);
 			}
 		}
 	}
