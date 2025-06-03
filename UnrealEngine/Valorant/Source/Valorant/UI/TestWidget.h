@@ -20,6 +20,7 @@ class VALORANT_API UTestWidget : public UUserWidget
 	UDatabaseManager* DatabaseManager = nullptr;
 	FOnGetMatchCompleted OnGetMatchCompletedDelegate;
 	FOnPostMatchCompleted OnPostMatchCompletedDelegate;
+	FOnGetPlayerMatchCompleted OnGetPlayerMatchCompletedDelegate;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -27,6 +28,8 @@ protected:
 	void OnGetMatchCompleted(const bool bIsSuccess, const FMatchDTO& MatchDto);
 	UFUNCTION()
 	void OnPostMatchCompleted(const bool bIsSuccess, const FMatchDTO& CreatedMatchDto);
+	UFUNCTION()
+	void OnGetPlayerMatchCompleted(const bool bIsSuccess, const FPlayerMatchDTO& PlayerMatchDto);
 	
 public:
 	UFUNCTION(BlueprintCallable)
@@ -46,4 +49,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void PutMatch();
+
+	UFUNCTION(BlueprintCallable)
+	void GetPlayerMatch();
+
+	UFUNCTION(BlueprintCallable)
+	void PostPlayerMatch();
 };

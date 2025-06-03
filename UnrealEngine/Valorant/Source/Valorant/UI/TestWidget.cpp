@@ -11,6 +11,7 @@ void UTestWidget::NativeConstruct()
 	DatabaseManager = UDatabaseManager::GetInstance();
 	OnGetMatchCompletedDelegate.AddDynamic(this, &ThisClass::OnGetMatchCompleted);
 	OnPostMatchCompletedDelegate.AddDynamic(this, &ThisClass::OnPostMatchCompleted);
+	OnGetPlayerMatchCompletedDelegate.AddDynamic(this, &ThisClass::OnGetPlayerMatchCompleted);
 }
 
 void UTestWidget::OnGetMatchCompleted(const bool bIsSuccess, const FMatchDTO& MatchDto)
@@ -30,6 +31,18 @@ void UTestWidget::OnPostMatchCompleted(const bool bIsSuccess, const FMatchDTO& C
 	if (bIsSuccess)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%hs Called, match_id: %d, start_timestamp: %s"), __FUNCTION__, CreatedMatchDto.match_id, *CreatedMatchDto.start_timestamp);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%hs Called, Failed"), __FUNCTION__);
+	}
+}
+
+void UTestWidget::OnGetPlayerMatchCompleted(const bool bIsSuccess, const FPlayerMatchDTO& PlayerMatchDto)
+{
+	if (bIsSuccess)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%hs Called, player_id: %s, match_id: %d"), __FUNCTION__, *PlayerMatchDto.player_id, PlayerMatchDto.match_id);
 	}
 	else
 	{
@@ -66,4 +79,17 @@ void UTestWidget::PutMatch()
 	MatchDto.blue_score = 100;
 	MatchDto.red_score = 200;
 	DatabaseManager->PutMatch(2, MatchDto);
+}
+
+void UTestWidget::GetPlayerMatch()
+{
+	DatabaseManager->GetPlayerMatch(TEXT("test"), 3, OnGetPlayerMatchCompletedDelegate);
+}
+
+void UTestWidget::PostPlayerMatch()
+{
+	FPlayerMatchDTO PlayerMatchDto;
+	PlayerMatchDto.player_id = TEXT("unreal");
+	PlayerMatchDto.match_id = 999;
+	DatabaseManager->PostPlayerMatch(PlayerMatchDto);
 }

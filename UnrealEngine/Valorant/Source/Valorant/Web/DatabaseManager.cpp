@@ -153,3 +153,58 @@ void UDatabaseManager::PutMatch(const int MatchId, const FMatchDTO& MatchDto)
 	
 	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + FString::Printf(TEXT("match/%d"), MatchId), TEXT("PUT"), JsonString);
 }
+
+void UDatabaseManager::GetPlayerMatch(const FString& PlayerId, const int MatchId, const FOnGetPlayerMatchCompleted& Callback)
+{
+	TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
+	Json->SetStringField(TEXT("player_id"), PlayerId);
+	Json->SetNumberField(TEXT("match_id"), MatchId);
+	FString q;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&q);
+	FJsonSerializer::Serialize(Json.ToSharedRef(), Writer);
+	UE_LOG(LogTemp, Warning, TEXT("q: %s"), *q);
+
+	FHttpQuery Query;
+	Query.AddQuery("q", q);
+	const FString& Url = Query.AppendToURL(DatabaseUrl + TEXT("player_match/"));
+	UE_LOG(LogTemp, Warning, TEXT("Url: %s"), *Url);
+	
+	UHttpManager::GetInstance()->SendRequest(Url, TEXT("GET"), TEXT(""),
+	[=](const FHttpResponsePtr& Response, const bool bSuccess)
+	{
+		if (!bSuccess || !Response.IsValid()) {
+			Callback.Broadcast(false, FPlayerMatchDTO());
+			return;
+		}
+
+		TSharedPtr<FJsonObject> ResponseJson;
+		const FString ResponseBody = Response->GetContentAsString();
+		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseBody);
+		UE_LOG(LogTemp, Warning, TEXT("ResponseBody: %s"), *ResponseBody);
+		if (FJsonSerializer::Deserialize(Reader, ResponseJson) && ResponseJson.IsValid())
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Items;
+			if (ResponseJson->TryGetArrayField(TEXT("items"), Items) && Items && Items->Num() > 0)
+			{
+				const TSharedPtr<FJsonObject> ItemObj = (*Items)[0]->AsObject();
+				if (ItemObj.IsValid())
+				{
+					FPlayerMatchDTO PlayerMatchDto;
+					if (FJsonObjectConverter::JsonObjectToUStruct(ItemObj.ToSharedRef(), FPlayerMatchDTO::StaticStruct(), &PlayerMatchDto))
+					{
+						Callback.Broadcast(bSuccess, PlayerMatchDto);
+						return;
+					}
+				}
+			}
+			Callback.Broadcast(false, FPlayerMatchDTO());
+		}
+	});
+}
+
+void UDatabaseManager::PostPlayerMatch(const FPlayerMatchDTO& PlayerMatchDto)
+{
+	FString JsonString;
+	FJsonObjectConverter::UStructToJsonObjectString(PlayerMatchDto, JsonString);
+	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + TEXT("player_match/"), TEXT("POST"), JsonString);
+}

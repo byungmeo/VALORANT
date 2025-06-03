@@ -37,7 +37,7 @@ struct FMatchDTO
  *	특정 Player가 특정 Match에서 기록한 전적
  */
 USTRUCT(BlueprintType)
-struct FMatchPlayerDTO
+struct FPlayerMatchDTO
 {
 	GENERATED_BODY()
 
@@ -60,6 +60,7 @@ struct FMatchPlayerDTO
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGetPlayerCompleted, const bool, bIsSuccess, const FPlayerDTO&, PlayerDto);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGetMatchCompleted, const bool, bIsSuccess, const FMatchDTO&, MatchDto);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPostMatchCompleted, const bool, bIsSuccess, const FMatchDTO&, CreatedMatchDto);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGetPlayerMatchCompleted, const bool, bIsSuccess, const FPlayerMatchDTO&, PlayerMatchDto);
 
 /**
  * 
@@ -87,4 +88,10 @@ public:
 	void GetMatch(int MatchId, const FOnGetMatchCompleted& Callback);
 	void PostMatch(const FOnPostMatchCompleted& Callback);
 	void PutMatch(const int MatchId, const FMatchDTO& MatchDto);
+
+	/*
+	 *	PLAYER_MATCH
+	 */
+	void GetPlayerMatch(const FString& PlayerId, const int MatchId, const FOnGetPlayerMatchCompleted& Callback);
+	void PostPlayerMatch(const FPlayerMatchDTO& PlayerMatchDto);
 };
