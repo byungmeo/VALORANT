@@ -27,7 +27,8 @@ private:
 	const float UnequipTime = 0.25f;
 	const float MaximumAirTime = 2.0f;
 	FTimerHandle AirTimeHandle;
-	const float Radius = 335;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Projectile, meta = (AllowPrivateAccess = "true"))
+	float Radius = 335;
 	const float Duration = 2.5f;
 	FTimerHandle DurationTimerHandle;
 
