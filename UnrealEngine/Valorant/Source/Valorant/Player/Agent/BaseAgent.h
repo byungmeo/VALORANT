@@ -605,6 +605,9 @@ protected:
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
 
+	/**데미지가 무기에 의한 것인지 판별하기 위함*/
+	bool IsGunDamage() const;
+
 private:
 	// ToDo : 수정
 	UPROPERTY(Replicated)
