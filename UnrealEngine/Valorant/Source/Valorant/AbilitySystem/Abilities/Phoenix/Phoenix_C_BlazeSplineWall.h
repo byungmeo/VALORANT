@@ -34,7 +34,14 @@ public:
     float DamagePerSecond = 30.0f;
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
-    float HealPerSecond = 12.5f;
+    float HealPerSecond = 6.25f;
+    
+    // 충돌 범위 설정
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
+    float FlashRangeMultiplier = 1.0f;  // 섬광 효과 범위 (기본 벽 두께)
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
+    float DamageRangeMultiplier = 2.0f;  // 데미지/힐 효과 범위 (벽 두께의 2배)
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Wall Config")
     UStaticMesh* WallMesh;
@@ -69,13 +76,22 @@ private:
     UPROPERTY()
     TArray<USplineMeshComponent*> SplineMeshComponents;
     
+    // 두 가지 충돌 범위를 위한 컴포넌트들
     UPROPERTY()
-    TArray<UBoxComponent*> CollisionComponents;
+    TArray<UBoxComponent*> FlashCollisionComponents;  // 섬광 효과용 (가까운 범위)
     
     UPROPERTY()
-    TSet<ABaseAgent*> OverlappedAgents;
+    TArray<UBoxComponent*> DamageCollisionComponents;  // 데미지/힐용 (넓은 범위)
+    
+    // 각 범위에 있는 에이전트들 추적
+    UPROPERTY()
+    TSet<ABaseAgent*> FlashOverlappedAgents;
+    
+    UPROPERTY()
+    TSet<ABaseAgent*> DamageOverlappedAgents;
     
     FTimerHandle DamageTimerHandle;
+    FTimerHandle FlashTimerHandle;
     FTimerHandle DurationTimerHandle;
     
     float EffectApplicationInterval = 0.25f;
@@ -85,17 +101,27 @@ private:
     // 스플라인 메시 업데이트
     void UpdateSplineMesh();
     
-    // 충돌 처리
+    // 섬광 충돌 처리
     UFUNCTION()
-    void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+    void OnFlashBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
     
     UFUNCTION()
-    void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+    void OnFlashEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
     
-    void ApplyGameEffect();
+    // 데미지 충돌 처리
+    UFUNCTION()
+    void OnDamageBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+        UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+    
+    UFUNCTION()
+    void OnDamageEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+        UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+    
+    void ApplyDamageEffect();
+    void ApplyFlashEffect();
     void OnElapsedDuration();
-    bool IsPhoenixOrAlly(AActor* Actor) const;
+    bool IsPhoenixSelf(AActor* Actor) const;
     void CalculateTickValues();
 };
