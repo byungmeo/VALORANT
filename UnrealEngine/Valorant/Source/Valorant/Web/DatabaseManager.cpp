@@ -76,3 +76,80 @@ void UDatabaseManager::PostPlayer(const FString& PlayerId, const FString& Platfo
 	FJsonObjectConverter::UStructToJsonObjectString(PlayerDto, JsonString);
 	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + TEXT("player/"), TEXT("POST"), JsonString);
 }
+
+void UDatabaseManager::GetMatch(const int MatchId, const FOnGetMatchCompleted& Callback)
+{
+	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + FString::Printf(TEXT("match/%d"), MatchId), TEXT("GET"), "",
+	[=](const FHttpResponsePtr& Response, const bool bSuccess)
+	{
+		if (!bSuccess || !Response.IsValid()) {
+			Callback.Broadcast(false, FMatchDTO());
+			return;
+		}
+
+		TSharedPtr<FJsonObject> ResponseJson;
+		const FString ResponseBody = Response->GetContentAsString();
+		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseBody);
+
+		if (FJsonSerializer::Deserialize(Reader, ResponseJson) && ResponseJson.IsValid())
+		{
+			FMatchDTO MatchDto;
+			FJsonObjectConverter::JsonObjectToUStruct(ResponseJson.ToSharedRef(), FMatchDTO::StaticStruct(), &MatchDto);
+			Callback.Broadcast(bSuccess, MatchDto);
+		}
+		else
+		{
+			Callback.Broadcast(false, FMatchDTO());
+		}
+	});
+}
+
+void UDatabaseManager::PostMatch(const FOnPostMatchCompleted& Callback)
+{
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+	JsonObject->SetNumberField("map_id", 0);
+	JsonObject->SetNumberField("blue_score", 0);
+	JsonObject->SetNumberField("red_score", 0);
+
+	FString JsonString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+	
+	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + TEXT("match/"), TEXT("POST"), JsonString,
+	[=](const FHttpResponsePtr& Response, const bool bSuccess)
+	{
+		if (!bSuccess || !Response.IsValid()) {
+			Callback.Broadcast(false, FMatchDTO());
+			return;
+		}
+
+		TSharedPtr<FJsonObject> ResponseJson;
+		const FString ResponseBody = Response->GetContentAsString();
+		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseBody);
+
+		if (FJsonSerializer::Deserialize(Reader, ResponseJson) && ResponseJson.IsValid())
+		{
+			FMatchDTO MatchDto;
+			FJsonObjectConverter::JsonObjectToUStruct(ResponseJson.ToSharedRef(), FMatchDTO::StaticStruct(), &MatchDto);
+			Callback.Broadcast(bSuccess, MatchDto);
+		}
+		else
+		{
+			Callback.Broadcast(false, FMatchDTO());
+		}
+	});
+}
+
+void UDatabaseManager::PutMatch(const int MatchId, const FMatchDTO& MatchDto)
+{
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+	JsonObject->SetNumberField("map_id", MatchDto.map_id);
+	JsonObject->SetNumberField("blue_score", MatchDto.blue_score);
+	JsonObject->SetNumberField("red_score", MatchDto.red_score);
+
+	FString JsonString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+	
+	UHttpManager::GetInstance()->SendRequest(DatabaseUrl + FString::Printf(TEXT("match/%d"), MatchId), TEXT("PUT"), JsonString);
+}
