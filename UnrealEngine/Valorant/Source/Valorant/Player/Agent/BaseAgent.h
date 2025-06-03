@@ -8,6 +8,8 @@
 #include "AbilitySystem/ValorantGameplayTags.h"
 #include "BaseAgent.generated.h"
 
+class UMatchMapHUD;
+class USpikeWidget;
 class AMatchGameMode;
 struct FKillFeedInfo;
 enum class EKillFeedReason : uint8;
@@ -192,6 +194,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void BindToDelegatePC(AAgentPlayerController* pc);
+
+	UFUNCTION(BlueprintCallable)
+	AAgentPlayerController* GetPC() const { return PC; }
 
 	UFUNCTION(BlueprintCallable)
 	UAgentAbilitySystemComponent* GetASC() const { return ASC.Get(); }
@@ -472,6 +477,9 @@ protected:
 
 	FAgentData* m_AgentData = nullptr;
 
+	UPROPERTY()
+	UMatchMapHUD* m_Hud = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAgentAnimInstance* ABP_1P = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -642,9 +650,10 @@ public:
 	
 	void OnSpikeStartDefuse();
 	void OnSpikeFinishDefuse();
-	// void OnSpikeCancelDefuse();
 	
 	void OnSpikeCancelInteract();
+
+	void OnSpikeProgressBarUpdate(const float ratio);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_OnSpikeOwnChanged(bool bOwnSpike);

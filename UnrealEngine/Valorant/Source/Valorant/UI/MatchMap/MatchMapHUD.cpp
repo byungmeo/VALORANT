@@ -255,7 +255,7 @@ void UMatchMapHUD::BindToDelegatePC(UAgentAbilitySystemComponent* asc, AAgentPla
 	pc->OnHealthChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayHealth);
 	pc->OnArmorChanged_PC.AddDynamic(this, &UMatchMapHUD::UpdateDisplayArmor);
 	pc->OnChangedAmmo.AddDynamic(this, &UMatchMapHUD::UpdateAmmo);
-	pc->GetCacehdASC()->RegisterGameplayTagEvent(FValorantGameplayTags::Get().State_Debuff_Suppressed).AddUObject(this, &UMatchMapHUD::OnSuppressed);
+	pc->GetCacehdASC()->RegisterGameplayTagEvent(FValorantGameplayTags::Get().State_Debuff_Suppressed,EGameplayTagEventType::NewOrRemoved).AddUObject(this, &UMatchMapHUD::OnSuppressed);
 
 	if (asc == nullptr)
 	{

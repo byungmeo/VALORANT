@@ -6,6 +6,8 @@
 #include "ValorantObject/BaseInteractor.h"
 #include "Spike.generated.h"
 
+class UMatchMapHUD;
+class USpikeWidget;
 class ABaseAgent;
 class AMatchGameState;
 UENUM(BlueprintType)
@@ -111,6 +113,8 @@ protected:
 	UPROPERTY()
 	AMatchGameState* CachedGameState = nullptr;
 
+	UPROPERTY(Replicated)
+	UMatchMapHUD* Hud = nullptr; 
 
 public:
 	virtual void ServerRPC_PickUp_Implementation(ABaseAgent* Agent) override;
@@ -250,4 +254,11 @@ protected:
 	void MulticastRPC_AgentStartDefuse(ABaseAgent* Agent);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPC_AgentFinishDefuse(ABaseAgent* Agent);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_Progress(const float interat, const float finishTime);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_SetSpikeTextPlant();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_SetSpikeTextDefuse();
 };

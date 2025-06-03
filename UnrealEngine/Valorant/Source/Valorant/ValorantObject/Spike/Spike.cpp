@@ -2,6 +2,7 @@
 
 #include "Spike.h"
 
+#include "Valorant.h"
 #include "Components/AudioComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
@@ -11,8 +12,11 @@
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameManager/MatchGameState.h"
+#include "GameManager/SubsystemSteamManager.h"
+#include "Player/AgentPlayerController.h"
 #include "Player/AgentPlayerState.h"
 #include "Player/MatchPlayerController.h"
+#include "UI/MatchMap/MatchMapHUD.h"
 #include "Weapon/ThirdPersonInteractor.h"
 
 
@@ -66,7 +70,8 @@ void ASpike::Tick(float DeltaTime)
 			}
 
 			InteractProgress += DeltaTime;
-			// AddActorWorldOffset(FVector(0, 0, 12.66f) * DeltaTime);
+			MulticastRPC_Progress(InteractProgress, PlantTime);
+			
 			if (InteractProgress >= PlantTime)
 			{
 				ServerRPC_FinishPlanting();
@@ -83,7 +88,7 @@ void ASpike::Tick(float DeltaTime)
 			}
 
 			InteractProgress += DeltaTime;
-			AddActorWorldOffset(FVector(0, 0, -7.14f) * DeltaTime);
+			MulticastRPC_Progress(InteractProgress, DefuseTime);
 
 			// 반 해제 체크
 			if (!bIsHalfDefused && InteractProgress >= HalfDefuseTime)
@@ -110,6 +115,7 @@ void ASpike::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimePr
 	DOREPLIFETIME(ASpike, InteractingAgent);
 	DOREPLIFETIME(ASpike, bIsHalfDefused);
 	DOREPLIFETIME(ASpike, LastDefusingAgent);
+	DOREPLIFETIME(ASpike, Hud);
 }
 
 void ASpike::OnRep_SpikeState()
@@ -179,6 +185,9 @@ void ASpike::ServerRPC_PickUp_Implementation(ABaseAgent* Agent)
 	// 스파이크 Mesh 숨기기
 	SetActive(false);
 	Agent->AcquireInteractor(this);
+
+	Hud = Cast<UMatchMapHUD>(Agent->GetPC()->GetMatchMapHud());
+	MulticastRPC_SetSpikeTextPlant();
 }
 
 void ASpike::ServerRPC_Drop_Implementation()
@@ -189,6 +198,8 @@ void ASpike::ServerRPC_Drop_Implementation()
 	}
 	OwnerAgent->ResetOwnSpike();
 	OwnerAgent->Multicast_OnSpikeOwnChanged(false);
+
+	Hud = nullptr;
 	
 	Super::ServerRPC_Drop_Implementation();
 
@@ -350,7 +361,6 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 	InteractProgress = 0.0f;
 	RemainingDetonationTime = 45.0f; // 폭발까지 45초
 	
-	
 	// 게임 모드에 설치 완료 알림
 	AMatchGameMode* GameMode = Cast<AMatchGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (GameMode)
@@ -390,6 +400,8 @@ void ASpike::ServerRPC_FinishPlanting_Implementation()
 
 	// 설치 완료 이벤트 발생
 	MulticastRPC_OnPlantingFinished();
+
+	Hud = nullptr;
 }
 
 void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
@@ -414,6 +426,9 @@ void ASpike::ServerRPC_StartDefusing_Implementation(ABaseAgent* Agent)
 	SpikeState = ESpikeState::Defusing;
 	InteractingAgent = Agent;
 
+	Hud = Cast<UMatchMapHUD>(Agent->GetPC()->GetMatchMapHud());
+	MulticastRPC_SetSpikeTextDefuse();
+	
 	// 에이전트에 해체 시작 알림
 	MulticastRPC_AgentStartDefuse(InteractingAgent);
 
@@ -446,6 +461,8 @@ void ASpike::ServerRPC_CancelDefusing_Implementation()
 
 	// 해제 취소 이벤트 발생
 	MulticastRPC_OnDefusingCancelled();
+
+	Hud = nullptr;
 }
 
 void ASpike::ServerRPC_FinishDefusing_Implementation()
@@ -485,6 +502,8 @@ void ASpike::ServerRPC_FinishDefusing_Implementation()
 
 	// 해제 완료 이벤트 발생
 	MulticastRPC_OnDefusingFinished();
+
+	Hud = nullptr;
 }
 
 void ASpike::ServerRPC_Detonate_Implementation()
@@ -513,6 +532,7 @@ void ASpike::CheckHalfDefuse()
 		LastDefusingAgent = InteractingAgent;
 	}
 }
+
 
 bool ASpike::ServerOnly_CanAutoPickUp(ABaseAgent* Agent) const
 {
@@ -585,18 +605,32 @@ bool ASpike::IsGameStateInRound() const
 void ASpike::MulticastRPC_OnPlantingStarted_Implementation()
 {
 	// 설치 시작 효과 (사운드, 애니메이션 등)
+	if (Hud)
+	{
+		Hud->DisplaySpikeProgress();
+	}
 	HandlePlantingStarted();
 }
 
 void ASpike::MulticastRPC_OnPlantingCancelled_Implementation()
 {
 	// 설치 취소 효과
+	if (Hud)
+	{
+		Hud->HideSpikeProgress();
+	}
 	HandlePlantingCancelled();
 }
 
 void ASpike::MulticastRPC_OnPlantingFinished_Implementation()
 {
 	// 설치 완료 효과
+	if (Hud)
+	{
+		Hud->HideSpikeProgress();
+		Hud->ResetSpikeProgressBar();
+	}
+	
 	HandlePlantingFinished();
 	PlayBeepSound();
 	GetWorldTimerManager().SetTimer(BeepTimerHandle,this,&ASpike::PlayBeepSound, BeepTimeRange_Calm, true);
@@ -606,6 +640,10 @@ void ASpike::MulticastRPC_OnPlantingFinished_Implementation()
 void ASpike::MulticastRPC_OnDefusingStarted_Implementation(bool bHalfDefuse)
 {
 	// 해제 시작 효과
+	if (Hud)
+	{
+		Hud->DisplaySpikeProgress();
+	}
 	HandleDefusingStarted();
 	// bHalfDefuse가 true인 경우 반 해제 상태임을 표시
 }
@@ -613,12 +651,22 @@ void ASpike::MulticastRPC_OnDefusingStarted_Implementation(bool bHalfDefuse)
 void ASpike::MulticastRPC_OnDefusingCancelled_Implementation()
 {
 	// 해제 취소 효과
+	if (Hud)
+	{
+		Hud->HideSpikeProgress();
+	}
 	HandleDefusingCancelled();
 }
 
 void ASpike::MulticastRPC_OnDefusingFinished_Implementation()
 {
 	// 해제 완료 효과
+	if (Hud)
+	{
+		Hud->HideSpikeProgress();
+		Hud->ResetSpikeProgressBar();
+	}
+	
 	GetWorldTimerManager().ClearTimer(BeepTimerHandle);
 	if (BeepAudioComp->IsPlaying())
 	{
@@ -713,4 +761,28 @@ void ASpike::MulticastRPC_AgentStartDefuse_Implementation(ABaseAgent* Agent)
 void ASpike::MulticastRPC_AgentFinishDefuse_Implementation(ABaseAgent* Agent)
 {
 	Agent->OnSpikeFinishDefuse();
+}
+
+void ASpike::MulticastRPC_Progress_Implementation(const float interat, const float finishTime)
+{
+	if (InteractingAgent)
+	{
+		InteractingAgent->OnSpikeProgressBarUpdate(FMath::Clamp(interat / finishTime, 0.0f, 1.0f));
+	}
+}
+
+void ASpike::MulticastRPC_SetSpikeTextPlant_Implementation()
+{
+	if (Hud)
+	{
+		Hud->SetSpikeProgressTextToPlant();
+	}
+}
+
+void ASpike::MulticastRPC_SetSpikeTextDefuse_Implementation()
+{
+	if (Hud)
+	{
+		Hud->SetSpikeProgressTextToPlant();
+	}
 }

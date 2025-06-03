@@ -251,6 +251,23 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSuppressed(FGameplayTag GameplayTag, int num);
+
+	// 스파이크 설치 및 해제
+	UFUNCTION(BlueprintImplementableEvent)
+	void DisplaySpikeProgress();
+	UFUNCTION(BlueprintImplementableEvent)
+	void HideSpikeProgress();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSpikeProgressBarUpdate(const float ratio);
+	UFUNCTION(BlueprintImplementableEvent)
+	void ResetSpikeProgressBar();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetSpikeProgressTextToPlant();
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetSpikeProgressTextToDefuse();
+	
 	
 public:
 	UPROPERTY(meta=(BindWidget))
