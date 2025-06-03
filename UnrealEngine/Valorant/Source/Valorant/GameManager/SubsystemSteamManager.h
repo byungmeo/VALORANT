@@ -45,9 +45,9 @@ public:
 	void FindSessions();
 	void JoinSession(const FOnlineSessionSearchResult& SessionResult);
 	void DestroySession();
-
+	
 	UFUNCTION(BlueprintPure, Category = "OSS")
-	static FString GetDisplayName(const UObject* WorldContextObj, int LocalUserNum = 0);
+	static FString GetDisplayName(const UObject* WorldContextObj, int LocalUserNum = 0, bool bShort = true);
 	
 	// SessionName에 해당하는 NamedOnlineSession 반환
 	static FNamedOnlineSession* GetNamedOnlineSession(FName SessionName = NAME_GameSession);

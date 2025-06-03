@@ -42,7 +42,7 @@ public:
 	UUserWidget* GetMatchMapHud() const { return Hud; }
 	void SetGameMode(AMatchGameMode* MatchGameMode);
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_NotifyBeginPlay(const FString& Name);
+	void ServerRPC_NotifyBeginPlay(const FString& Name, const FString& RealName);
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_ShowSelectUI(const TArray<FString>& NewTeamPlayerNameArray);
 	UFUNCTION(Client, Reliable)
