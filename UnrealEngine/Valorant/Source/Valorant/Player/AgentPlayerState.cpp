@@ -32,12 +32,6 @@ AAgentPlayerState::AAgentPlayerState()
 	SetMinNetUpdateFrequency(33.f);
 }
 
-void AAgentPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AAgentPlayerState, m_AgentID);
-}
-
 int32 AAgentPlayerState::GetAbilityStack(int32 AbilityID) const
 {
 	const int32* Stack = AbilityStacks.Find(AbilityID);
@@ -209,18 +203,15 @@ UBaseAttributeSet* AAgentPlayerState::GetBaseAttributeSet() const
 	return BaseAttributeSet;
 }
 
-void AAgentPlayerState::SetAgentID(int32 NewAgentID)
-{
-	m_AgentID = NewAgentID;
-}
-
 int32 AAgentPlayerState::GetAgentID() const
 {
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, m_AgentID);
 	return m_AgentID;
 }
 
-void AAgentPlayerState::SyncsAgentID_Implementation(int AgentID)
+void AAgentPlayerState::MulticastRPC_SetAgentID_Implementation(int AgentID)
 {
+	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentId: %d"), __FUNCTION__, AgentID);
 	m_AgentID = AgentID;
 }
 
