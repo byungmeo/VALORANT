@@ -77,10 +77,10 @@ void UMatchMapShopUI::InitializeShopUI(AAgentPlayerController* Controller)
 	// 상점 컴포넌트의 무기 장착 변경 이벤트에 연결
 	if (Controller && Controller->ShopComponent)
 	{
-		Controller->ShopComponent->OnEquippedWeaponsChanged.AddDynamic(this, &UMatchMapShopUI::UpdateWeaponHighlights);
+		Controller->ShopComponent->OnEquippedWeaponsChanged.AddDynamic(this, &UMatchMapShopUI::Client_UpdateWeaponHighlight);
 
 		// 초기 하이라이트 상태 업데이트
-		UpdateWeaponHighlights();
+		Client_UpdateWeaponHighlight();
 	}
 
 	// 서버로부터 오는 구매 결과 델리게이트에 바인딩
@@ -245,6 +245,11 @@ void UMatchMapShopUI::OnClickedBuyShiledButton(const int ShieldId)
 	OwnerController->RequestPurchaseArmor(ShieldId);
 }
 
+void UMatchMapShopUI::Client_UpdateWeaponHighlight_Implementation()
+{
+	UpdateWeaponHighlights();
+}
+
 void UMatchMapShopUI::UpdateShopItemList()
 {
 	if (!OwnerController)
@@ -293,7 +298,7 @@ void UMatchMapShopUI::HandleServerPurchaseResult(bool bSuccess, int32 ItemID, ES
 
 	if (bSuccess)
 	{
-		UpdateWeaponHighlights();
+		Client_UpdateWeaponHighlight();
 		UpdateShopItemList(); // 아이템 목록 UI 갱신
 		// 크레딧 표시는 OnCreditChanged 델리게이트를 통해 자동으로 업데이트될 것이므로, 여기서 직접 호출할 필요는 없을 수 있음
 		// 필요하다면 RequestLatestCreditValue(); 호출 고려
@@ -342,11 +347,22 @@ void UMatchMapShopUI::UpdateWeaponHighlights()
 		return;
 	}
 
-	// 현재 장착 중인 무기 ID 가져오기
-	EquippedWeaponIDs = OwnerController->ShopComponent->GetEquippedWeaponIDs();
+	// Replicate 동기화를 위해 잠시뒤 처리
+	FTimerHandle TimerHandle;
+	TWeakObjectPtr<UMatchMapShopUI> WeakThis = this;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [WeakThis]()
+	{
+		UMatchMapShopUI* StrongThis = WeakThis.Get();
+		if (StrongThis)
+		{
+			// 현재 장착 중인 무기 ID 가져오기
+			StrongThis->EquippedWeaponIDs = StrongThis->OwnerController->ShopComponent->GetEquippedWeaponIDs();
 
-	// Blueprint에서 구현할 UI 업데이트 이벤트 호출
-	OnWeaponHighlightUpdated();
+			// Blueprint에서 구현할 UI 업데이트 이벤트 호출
+			StrongThis->OnWeaponHighlightUpdated();
+		}
+	}
+	, 0.1f, false);
 }
 
 bool UMatchMapShopUI::IsWeaponEquipped(int32 WeaponID) const

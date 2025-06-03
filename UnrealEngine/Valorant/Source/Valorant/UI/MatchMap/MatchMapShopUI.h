@@ -83,6 +83,9 @@ public:
 	void OnClickedBuyShiledButton(const int ShieldId);
 
 	// 무기 목록 갱신 및 보유 중인 무기 하이라이트
+	UFUNCTION(Client, Reliable)
+	void Client_UpdateWeaponHighlight();
+	
 	UFUNCTION(BlueprintCallable)
 	void UpdateWeaponHighlights();
 
