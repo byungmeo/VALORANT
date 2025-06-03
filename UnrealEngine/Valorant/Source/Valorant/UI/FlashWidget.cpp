@@ -58,40 +58,53 @@ void UFlashWidget::UpdateFlashIntensity(float Intensity, FVector FlashWorldLocat
 	float PreviousIntensity = CurrentFlashIntensity;
 	CurrentFlashIntensity = FMath::Clamp(Intensity, 0.0f, 1.0f);
     
+	// 페이드 효과 적용 (발로란트 스타일)
+	float FadeIntensity = CalculateFadeIntensity(CurrentFlashIntensity);
+	
 	if (FlashOverlay)
 	{
-		// 전체 화면 오버레이 투명도 설정
-		FlashOverlay->SetRenderOpacity(CurrentFlashIntensity);
+		// 전체 화면 오버레이 투명도 설정 (페이드 효과 적용)
+		FlashOverlay->SetRenderOpacity(FadeIntensity);
 		FlashOverlay->SetColorAndOpacity(CurrentFlashColor);
 	}
 
 	// 방사형 효과 처리
 	if (RadialFlashImage)
 	{
-		// 새로운 섬광이 시작될 때만 위치 계산 (이전 강도가 0이고 현재 강도가 0보다 클 때)
+		// 새로운 섬광이 시작될 때 월드 위치 저장
 		if (PreviousIntensity <= 0.01f && CurrentFlashIntensity > 0.01f && !FlashWorldLocation.IsZero())
 		{
-			// 월드 좌표를 화면 좌표로 변환
-			FixedFlashScreenPosition = ConvertWorldToScreenPosition(FlashWorldLocation);
-			bFlashPositionFixed = true;
+			StoredFlashWorldLocation = FlashWorldLocation;
+			bHasStoredWorldLocation = true;
+
+			// 저장된 월드 위치를 현재 카메라 기준으로 화면 좌표로 변환
+			FixedFlashScreenPosition = ConvertWorldToScreenPosition(StoredFlashWorldLocation);
+			 
 			
-			UE_LOG(LogTemp, Warning, TEXT("섬광 위치 고정: X=%.2f, Y=%.2f"), FixedFlashScreenPosition.X, FixedFlashScreenPosition.Y);
+			UE_LOG(LogTemp, Warning, TEXT("섬광 월드 위치 저장: %s"), *StoredFlashWorldLocation.ToString());
 		}
 		
-		// 고정된 위치가 있으면 그 위치 사용
-		if (bFlashPositionFixed)
+		// 섬광 효과가 진행 중일 때
+		if (CurrentFlashIntensity > 0.01f && bHasStoredWorldLocation)
 		{
-			// 방사형 이미지 위치 업데이트
 			UpdateRadialImagePosition(FixedFlashScreenPosition);
 			
-			// 방사형 이미지 투명도 설정 (전체 오버레이보다 약간 더 강하게)
-			float RadialOpacity = FMath::Min(CurrentFlashIntensity * 1.2f, 1.0f);
+			// 방사형 이미지 투명도 설정 (페이드 효과 적용)
+			float RadialOpacity = FMath::Min(FadeIntensity * 1.2f, 1.0f); // 방사형은 약간 더 강하게
 			RadialFlashImage->SetRenderOpacity(RadialOpacity);
 			RadialFlashImage->SetColorAndOpacity(CurrentFlashColor);
 		}
-		else
+		else if (CurrentFlashIntensity <= 0.01f)
 		{
-			// 위치 정보가 없으면 화면 중앙에 배치
+			// 섬광이 끝났을 때 초기화
+			if (bHasStoredWorldLocation)
+			{
+				bHasStoredWorldLocation = false;
+				StoredFlashWorldLocation = FVector::ZeroVector;
+				UE_LOG(LogTemp, Warning, TEXT("섬광 위치 초기화"));
+			}
+			
+			// 화면 중앙으로 리셋
 			if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(RadialFlashImage->Slot))
 			{
 				CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
@@ -99,16 +112,7 @@ void UFlashWidget::UpdateFlashIntensity(float Intensity, FVector FlashWorldLocat
 				CanvasSlot->SetAnchors(FAnchors(0.5f, 0.5f));
 			}
 			
-			RadialFlashImage->SetRenderOpacity(CurrentFlashIntensity);
-			RadialFlashImage->SetColorAndOpacity(CurrentFlashColor);
-		}
-		
-		// 섬광이 완전히 끝났을 때 위치 초기화
-		if (CurrentFlashIntensity <= 0.01f && bFlashPositionFixed)
-		{
-			bFlashPositionFixed = false;
-			FixedFlashScreenPosition = FVector2D::ZeroVector;
-			UE_LOG(LogTemp, Warning, TEXT("섬광 위치 초기화"));
+			RadialFlashImage->SetRenderOpacity(0.0f);
 		}
 	}
 }
@@ -116,10 +120,6 @@ void UFlashWidget::UpdateFlashIntensity(float Intensity, FVector FlashWorldLocat
 void UFlashWidget::StartFlashEffect(float Duration, EFlashType FlashType)
 {
 	SetVisibility(ESlateVisibility::HitTestInvisible);
-	
-	// 새로운 섬광 시작 시 위치 고정 초기화
-	bFlashPositionFixed = false;
-	FixedFlashScreenPosition = FVector2D::ZeroVector;
 	
 	// 섬광 타입 설정
 	SetFlashType(FlashType);
@@ -139,9 +139,9 @@ void UFlashWidget::StopFlashEffect()
 		RadialFlashImage->SetRenderOpacity(0.0f);
 	}
 	
-	// 고정된 위치 초기화
-	bFlashPositionFixed = false;
-	FixedFlashScreenPosition = FVector2D::ZeroVector;
+	// 저장된 위치 초기화
+	bHasStoredWorldLocation = false;
+	StoredFlashWorldLocation = FVector::ZeroVector;
 }
 
 void UFlashWidget::SetFlashType(EFlashType InFlashType)
@@ -171,14 +171,38 @@ FVector2D UFlashWidget::ConvertWorldToScreenPosition(FVector WorldLocation)
 		int32 ViewportSizeX, ViewportSizeY;
 		PC->GetViewportSize(ViewportSizeX, ViewportSizeY);
 		
-		// 화면 중앙을 (0,0)으로 하는 좌표계로 변환
-		ScreenPosition.X = ScreenPosition.X - (ViewportSizeX * 0.5f);
-		ScreenPosition.Y = ScreenPosition.Y - (ViewportSizeY * 0.5f);
+		// 화면 좌표를 -1 ~ 1 범위로 정규화
+		ScreenPosition.X = ((ScreenPosition.X / ViewportSizeX) - 0.5f) * 2.0f;
+		ScreenPosition.Y = ((ScreenPosition.Y / ViewportSizeY) - 0.5f) * 2.0f;
+		
+		// UI 좌표계로 변환 (픽셀 단위)
+		ScreenPosition.X *= ViewportSizeX * 0.5f;
+		ScreenPosition.Y *= ViewportSizeY * 0.5f;
+		
+		// 화면 밖으로 나가는 것을 제한
+		float MaxOffset = FMath::Max(ViewportSizeX, ViewportSizeY) * 0.8f;
+		ScreenPosition.X = FMath::Clamp(ScreenPosition.X, -MaxOffset, MaxOffset);
+		ScreenPosition.Y = FMath::Clamp(ScreenPosition.Y, -MaxOffset, MaxOffset);
 	}
 	else
 	{
-		// 프로젝션 실패 시 화면 중앙
-		ScreenPosition = FVector2D::ZeroVector;
+		// 화면 밖이거나 뒤에 있는 경우 처리
+		if (PC)
+		{
+			FVector CameraLocation;
+			FRotator CameraRotation;
+			PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+			
+			FVector ToFlash = (WorldLocation - CameraLocation).GetSafeNormal();
+			FVector CameraForward = CameraRotation.Vector();
+			
+			float DotProduct = FVector::DotProduct(CameraForward, ToFlash);
+			if (DotProduct < 0) // 뒤에 있는 경우
+			{
+				// 화면 중앙으로 설정
+				ScreenPosition = FVector2D::ZeroVector;
+			}
+		}
 	}
 	
 	return ScreenPosition;
@@ -224,16 +248,39 @@ void UFlashWidget::UpdateRadialImagePosition(FVector2D ScreenPosition)
 		int32 ViewportSizeX, ViewportSizeY;
 		PC->GetViewportSize(ViewportSizeX, ViewportSizeY);
 		
-		// 화면보다 큰 이미지 크기 설정 (화면을 완전히 채우기 위해)
+		// 화면보다 큰 이미지 크기 설정
 		float LargerDimension = FMath::Max(ViewportSizeX, ViewportSizeY);
 		FVector2D ImageSize = FVector2D(LargerDimension * RadialImageSizeMultiplier, LargerDimension * RadialImageSizeMultiplier);
 		
-		// 위치 설정 (클램핑 없이 자유롭게 이동)
-		CanvasSlot->SetPosition(ScreenPosition);
-		CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
-		CanvasSlot->SetSize(ImageSize);
-		
 		// 앵커를 중앙으로 설정
 		CanvasSlot->SetAnchors(FAnchors(0.5f, 0.5f));
+		CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+		
+		// 위치 설정
+		CanvasSlot->SetPosition(ScreenPosition);
+		CanvasSlot->SetSize(ImageSize);
+		
+		// 디버그용
+		UE_LOG(LogTemp, VeryVerbose, TEXT("방사형 이미지 위치 업데이트: X=%.2f, Y=%.2f"), ScreenPosition.X, ScreenPosition.Y);
+	}
+}
+
+float UFlashWidget::CalculateFadeIntensity(float BaseIntensity)
+{
+	// 발로란트 스타일 페이드 효과
+	if (BaseIntensity >= 0.95f)
+	{
+		// 완전 실명 상태 - 즉시 최대 밝기
+		return 1.0f;
+	}
+	else if (BaseIntensity > 0.01f)
+	{
+		// 회복 중 - 빠른 초기 감소, 느린 후기 감소
+		// Pow 값을 조정하여 페이드 커브 변경 가능
+		return FMath::Pow(BaseIntensity, 2.5f);
+	}
+	else
+	{
+		return 0.0f;
 	}
 }

@@ -51,12 +51,10 @@ protected:
 	FLinearColor DefaultFlashColor = FLinearColor::White;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Colors")
-	FLinearColor PhoenixFlashColor = FLinearColor::White;
-	//FLinearColor PhoenixFlashColor = FLinearColor(1.0f, 0.3f, 0.0f, 1.0f); // 빨강/주황
+	FLinearColor PhoenixFlashColor = FLinearColor(1.0f, 0.95f, 0.9f, 1.0f); // 약간 따뜻한 흰색
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Colors")
-	FLinearColor KayOFlashColor = FLinearColor::White;
-	//FLinearColor KayOFlashColor = FLinearColor(0.0f, 0.5f, 1.0f, 1.0f); // 파랑
+	FLinearColor KayOFlashColor = FLinearColor(0.95f, 0.98f, 1.0f, 1.0f); // 약간 차가운 흰색
 
 	// 섬광 타입별 텍스처 (옵션)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Textures")
@@ -68,6 +66,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Textures")
 	UTexture2D* KayORadialTexture;
 
+	// 방사형 이미지 크기 설정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
+	float RadialImageSizeMultiplier = 2.5f;  // 화면 크기의 배수
+
+
 private:
 	// 현재 섬광 강도
 	float CurrentFlashIntensity = 0.0f;
@@ -78,13 +81,10 @@ private:
 	// 현재 섬광 색상
 	FLinearColor CurrentFlashColor = FLinearColor::White;
 
-	// 섬광 시작 시 고정된 화면 위치
+	// 섬광 월드 위치 저장
+	FVector StoredFlashWorldLocation;
 	FVector2D FixedFlashScreenPosition;
-	bool bFlashPositionFixed = false;
-
-	// 방사형 이미지 기본 크기 (화면보다 크게 설정)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flash Settings", meta = (AllowPrivateAccess = "true"))
-	float RadialImageSizeMultiplier = 3.0f;  // 화면 크기의 배수
+	bool bHasStoredWorldLocation = false;
 
 	// 섬광 위치를 화면 좌표로 변환
 	FVector2D ConvertWorldToScreenPosition(FVector WorldLocation);
@@ -97,4 +97,7 @@ private:
 
 	// 방사형 이미지 위치 업데이트
 	void UpdateRadialImagePosition(FVector2D ScreenPosition);
+
+	// 페이드 효과 계산
+	float CalculateFadeIntensity(float BaseIntensity);
 };

@@ -4,6 +4,7 @@
 #include "MatchPlayerController.h"
 
 #include "MatchPlayerState.h"
+#include "OnlineSubsystem.h"
 #include "Valorant.h"
 #include "Blueprint/UserWidget.h"
 #include "CharSelect/CharSelectCamera.h"
@@ -21,7 +22,9 @@ void AMatchPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	const FString& DisplayName = USubsystemSteamManager::GetDisplayName(GetWorld());
-	ServerRPC_NotifyBeginPlay(DisplayName);
+	const FString& RealName = USubsystemSteamManager::GetDisplayName(GetWorld(), 0, false);
+	
+	ServerRPC_NotifyBeginPlay(DisplayName, RealName);
 }
 
 void AMatchPlayerController::OnPossess(APawn* InPawn)
@@ -95,7 +98,7 @@ void AMatchPlayerController::ClientRPC_OnAgentSelected_Implementation(const FStr
 	SelectUIWidget->OnSelectedAgentChanged(DisplayName, SelectedAgentID);
 }
 
-void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FString& Name)
+void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FString& Name, const FString& RealName)
 {
 	if (nullptr == GameMode)
 	{
@@ -103,7 +106,7 @@ void AMatchPlayerController::ServerRPC_NotifyBeginPlay_Implementation(const FStr
 		return;
 	}
 
-	GameMode->OnControllerBeginPlay(this, Name);
+	GameMode->OnControllerBeginPlay(this, Name, RealName);
 }
 
 void AMatchPlayerController::ClientRPC_ShowSelectUI_Implementation(const TArray<FString>& NewTeamPlayerNameArray)
