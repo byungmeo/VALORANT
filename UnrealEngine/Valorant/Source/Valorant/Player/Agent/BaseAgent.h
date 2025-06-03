@@ -436,7 +436,21 @@ public:
 	void LogFinalDamage(const int damage);
 	UFUNCTION(Server, Reliable, Category = "Log")
 	void ServerRPC_SubmitLog();
-	
+
+	// WAV 파일을 로드하고 바이너리 데이터로 전환
+	UFUNCTION(Category = "Log")
+	void LoadWavFileBinary(const FString& FilePath, TArray<uint8>& BinaryData);
+
+	// WAV 파일을 multipart/form-data 형식으로 전송
+	UFUNCTION(Category = "Log")
+	void SendWavFileAsFormData(const TArray<uint8>& BinaryData);
+
+	// WAV 파일을 직접 전송하는 함수
+	UFUNCTION(BlueprintCallable, Category = "Log")
+	void SendWavFileDirectly();
+
+private:
+	TArray<uint8> FStringToUint8(FString str);
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -590,6 +604,9 @@ protected:
 
 	// 무기 카테고리에 따른 이동 속도 멀티플라이어 업데이트
 	void UpdateEquipSpeedMultiplier();
+
+	/**데미지가 무기에 의한 것인지 판별하기 위함*/
+	bool IsGunDamage() const;
 
 private:
 	// ToDo : 수정
