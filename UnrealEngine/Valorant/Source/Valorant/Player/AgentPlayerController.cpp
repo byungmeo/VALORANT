@@ -276,11 +276,11 @@ void AAgentPlayerController::RequestCloseShopUI()
 }
 
 void AAgentPlayerController::ClientRPC_SaveMatchResult_Implementation(const FMatchDTO& MatchDto,
-	const FPlayerMatchDTO& PlayerMatchDto)
+	const TArray<FPlayerMatchDTO>& PlayerMatchDtoArray)
 {
 	if (auto* GI = GetGameInstance<UValorantGameInstance>())
 	{
-		GI->SaveMatchResult(MatchDto, PlayerMatchDto);
+		GI->SaveMatchResult(MatchDto, PlayerMatchDtoArray);
 	}
 	
 	if (auto* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())

@@ -296,7 +296,9 @@ void AMatchGameMode::LeavingMatch()
 	
 	const bool bBlueWin = RequiredScore <= TeamBlueScore;
 	const double TotalPlaySeconds = GetWorld()->GetRealTimeSeconds();
-	
+
+	TArray<FPlayerMatchDTO> PlayerMatchInfoArray;
+	PlayerMatchInfoMap.GenerateValueArray(PlayerMatchInfoArray);
 	for (auto& Pair : PlayerMatchInfoMap)
 	{
 		auto* Controller = Pair.Key;
@@ -323,7 +325,7 @@ void AMatchGameMode::LeavingMatch()
 		UDatabaseManager::GetInstance()->PutPlayer(PlayerDto);
 		UDatabaseManager::GetInstance()->PutMatch(*CurrentMatchInfo);
 		UDatabaseManager::GetInstance()->PostPlayerMatch(PlayerMatchInfo);
-		Controller->ClientRPC_SaveMatchResult(*CurrentMatchInfo, PlayerMatchInfo);
+		Controller->ClientRPC_SaveMatchResult(*CurrentMatchInfo, PlayerMatchInfoArray);
 	}
 	
 	PrintAllPlayerLogs();

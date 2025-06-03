@@ -30,12 +30,14 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UUserWidget> LobbyToSelectLoadingWidgetClass;
-	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UUserWidget> MatchResultPageClass;
+
 	void OnMatchHasStarted();
 	
 	FMatchDTO MatchResult;
-	FPlayerMatchDTO PlayerMatchResult;
-	void SaveMatchResult(const FMatchDTO& MatchDto, const FPlayerMatchDTO& PlayerMatchDto);
+	TArray<FPlayerMatchDTO> PlayerMatchResultArray;
+	void SaveMatchResult(const FMatchDTO& MatchDto, const TArray<FPlayerMatchDTO>& PlayerMatchDtoArray);
 
 protected:
 	virtual void OnStart() override;

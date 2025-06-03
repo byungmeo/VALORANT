@@ -107,7 +107,7 @@ public:
 	UBaseAttributeSet* GetCachedABS() { return CachedABS; }
 
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_SaveMatchResult(const FMatchDTO& MatchDto, const FPlayerMatchDTO& PlayerMatchDto);
+	void ClientRPC_SaveMatchResult(const FMatchDTO& MatchDto, const TArray<FPlayerMatchDTO>& PlayerMatchDtoArray);
 
 	// 상점 UI 관련 기능
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI")

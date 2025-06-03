@@ -12,6 +12,9 @@
 #include "GameFramework/GameUserSettings.h"
 #include "GameFramework/PlayerController.h" 
 #include "ResourceManager/ValorantGameType.h"
+#include "UI/MainMap/MainMapCoreUI.h"
+#include "UI/MainMap/MainMapMenuUI.h"
+#include "UI/MainMap/MatchResultPage.h"
 #include "Web/DatabaseManager.h"
 
 template<typename RowStructType, typename IDType>
@@ -162,6 +165,17 @@ void UValorantGameInstance::EndLoadingScreen(UWorld* InLoadedWorld)
 			}
 		}
 	}
+
+	if (InLoadedWorld->GetMapName().Contains(TEXT("MainMap")) && PlayerMatchResultArray.Num() > 0)
+	{
+		auto* Widget = CreateWidget<UMatchResultPage>(this, MatchResultPageClass);
+		for (const auto& PlayerMatchInfo : PlayerMatchResultArray)
+		{
+			Widget->DisplayMatchResult(MatchResult);
+			Widget->AddRow(PlayerMatchInfo);
+		}
+		Widget->AddToViewport(100000);
+	}
 }
 
 void UValorantGameInstance::OnMatchHasStarted()
@@ -174,10 +188,11 @@ void UValorantGameInstance::OnMatchHasStarted()
 	}
 }
 
-void UValorantGameInstance::SaveMatchResult(const FMatchDTO& MatchDto, const FPlayerMatchDTO& PlayerMatchDto)
+void UValorantGameInstance::SaveMatchResult(const FMatchDTO& MatchDto,
+	const TArray<FPlayerMatchDTO>& PlayerMatchDtoArray)
 {
 	MatchResult = MatchDto;
-	PlayerMatchResult = PlayerMatchDto;
+	PlayerMatchResultArray = PlayerMatchDtoArray;
 }
 
 void UValorantGameInstance::OnStart()
