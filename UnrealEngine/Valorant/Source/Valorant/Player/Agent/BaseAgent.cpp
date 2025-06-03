@@ -1150,7 +1150,7 @@ void ABaseAgent::Die()
 		{
 			if (AMatchGameMode* GameMode = GetWorld()->GetAuthGameMode<AMatchGameMode>())
 			{
-				GameMode->OnKill(KillerPC, PC);
+				GameMode->OnKill(Cast<AAgentPlayerController>(KillerPC), PC);
 			}
 		}
 	}

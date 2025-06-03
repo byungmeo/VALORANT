@@ -24,7 +24,7 @@ ABaseWeapon::ABaseWeapon()
 	PrimaryActorTick.bCanEverTick = true;
 	Mesh->SetUseCCD(true);
 
-	ConstructorHelpers::FObjectFinder<UNiagaraSystem> agentHitTracerEffect(TEXT("/Script/Niagara.NiagaraSystem'/Game/Resource/Fab/Bullet_Impact_Hit/Prefabs/Wall/Fx_Bullet_Impact_Agent.Fx_Bullet_Impact_Agent'"));
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> agentHitTracerEffect(TEXT("/Script/Niagara.NiagaraSystem'/Game/Resource/Fab/Bullet_Impact_Hit/Prefabs/Wall/Fx_Bullet_Impact_Agent.Fx_Bullet_Impact_Agent'"));
 	if (agentHitTracerEffect.Succeeded())
 	{
 		AgentHitTracerEffect = agentHitTracerEffect.Object;

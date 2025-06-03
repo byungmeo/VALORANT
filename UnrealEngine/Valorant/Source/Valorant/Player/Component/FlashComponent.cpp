@@ -138,7 +138,7 @@ void UFlashComponent::FlashEffect(float InBlindDuration, float InRecoveryDuratio
 
     // 델리게이트 호출 - 섬광 위치 정보도 함께 전달
     OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity, FlashLocation);
-    
+
     UE_LOG(LogTemp, Warning, TEXT("섬광 시작: 완전실명 %.1f초, 회복 %.1f초, 각도배율 %.2f, 타입: %d, 최소효과: %s"), 
            m_BlindDuration, m_RecoveryDuration, ViewAngleMultiplier, (int32)CurrentFlashType, bIsMinimumFlash ? TEXT("Yes") : TEXT("No"));
 }
@@ -177,11 +177,11 @@ void UFlashComponent::UpdateFlashEffect()
     }
     else if (FlashState == EFlashState::Recovery)
     {
-        // 회복 상태: 빠른 감소 (0.3초 내에 0으로)
+        // 회복 상태: 발로란트 스타일의 빠른 감소
         float RecoveryRatio = FMath::Clamp(ElapsedTime / m_RecoveryDuration, 0.0f, 1.0f);
         
-        // 지수 감소로 빠른 회복
-        float RecoveryFactor = FMath::Pow(1.0f - RecoveryRatio, 3.0f);
+        // 더 빠른 초기 감소를 위해 지수를 2.0으로 변경 (기존 3.0)
+        float RecoveryFactor = FMath::Pow(1.0f - RecoveryRatio, 2.0f);
         CurrentFlashIntensity = RecoveryFactor;
         
         // 회복 완료 체크
@@ -194,6 +194,7 @@ void UFlashComponent::UpdateFlashEffect()
 
     // 델리게이트 호출 - 섬광 위치 정보도 함께 전달
     OnFlashIntensityChanged.Broadcast(CurrentFlashIntensity, FlashLocation);
+
 }
 
 void UFlashComponent::StopFlashEffect()

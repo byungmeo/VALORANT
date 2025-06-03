@@ -309,7 +309,7 @@ void USage_E_HealingOrb::PlayHealingEffects(ABaseAgent* Target)
 		if (HealingEffect)
 		{
 			
-			OwnerAgent->Multicast_PlayNiagaraEffectAttached(OwnerAgent, HealingEffect, 5.0f);
+			// OwnerAgent->Multicast_PlayNiagaraEffectAttached(OwnerAgent, HealingEffect, 5.0f);
 			// UNiagaraComponent* HealingComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
 			// 	HealingEffect,
 			// 	Target->GetRootComponent(),

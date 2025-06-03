@@ -78,7 +78,7 @@ void UTestWidget::PutMatch()
 	MatchDto.map_id = 999;
 	MatchDto.blue_score = 100;
 	MatchDto.red_score = 200;
-	DatabaseManager->PutMatch(2, MatchDto);
+	DatabaseManager->PutMatch(MatchDto);
 }
 
 void UTestWidget::GetPlayerMatch()

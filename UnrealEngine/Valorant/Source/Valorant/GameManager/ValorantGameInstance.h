@@ -32,6 +32,10 @@ public:
 	TSubclassOf<UUserWidget> LobbyToSelectLoadingWidgetClass;
 	
 	void OnMatchHasStarted();
+	
+	FMatchDTO MatchResult;
+	FPlayerMatchDTO PlayerMatchResult;
+	void SaveMatchResult(const FMatchDTO& MatchDto, const FPlayerMatchDTO& PlayerMatchDto);
 
 protected:
 	virtual void OnStart() override;

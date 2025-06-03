@@ -105,12 +105,23 @@ void APhoenix_C_BlazeSplineWall::Multicast_FinalizeWall_Implementation()
 	// 서버에서만 충돌 이벤트 바인딩
 	if (HasAuthority())
 	{
-		for (UBoxComponent* Collision : CollisionComponents)
+		// 섬광 충돌 이벤트
+		for (UBoxComponent* Collision : FlashCollisionComponents)
 		{
 			if (Collision)
 			{
-				Collision->OnComponentBeginOverlap.AddDynamic(this, &APhoenix_C_BlazeSplineWall::OnBeginOverlap);
-				Collision->OnComponentEndOverlap.AddDynamic(this, &APhoenix_C_BlazeSplineWall::OnEndOverlap);
+				Collision->OnComponentBeginOverlap.AddDynamic(this, &APhoenix_C_BlazeSplineWall::OnFlashBeginOverlap);
+				Collision->OnComponentEndOverlap.AddDynamic(this, &APhoenix_C_BlazeSplineWall::OnFlashEndOverlap);
+			}
+		}
+
+		// 데미지 충돌 이벤트
+		for (UBoxComponent* Collision : DamageCollisionComponents)
+		{
+			if (Collision)
+			{
+				Collision->OnComponentBeginOverlap.AddDynamic(this, &APhoenix_C_BlazeSplineWall::OnDamageBeginOverlap);
+				Collision->OnComponentEndOverlap.AddDynamic(this, &APhoenix_C_BlazeSplineWall::OnDamageEndOverlap);
 			}
 		}
 	}
@@ -128,14 +139,24 @@ void APhoenix_C_BlazeSplineWall::UpdateSplineMesh()
 	}
 	SplineMeshComponents.Empty();
 
-	for (UBoxComponent* Collision : CollisionComponents)
+	// 기존 충돌 컴포넌트 제거
+	for (UBoxComponent* Collision : FlashCollisionComponents)
 	{
 		if (Collision)
 		{
 			Collision->DestroyComponent();
 		}
 	}
-	CollisionComponents.Empty();
+	FlashCollisionComponents.Empty();
+
+	for (UBoxComponent* Collision : DamageCollisionComponents)
+	{
+		if (Collision)
+		{
+			Collision->DestroyComponent();
+		}
+	}
+	DamageCollisionComponents.Empty();
 
 	// 새로운 스플라인 메시 생성
 	int32 NumPoints = WallSpline->GetNumberOfSplinePoints();
@@ -176,40 +197,83 @@ void APhoenix_C_BlazeSplineWall::UpdateSplineMesh()
 		SplineMeshComponents.Add(SplineMesh);
 
 		SplineMesh->SetForwardAxis(ESplineMeshAxis::X);
+
 		// 충돌 박스 생성 (서버에서만 실제 충돌 처리)
 		if (HasAuthority())
 		{
-			UBoxComponent* CollisionBox = NewObject<UBoxComponent>(this,
-			                                                       UBoxComponent::StaticClass(),
-			                                                       FName(*FString::Printf(TEXT("Collision_%d"), i)));
-
-			CollisionBox->SetupAttachment(WallSpline);
-			CollisionBox->RegisterComponent();
-
-			// 충돌 박스 위치와 크기 설정
 			FVector SegmentCenter = (StartPos + EndPos) / 2.0f;
 			float SegmentLength = FVector::Dist(StartPos, EndPos);
-
-			CollisionBox->SetRelativeLocation(SegmentCenter);
-			CollisionBox->SetBoxExtent(FVector(SegmentLength / 2.0f, WallThickness / 2.0f, WallHeight / 2.0f));
-
-			// 회전 설정
 			FVector Direction = (EndPos - StartPos).GetSafeNormal();
 			FRotator Rotation = Direction.Rotation();
-			CollisionBox->SetRelativeRotation(Rotation);
 
-			CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-			CollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
-			CollisionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+			// 1. 섬광 효과용 충돌 박스 (가까운 범위)
+			UBoxComponent* FlashCollisionBox = NewObject<UBoxComponent>(this,
+			                                                            UBoxComponent::StaticClass(),
+			                                                            FName(*FString::Printf(
+				                                                            TEXT("FlashCollision_%d"), i)));
 
-			CollisionComponents.Add(CollisionBox);
+			FlashCollisionBox->SetupAttachment(WallSpline);
+			FlashCollisionBox->RegisterComponent();
+			FlashCollisionBox->SetRelativeLocation(SegmentCenter);
+
+			// 섬광 범위 설정
+			float FlashThickness = WallThickness * FlashRangeMultiplier;
+			FlashCollisionBox->SetBoxExtent(FVector(SegmentLength / 2.0f,
+			                                        FlashThickness / 2.0f,
+			                                        WallHeight * 5));
+			FlashCollisionBox->SetRelativeRotation(Rotation);
+			FlashCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			FlashCollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+			FlashCollisionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+			// 디버그 시각화 (개발 중에만)
+#ifdef DEBUGTEST
+			FlashCollisionBox->SetHiddenInGame(false);
+			FlashCollisionBox->ShapeColor = FColor::Yellow;
+#endif
+
+			FlashCollisionComponents.Add(FlashCollisionBox);
+
+			// 2. 데미지/힐 효과용 충돌 박스 (넓은 범위)
+			UBoxComponent* DamageCollisionBox = NewObject<UBoxComponent>(this,
+			                                                             UBoxComponent::StaticClass(),
+			                                                             FName(*FString::Printf(
+				                                                             TEXT("DamageCollision_%d"), i)));
+
+			DamageCollisionBox->SetupAttachment(WallSpline);
+			DamageCollisionBox->RegisterComponent();
+			DamageCollisionBox->SetRelativeLocation(SegmentCenter);
+
+			// 데미지 범위 설정
+			float DamageThickness = WallThickness * DamageRangeMultiplier;
+			DamageCollisionBox->SetBoxExtent(FVector(SegmentLength / 2.0f,
+			                                         DamageThickness / 2.0f,
+			                                         WallHeight * 5));
+			DamageCollisionBox->SetRelativeRotation(Rotation);
+			DamageCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			DamageCollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+			DamageCollisionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+			// 디버그 시각화 (개발 중에만)
+#ifdef DEBUGTEST
+			DamageCollisionBox->SetHiddenInGame(false);
+			DamageCollisionBox->ShapeColor = FColor::Red;
+#endif
+
+			DamageCollisionComponents.Add(DamageCollisionBox);
+
+			UE_LOG(LogTemp, Warning, TEXT("Blaze Collision %d - Flash: %fx%fx%f, Damage: %fx%fx%f"),
+			       i,
+			       SegmentLength, FlashThickness, WallHeight,
+			       SegmentLength, DamageThickness, WallHeight);
 		}
 	}
 }
 
-void APhoenix_C_BlazeSplineWall::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                                                UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
-                                                const FHitResult& SweepResult)
+void APhoenix_C_BlazeSplineWall::OnFlashBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+                                                     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+                                                     bool bFromSweep,
+                                                     const FHitResult& SweepResult)
 {
 	if (!HasAuthority() || IsActorBeingDestroyed() || !OtherActor || OtherActor == this)
 	{
@@ -218,26 +282,26 @@ void APhoenix_C_BlazeSplineWall::OnBeginOverlap(UPrimitiveComponent* OverlappedC
 
 	if (ABaseAgent* Agent = Cast<ABaseAgent>(OtherActor))
 	{
-		if (!OverlappedAgents.Contains(Agent))
+		if (!FlashOverlappedAgents.Contains(Agent))
 		{
-			OverlappedAgents.Add(Agent);
+			FlashOverlappedAgents.Add(Agent);
 
 			// 첫 번째 에이전트가 들어왔을 때 타이머 시작
-			if (OverlappedAgents.Num() == 1 && !GetWorld()->GetTimerManager().IsTimerActive(DamageTimerHandle))
+			if (FlashOverlappedAgents.Num() == 1 && !GetWorld()->GetTimerManager().IsTimerActive(FlashTimerHandle))
 			{
-				GetWorld()->GetTimerManager().SetTimer(DamageTimerHandle, this,
-				                                       &APhoenix_C_BlazeSplineWall::ApplyGameEffect,
+				GetWorld()->GetTimerManager().SetTimer(FlashTimerHandle, this,
+				                                       &APhoenix_C_BlazeSplineWall::ApplyFlashEffect,
 				                                       EffectApplicationInterval, true);
 
 				// 즉시 첫 효과 적용
-				ApplyGameEffect();
+				Agent->AdjustFlashEffectDirect(0.25f, 0.25f);
 			}
 		}
 	}
 }
 
-void APhoenix_C_BlazeSplineWall::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                                              UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void APhoenix_C_BlazeSplineWall::OnFlashEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+                                                   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	if (!HasAuthority() || IsActorBeingDestroyed() || !OtherActor)
 	{
@@ -246,38 +310,87 @@ void APhoenix_C_BlazeSplineWall::OnEndOverlap(UPrimitiveComponent* OverlappedCom
 
 	if (ABaseAgent* Agent = Cast<ABaseAgent>(OtherActor))
 	{
-		OverlappedAgents.Remove(Agent);
+		FlashOverlappedAgents.Remove(Agent);
 
-		if (OverlappedAgents.Num() == 0)
+		if (FlashOverlappedAgents.Num() == 0)
+		{
+			GetWorld()->GetTimerManager().ClearTimer(FlashTimerHandle);
+		}
+	}
+}
+
+void APhoenix_C_BlazeSplineWall::OnDamageBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+                                                      UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+                                                      bool bFromSweep,
+                                                      const FHitResult& SweepResult)
+{
+	if (!HasAuthority() || IsActorBeingDestroyed() || !OtherActor || OtherActor == this)
+	{
+		return;
+	}
+
+	if (ABaseAgent* Agent = Cast<ABaseAgent>(OtherActor))
+	{
+		if (!DamageOverlappedAgents.Contains(Agent))
+		{
+			DamageOverlappedAgents.Add(Agent);
+
+			// 첫 번째 에이전트가 들어왔을 때 타이머 시작
+			if (DamageOverlappedAgents.Num() == 1 && !GetWorld()->GetTimerManager().IsTimerActive(DamageTimerHandle))
+			{
+				GetWorld()->GetTimerManager().SetTimer(DamageTimerHandle, this,
+				                                       &APhoenix_C_BlazeSplineWall::ApplyDamageEffect,
+				                                       EffectApplicationInterval, true);
+
+				// 즉시 첫 효과 적용
+				ApplyDamageEffect();
+			}
+		}
+	}
+}
+
+void APhoenix_C_BlazeSplineWall::OnDamageEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+                                                    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (!HasAuthority() || IsActorBeingDestroyed() || !OtherActor)
+	{
+		return;
+	}
+
+	if (ABaseAgent* Agent = Cast<ABaseAgent>(OtherActor))
+	{
+		DamageOverlappedAgents.Remove(Agent);
+
+		if (DamageOverlappedAgents.Num() == 0)
 		{
 			GetWorld()->GetTimerManager().ClearTimer(DamageTimerHandle);
 		}
 	}
 }
 
-void APhoenix_C_BlazeSplineWall::ApplyGameEffect()
+void APhoenix_C_BlazeSplineWall::ApplyDamageEffect()
 {
 	if (!HasAuthority() || IsActorBeingDestroyed())
 	{
 		return;
 	}
 
-	TArray<ABaseAgent*> AgentsCopy = OverlappedAgents.Array();
+	TArray<ABaseAgent*> AgentsCopy = DamageOverlappedAgents.Array();
 
 	for (ABaseAgent* Agent : AgentsCopy)
 	{
 		if (!IsValid(Agent))
 		{
-			OverlappedAgents.Remove(Agent);
+			DamageOverlappedAgents.Remove(Agent);
 			continue;
 		}
 
-		Agent->AdjustFlashEffectDirect(0.25f, 0.25f);
+		// Phoenix 자신인지 확인
+		bool bIsSelf = IsPhoenixSelf(Agent);
 
-		bool bIsPhoenix = IsPhoenixOrAlly(Agent);
-
-		if (bIsPhoenix)
+		if (bIsSelf)
 		{
+			// Phoenix 자신에게는 힐 적용
 			if (GameplayEffect)
 			{
 				Agent->ServerApplyHealthGE(GameplayEffect, HealPerTick);
@@ -285,6 +398,7 @@ void APhoenix_C_BlazeSplineWall::ApplyGameEffect()
 		}
 		else
 		{
+			// 모든 다른 에이전트(아군 포함)에게는 데미지 적용
 			if (GameplayEffect)
 			{
 				Agent->ServerApplyHealthGE(GameplayEffect, -DamagePerTick);
@@ -293,27 +407,23 @@ void APhoenix_C_BlazeSplineWall::ApplyGameEffect()
 	}
 }
 
-bool APhoenix_C_BlazeSplineWall::IsPhoenixOrAlly(AActor* Actor) const
+void APhoenix_C_BlazeSplineWall::ApplyFlashEffect()
 {
-	if (!Actor)
+	if (!HasAuthority() || IsActorBeingDestroyed())
 	{
-		return false;
+		return;
 	}
-
-	if (Actor == GetInstigator())
+	// 섬광 효과 적용
+	for (ABaseAgent* Agent : FlashOverlappedAgents.Array())
 	{
-		return true;
+		Agent->AdjustFlashEffectDirect(0.25f, 0.25f);
 	}
+}
 
-	if (ABaseAgent* Agent = Cast<ABaseAgent>(Actor))
-	{
-		if (ABaseAgent* InstigatorAgent = Cast<ABaseAgent>(GetInstigator()))
-		{
-			return InstigatorAgent->IsBlueTeam() == Agent->IsBlueTeam();
-		}
-	}
-
-	return false;
+bool APhoenix_C_BlazeSplineWall::IsPhoenixSelf(AActor* Actor) const
+{
+	// Instigator와 같은 액터인지 확인
+	return Actor == GetInstigator();
 }
 
 void APhoenix_C_BlazeSplineWall::OnElapsedDuration()

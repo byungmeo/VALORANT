@@ -16,15 +16,6 @@ AKayoSuppressionZone::AKayoSuppressionZone()
 	// 억제 영역 크기 설정
 	const float Scale = SuppressionRadius * 2.f / 100.f;
 	GroundMesh->SetRelativeScale3D(FVector(Scale, Scale, 0.5f)); // 높이를 더 높게
-
-	// // 기본 머티리얼 오버라이드 (KAYO 전용 억제 영역 표시)
-	// static ConstructorHelpers::FObjectFinder<UMaterialInterface> SuppressionMat(
-	// 	TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Materials/MI_KayoSuppression.MI_KayoSuppression'"));
-	// if (SuppressionMat.Succeeded())
-	// {
-	// 	RangeIndicatorMaterial = SuppressionMat.Object;
-	// 	GroundMesh->SetMaterial(0, RangeIndicatorMaterial);
-	// }
 }
 
 void AKayoSuppressionZone::BeginPlay()
