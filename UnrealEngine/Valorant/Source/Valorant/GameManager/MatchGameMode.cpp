@@ -115,10 +115,20 @@ void AMatchGameMode::Tick(float DeltaSeconds)
 		}
 		else if (TeamBlueRemainingAgentNum <= 0)
 		{
+			//모두 제거된 쪽이 공격이고, 스파이크가 설치되어 있다면 게임 끝내지 않음
+			if (bSpikePlanted == true && !IsShifted())
+			{
+				return;
+			}
 			StartEndPhaseByEliminated(false);
 		}
 		else if (TeamRedRemainingAgentNum <= 0)
 		{
+			//모두 제거된 쪽이 공격이고, 스파이크가 설치되어 있다면 게임 끝내지 않음
+			if (bSpikePlanted == true && IsShifted())
+			{
+				return;
+			}
 			StartEndPhaseByEliminated(true);
 		}
 	}
