@@ -5,6 +5,7 @@
 
 #include "MatchGameState.h"
 #include "OnlineSessionSettings.h"
+#include "OnlineSubsystemUtils.h"
 #include "SubsystemSteamManager.h"
 #include "Valorant.h"
 #include "AbilitySystem/AgentAbilitySystemComponent.h"
@@ -28,7 +29,7 @@ AMatchGameMode::AMatchGameMode()
 	RemainRoundStateTime = 0.0f;
 	SelectAgentTime = 60.0f;
 	PreRoundTime = 15.0f; // org: 45.0f
-	BuyPhaseTime = 25.0f; // org: 30.0f
+	BuyPhaseTime = 15.0f; // org: 30.0f
 	InRoundTime = 50.0f; // org: 100.0f
 	EndPhaseTime = 5.0f; // org: 10.0f
 	SpikeActiveTime = 25.0f; // org: 45.0f
@@ -86,6 +87,9 @@ void AMatchGameMode::BeginPlay()
 			NET_LOG(LogTemp, Error, TEXT("%hs Called, Try UpdateSession Failed"), __FUNCTION__);
 		}
 	}
+
+	OnPostMatchCompletedDelegate.AddDynamic(this, &AMatchGameMode::OnPostMatchCompleted);
+	UDatabaseManager::GetInstance()->PostMatch(OnPostMatchCompletedDelegate);
 
 	RequiredPlayerCount = SubsystemManager->ReqMatchAutoStartPlayerCount;
 }
@@ -146,13 +150,41 @@ void AMatchGameMode::PostLogin(APlayerController* NewPlayer)
 	Controller->SetGameMode(this);
 }
 
-void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname)
+void AMatchGameMode::OnPostMatchCompleted(const bool bIsSuccess, const FMatchDTO& CreatedMatchDto)
 {
-	FMatchPlayer PlayerInfo;
+	CurrentMatchInfo = MakeShared<FMatchDTO>(CreatedMatchDto);
+}
+
+void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, const FString& Nickname, const FString& RealNickname)
+{
 	auto* AgentPC = Cast<AAgentPlayerController>(Controller);
+
+	const bool bIsBlueTeam =  RequiredPlayerCount / 2 > LoggedInPlayerNum;
+	const bool bIsAttacker = bIsBlueTeam;
+	
+	FPlayerMatchDTO PlayerMatchInfo;
+	PlayerMatchInfo.player_id = RealNickname;
+	PlayerMatchInfo.team = bIsBlueTeam ? 0 : 1;
+	PlayerMatchInfoMap.Add(Cast<AAgentPlayerController>(Controller), PlayerMatchInfo);
+
+	FPlayerDTO PlayerDto;
+	PlayerDto.player_id = RealNickname;
+	PlayerMap.Add(Cast<AAgentPlayerController>(Controller), PlayerDto);
+	
+	auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>();
+	if (PlayerState)
+	{
+		PlayerState->bIsBlueTeam = bIsBlueTeam;
+		PlayerState->bIsAttacker = bIsAttacker;
+		PlayerState->DisplayName = Nickname;
+	}
+
+	// TODO: 삭제 예정
+	FMatchPlayer PlayerInfo;
 	PlayerInfo.Controller = AgentPC;
 	PlayerInfo.Nickname = Nickname;
-	PlayerInfo.bIsBlueTeam = RequiredPlayerCount / 2 > MatchPlayers.Num();
+	PlayerInfo.bIsBlueTeam = bIsBlueTeam;
+	MatchPlayers.Add(PlayerInfo);
 	if (PlayerInfo.bIsBlueTeam)
 	{
 		BlueTeamPlayerNameArray.Add(Nickname);
@@ -161,23 +193,8 @@ void AMatchGameMode::OnControllerBeginPlay(AMatchPlayerController* Controller, c
 	{
 		RedTeamPlayerNameArray.Add(Nickname);
 	}
-
-	auto* PlayerState = Controller->GetPlayerState<AMatchPlayerState>();
-	if (PlayerState)
-	{
-		PlayerState->bIsBlueTeam = PlayerInfo.bIsBlueTeam;
-		PlayerState->bIsAttacker = PlayerInfo.bIsBlueTeam;
-		PlayerState->DisplayName = Nickname;
-	}
-	MatchPlayers.Add(PlayerInfo);
+	
 	++LoggedInPlayerNum;
-	
-	// Log 데이터 추가
-	FLogData NewLog;
-	NewLog.Controller = AgentPC;
-	NewLog.Nickname = Nickname;
-	PlayerLog.Add(AgentPC, NewLog);
-	
 	NET_LOG(LogTemp, Warning, TEXT("%hs Called, Nickname: %s, bIsBlueTeam: %hs"), __FUNCTION__, *Nickname, PlayerState->bIsBlueTeam?"True":"False");
 }
 
@@ -276,11 +293,41 @@ bool AMatchGameMode::ReadyToEndMatch_Implementation()
 void AMatchGameMode::LeavingMatch()
 {
 	bReadyToEndMatch = true;
-	for (const auto& PlayerInfo : MatchPlayers)
+	
+	const bool bBlueWin = RequiredScore <= TeamBlueScore;
+	const double TotalPlaySeconds = GetWorld()->GetRealTimeSeconds();
+	
+	for (auto& Pair : PlayerMatchInfoMap)
 	{
-		PlayerInfo.Controller->ClientRPC_CleanUpSession();
-		PlayerInfo.Controller->ClientTravel("/Game/Maps/MainMap.MainMap", TRAVEL_Absolute);
+		auto* Controller = Pair.Key;
+		const auto* PlayerState = Controller->GetPlayerState<AAgentPlayerState>();
+		CurrentMatchInfo->blue_score = TeamBlueScore;
+		CurrentMatchInfo->red_score = TeamRedScore;
+		CurrentMatchInfo->map_id = 0;
+
+		FPlayerMatchDTO& PlayerMatchInfo = Pair.Value;
+		PlayerMatchInfo.agent_id = PlayerState ? Controller->GetPlayerState<AAgentPlayerState>()->GetAgentID() : 0;
+		PlayerMatchInfo.match_id = CurrentMatchInfo->match_id;
+		
+		FPlayerDTO& PlayerDto = PlayerMap[Controller];
+		PlayerDto.total_playseconds += TotalPlaySeconds;
+		if (bool bWin = !((PlayerMatchInfo.team == 0) ^ bBlueWin))
+		{
+			++PlayerDto.win_count;
+		}
+		else
+		{
+			++PlayerDto.defeat_count;
+		}
+
+		UDatabaseManager::GetInstance()->PutPlayer(PlayerDto);
+		UDatabaseManager::GetInstance()->PutMatch(*CurrentMatchInfo);
+		UDatabaseManager::GetInstance()->PostPlayerMatch(PlayerMatchInfo);
+		Controller->ClientRPC_SaveMatchResult(*CurrentMatchInfo, PlayerMatchInfo);
 	}
+	
+	PrintAllPlayerLogs();
+	GetWorld()->GetFirstPlayerController()->ClientTravel("/Game/Maps/MainMap.MainMap", TRAVEL_Absolute);
 }
 
 void AMatchGameMode::HandleMatchHasEnded()
@@ -439,14 +486,6 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	{
 		NET_LOG(LogTemp, Warning, TEXT("ReadyToEndMatch"));
 		const bool bBlueWin = RequiredScore <= TeamBlueScore;
-
-		// 로그: 최종 승리 여부
-		for (auto& MatchPlayer : MatchPlayers)
-		{
-			bool bWin = !(MatchPlayer.bIsBlueTeam ^ bBlueWin);
-			FLogData& Data = PlayerLog[MatchPlayer.Controller];
-			bWin ? Data.bWin = true : Data.bWin = false;
-		}
 		
 		// 일정 시간 후에 매치 세션 종료
 		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
@@ -627,18 +666,12 @@ void AMatchGameMode::ResetAgentGAS(AAgentPlayerState* AgentPS)
 	AgentPS->GetAbilitySystemComponent()->ForceCleanupAllAbilities();
 }
 
-void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerController* Victim)
+void AMatchGameMode::OnKill(AAgentPlayerController* Killer, AAgentPlayerController* Victim)
 {
 	// 킬러/희생자 정보 로깅
 	FString KillerName = Killer ? Killer->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
 	FString VictimName = Victim ? Victim->GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("없음");
 	NET_LOG(LogTemp, Warning, TEXT("OnKill 호출: 킬러=%s, 희생자=%s"), *KillerName, *VictimName);
-
-	// 로그: 킬뎃 
-	FLogData& KillerData = PlayerLog[Cast<AAgentPlayerController>(Killer)];
-	KillerData.Kill++;
-	FLogData& VictimData = PlayerLog[Cast<AAgentPlayerController>(Victim)];
-	VictimData.Death++;
 
 	// 킬러에게 크레딧 보상
 	if (Killer)
@@ -685,6 +718,17 @@ void AMatchGameMode::OnKill(AMatchPlayerController* Killer, AMatchPlayerControll
 			}
 		}
 	}
+	
+	if (PlayerMatchInfoMap.Contains(Killer) && PlayerMatchInfoMap.Contains(Victim))
+	{
+		const bool bFirstKill = MatchPlayers.Num() - (TeamBlueRemainingAgentNum + TeamRedRemainingAgentNum) == 1;
+		auto& KillerData = PlayerMatchInfoMap[Killer];
+		KillerData.kill_count++;
+		KillerData.first_kill_count += bFirstKill ? 1 : 0;
+		auto& VictimData = PlayerMatchInfoMap[Victim];
+		VictimData.death_count++;
+		VictimData.first_death_count += bFirstKill ? 1 : 0;
+	}
 }
 
 void AMatchGameMode::OnDie(AMatchPlayerController* Victim)
@@ -728,7 +772,7 @@ void AMatchGameMode::OnRevive(AMatchPlayerController* Reviver, AMatchPlayerContr
 	}
 }
 
-void AMatchGameMode::OnSpikePlanted(AMatchPlayerController* Planter)
+void AMatchGameMode::OnSpikePlanted(AAgentPlayerController* Planter)
 {
 	// 스파이크 설치자에게 크레딧 보상
 	if (Planter)
@@ -743,9 +787,11 @@ void AMatchGameMode::OnSpikePlanted(AMatchPlayerController* Planter)
 			}
 		}
 
-		// 로그: 스파이크 설치
-		FLogData& Data = PlayerLog[Cast<AAgentPlayerController>(Planter)];
-		Data.PlantCount++;
+		if (PlayerMatchInfoMap.Contains(Planter))
+		{
+			auto& PlanterData = PlayerMatchInfoMap[Planter];
+			PlanterData.plant_count++;
+		}
 	}
 
 	// 스파이크 설치 상태 업데이트
@@ -766,7 +812,7 @@ void AMatchGameMode::OnSpikePlanted(AMatchPlayerController* Planter)
 	                                       SpikeActiveTime);
 }
 
-void AMatchGameMode::OnSpikeDefused(AMatchPlayerController* Defuser)
+void AMatchGameMode::OnSpikeDefused(AAgentPlayerController* Defuser)
 {
 	// 스파이크 해제자에게 크레딧 보상
 	if (Defuser)
@@ -781,9 +827,11 @@ void AMatchGameMode::OnSpikeDefused(AMatchPlayerController* Defuser)
 			}
 		}
 
-		// 로그: 스파이크 해체
-		FLogData& Data = PlayerLog[Cast<AAgentPlayerController>(Defuser)];
-		Data.DefuseCount++;
+		if (PlayerMatchInfoMap.Contains(Defuser))
+		{
+			auto& PlanterData = PlayerMatchInfoMap[Defuser];
+			PlanterData.plant_count++;
+		}
 	}
 
 	// 스파이크 설치 상태 업데이트
@@ -815,17 +863,6 @@ void AMatchGameMode::HandleRoundEnd(bool bBlueWin, const ERoundEndReason RoundEn
 				{
 					// 팀 승패에 따라 크레딧 지급
 					bool bIsWinner = (Player.bIsBlueTeam == bBlueWin);
-
-					// 로그: 승리한 라운드, 패배한 라운드
-					FLogData& Data = PlayerLog[Cast<AAgentPlayerController>(Player.Controller)];
-					if (bIsWinner)
-					{
-						Data.WinRound.Add(CurrentRound);
-					}
-					else
-					{
-						Data.DefeatRound.Add(CurrentRound);
-					}
 
 					// 연속 패배 보너스 계산
 					int32 ConsecutiveLosses = bIsWinner
@@ -1053,85 +1090,81 @@ void AMatchGameMode::DestroySpikeInWorld()
 void AMatchGameMode::SubmitShotLog(AAgentPlayerController* pc, int32 fireCount, int32 hitCount,
 	int32 headshotCount, int damage)
 {
-	// NET_LOG(LogTemp,Error,TEXT("로그 제출, Fire: %d / Hit: %d / Head: %d" / Damage: %d), fireCount, hitCount, headshotCount, damage);
-	FLogData& Data = PlayerLog[pc];
-	Data.FireCount += fireCount;
-	Data.HitCount += hitCount;
-	Data.HeadshotCount += headshotCount;
-	Data.TotalDamage += damage;
+	if (PlayerMatchInfoMap.Contains(pc))
+	{
+		NET_LOG(LogTemp, Warning, TEXT("%hs Called, 로그 제출, Fire: %d / Hit: %d / Head: %d / Damage: %d"), __FUNCTION__, fireCount, hitCount, headshotCount, damage);
+		auto& Data = PlayerMatchInfoMap[pc];
+		Data.fire_count += fireCount;
+		Data.hit_count += hitCount;
+		Data.headshot_count += headshotCount;
+		Data.total_damage += damage;
+	}
 }
 
 void AMatchGameMode::PrintAllPlayerLogs() const
 {
 	// 맵이 비어있으면 간단히 메시지 찍고 리턴
-	if (PlayerLog.Num() == 0)
+	if (PlayerMatchInfoMap.Num() == 0)
 	{
-		UE_LOG(LogTemp, Log, TEXT("[GameMode] PlayerLog가 비어있습니다."));
+		UE_LOG(LogTemp, Error, TEXT("[GameMode] PlayerMatchInfoMap.Num() is 0"));
 		return;
 	}
 
-	for (const TPair<AAgentPlayerController*, FLogData>& Pair : PlayerLog)
+	for (const TPair<AAgentPlayerController*, FPlayerMatchDTO>& Pair : PlayerMatchInfoMap)
 	{
-		AAgentPlayerController* Controller = Pair.Key;
-		const FLogData& LogData = Pair.Value;
+		const auto* Controller = Pair.Key;
+		const auto& Data = Pair.Value;
 
-		// Controller 이름을 안전하게 얻기
-		const FString ControllerName = Controller
-			? Controller->GetName()
-			: TEXT("None");
-
-		// WinRound 배열을 "[1, 3, 4]" 형태로 변환
-		FString WinRounds;
-		{
-			for (int32 i = 0; i < LogData.WinRound.Num(); ++i)
-			{
-				WinRounds += FString::FromInt(LogData.WinRound[i]);
-				if (i < LogData.WinRound.Num() - 1)
-				{
-					WinRounds += TEXT(", ");
-				}
-			}
-			WinRounds = FString::Printf(TEXT("[%s]"), *WinRounds);
-		}
-
-		// DefeatRound 배열을 "[2]" 형태로 변환
-		FString DefeatRounds;
-		{
-			for (int32 i = 0; i < LogData.DefeatRound.Num(); ++i)
-			{
-				DefeatRounds += FString::FromInt(LogData.DefeatRound[i]);
-				if (i < LogData.DefeatRound.Num() - 1)
-				{
-					DefeatRounds += TEXT(", ");
-				}
-			}
-			DefeatRounds = FString::Printf(TEXT("[%s]"), *DefeatRounds);
-		}
+		// // WinRound 배열을 "[1, 3, 4]" 형태로 변환
+		// FString WinRounds;
+		// {
+		// 	for (int32 i = 0; i < LogData.WinRound.Num(); ++i)
+		// 	{
+		// 		WinRounds += FString::FromInt(LogData.WinRound[i]);
+		// 		if (i < LogData.WinRound.Num() - 1)
+		// 		{
+		// 			WinRounds += TEXT(", ");
+		// 		}
+		// 	}
+		// 	WinRounds = FString::Printf(TEXT("[%s]"), *WinRounds);
+		// }
+		//
+		// // DefeatRound 배열을 "[2]" 형태로 변환
+		// FString DefeatRounds;
+		// {
+		// 	for (int32 i = 0; i < LogData.DefeatRound.Num(); ++i)
+		// 	{
+		// 		DefeatRounds += FString::FromInt(LogData.DefeatRound[i]);
+		// 		if (i < LogData.DefeatRound.Num() - 1)
+		// 		{
+		// 			DefeatRounds += TEXT(", ");
+		// 		}
+		// 	}
+		// 	DefeatRounds = FString::Printf(TEXT("[%s]"), *DefeatRounds);
+		// }
 
 		// 구분선 출력 (헤더)
-		UE_LOG(LogTemp, Log, TEXT("=== PlayerLog Start [%s] ==="), *ControllerName);
+		UE_LOG(LogTemp, Log, TEXT("=== PlayerLog Start [%s] ==="), *Data.player_id);
 
 		// 각 멤버를 직접 포맷팅해 출력
 		UE_LOG(
 			LogTemp,
 			Log,
-			TEXT("Nickname=%s | Kill=%d | Death=%d | FireCount=%d | HitCount=%d | HeadshotCount=%d | TotalDamage=%d | PlantCount=%d | DefuseCount=%d | bWin=%s | WinRound=%s | DefeatRound=%s"),
-			*LogData.Nickname,
-			LogData.Kill,
-			LogData.Death,
-			LogData.FireCount,
-			LogData.HitCount,
-			LogData.HeadshotCount,
-			LogData.TotalDamage,
-			LogData.PlantCount,
-			LogData.DefuseCount,
-			LogData.bWin ? TEXT("True") : TEXT("False"),
-			*WinRounds,
-			*DefeatRounds
+			TEXT("Nickname=%s | Kill=%d | Death=%d | FireCount=%d | HitCount=%d | HeadshotCount=%d | TotalDamage=%d | PlantCount=%d | DefuseCount=%d | Team:%d"),
+			*Data.player_id,
+			Data.kill_count,
+			Data.death_count,
+			Data.fire_count,
+			Data.hit_count,
+			Data.headshot_count,
+			Data.total_damage,
+			Data.plant_count,
+			Data.defuse_count,
+			Data.team
 		);
 
 		// 구분선 출력 (푸터)
-		UE_LOG(LogTemp, Log, TEXT("=== PlayerLog End   [%s] ===\n"), *ControllerName);
+		UE_LOG(LogTemp, Log, TEXT("=== PlayerLog End   [%s] ===\n"), *Data.player_id);
 	}
 }
 

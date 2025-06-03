@@ -275,6 +275,25 @@ void AAgentPlayerController::RequestCloseShopUI()
 	}
 }
 
+void AAgentPlayerController::ClientRPC_SaveMatchResult_Implementation(const FMatchDTO& MatchDto,
+	const FPlayerMatchDTO& PlayerMatchDto)
+{
+	if (auto* GI = GetGameInstance<UValorantGameInstance>())
+	{
+		GI->SaveMatchResult(MatchDto, PlayerMatchDto);
+	}
+	
+	if (auto* SubsystemManager = GetGameInstance()->GetSubsystem<USubsystemSteamManager>())
+	{
+		SubsystemManager->DestroySession();
+	}
+
+	if (false == HasAuthority())
+	{
+		ClientTravel("/Game/Maps/MainMap", TRAVEL_Absolute);
+	}
+}
+
 void AAgentPlayerController::OpenShopUI()
 {
 	// 이미 UI가 열려 있으면 다시 열지 않음

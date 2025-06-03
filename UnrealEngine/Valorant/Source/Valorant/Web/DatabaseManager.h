@@ -81,13 +81,14 @@ public:
 	 */
 	void GetPlayer(const FString& PlayerId, const FString& Platform, const FOnGetPlayerCompleted& Callback);
 	void PostPlayer(const FString& PlayerId, const FString& Platform);
+	void PutPlayer(const FPlayerDTO& PlayerDto);
 
 	/*
 	 *	MATCH
 	 */
 	void GetMatch(int MatchId, const FOnGetMatchCompleted& Callback);
 	void PostMatch(const FOnPostMatchCompleted& Callback);
-	void PutMatch(const int MatchId, const FMatchDTO& MatchDto);
+	void PutMatch(const FMatchDTO& MatchDto);
 
 	/*
 	 *	PLAYER_MATCH
