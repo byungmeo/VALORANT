@@ -308,7 +308,7 @@ void AMatchGameMode::LeavingMatch()
 		CurrentMatchInfo->map_id = 0;
 
 		FPlayerMatchDTO& PlayerMatchInfo = Pair.Value;
-		PlayerMatchInfo.agent_id = PlayerState ? Controller->GetPlayerState<AAgentPlayerState>()->GetAgentID() : 0;
+		PlayerMatchInfo.agent_id = PlayerState ? PlayerState->GetAgentID() : 0;
 		PlayerMatchInfo.match_id = CurrentMatchInfo->match_id;
 		
 		FPlayerDTO& PlayerDto = PlayerMap[Controller];
