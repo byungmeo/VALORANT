@@ -731,6 +731,7 @@ void UMatchMapHUD::OnKillEvent(ABaseAgent* InstigatorAgent, ABaseAgent* VictimAg
 		bInstigatorIsMyTeam = InstigatorAgent->IsBlueTeam() == MyPS->bIsBlueTeam;
 		if (const FAgentData* InstigatorData = GI->GetAgentData(InstigatorAgent->GetAgentID()))
 		{
+			// NET_LOG(LogTemp, Warning, TEXT("%hs Called, AgentID is %d, KillFeedIconName is %s"), __FUNCTION__, InstigatorAgent->GetAgentID(), *InstigatorData->KillFeedIcon->GetName());
 			InstigatorIcon = InstigatorData->KillFeedIcon;
 		}
 	}

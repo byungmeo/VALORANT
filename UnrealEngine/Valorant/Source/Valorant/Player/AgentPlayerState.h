@@ -32,22 +32,18 @@ class VALORANT_API AAgentPlayerState : public AMatchPlayerState, public IAbility
 
 public:
 	AAgentPlayerState();
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable)
 	UAgentAbilitySystemComponent* GetAbilitySystemComponent() const;
 	
 	UBaseAttributeSet* GetBaseAttributeSet() const;
-
-	UFUNCTION(BlueprintCallable)
-	void SetAgentID(int32 NewAgentID);
 	
 	UFUNCTION(BlueprintCallable)
 	int32 GetAgentID() const;
-
+	
 	// 동기화 타이밍 안맞을경우 메뉴얼 동기화 -> 현재 MatchMapHUD 동기화 타이밍 어긋나서 추가
 	UFUNCTION(Reliable, NetMulticast)
-	void SyncsAgentID(int AgentID);
+	void MulticastRPC_SetAgentID(int AgentID);
 
 	UFUNCTION(BlueprintCallable, Category = "Agent|BaseAttributes")
 	float GetHealth() const;
@@ -143,7 +139,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UValorantGameInstance* m_GameInstance = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 m_AgentID = 0;
 	
 private:

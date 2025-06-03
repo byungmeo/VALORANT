@@ -219,8 +219,7 @@ void AMatchGameMode::OnLockIn(AMatchPlayerController* Player, int AgentId)
 
 	if (auto* agentPS = Player->GetPlayerState<AAgentPlayerState>())
 	{
-		agentPS->SetAgentID(AgentId);
-		agentPS->SyncsAgentID(AgentId);
+		agentPS->MulticastRPC_SetAgentID(AgentId);
 	}
 
 	if (++LockedInPlayerNum >= RequiredPlayerCount)
@@ -648,7 +647,7 @@ void AMatchGameMode::RespawnPlayer(AAgentPlayerState* ps, AAgentPlayerController
 
 	FAgentData* agentData = Cast<UValorantGameInstance>(GetGameInstance())->GetAgentData(ps->GetAgentID());
 	Agent = GetWorld()->SpawnActor<ABaseAgent>(agentData->AgentAsset, spawnTransform);
-
+	Agent->SetAgentID(ps->GetAgentID());
 	ps->SetIsSpectator(false);
 	ps->SetIsOnlyASpectator(false);
 
