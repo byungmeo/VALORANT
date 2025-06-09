@@ -37,8 +37,14 @@ private:
 	TSubclassOf<UUserWidget> HudClass;
 	UPROPERTY()
 	TObjectPtr<UUserWidget> Hud = nullptr;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UUserWidget> LoadingUIClass;
+	UPROPERTY()
+	TObjectPtr<UUserWidget> LoadingUI = nullptr;
 	
 public:
+	UFUNCTION(BlueprintCallable)
 	UUserWidget* GetMatchMapHud() const { return Hud; }
 	void SetGameMode(AMatchGameMode* MatchGameMode);
 	UFUNCTION(Server, Reliable)
@@ -61,4 +67,12 @@ public:
 	void ClientRPC_CleanUpSession();
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_SetViewTargetOnAgentSelectCamera();
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_SetLoadingUI(bool bDisplay);
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_PlayTutorialSound();
+	UFUNCTION(BlueprintImplementableEvent)
+	void PlayTutorialSound();
 };

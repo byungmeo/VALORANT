@@ -159,6 +159,8 @@ void AMatchGameMode::PostLogin(APlayerController* NewPlayer)
 	NET_LOG(LogTemp, Warning, TEXT("AMainMenuGameMode::PostLogin Address: %s, UniqueId: %d"), *Address, UniqueId);
 	auto* Controller = Cast<AMatchPlayerController>(NewPlayer);
 	Controller->SetGameMode(this);
+	
+	NotifyGameStart(Controller, true);
 }
 
 void AMatchGameMode::OnPostMatchCompleted(const bool bIsSuccess, const FMatchDTO& CreatedMatchDto)
@@ -408,6 +410,8 @@ void AMatchGameMode::HandleRoundSubState_SelectAgent()
 {
 	for (const FMatchPlayer& MatchPlayer : MatchPlayers)
 	{
+		NotifyGameStart(MatchPlayer.Controller, false);
+		
 		if (MatchPlayer.bIsBlueTeam)
 		{
 			MatchPlayer.Controller->ClientRPC_ShowSelectUI(BlueTeamPlayerNameArray);
@@ -1186,6 +1190,11 @@ void AMatchGameMode::PrintAllPlayerLogs() const
 		// 구분선 출력 (푸터)
 		UE_LOG(LogTemp, Log, TEXT("=== PlayerLog End   [%s] ===\n"), *Data.player_id);
 	}
+}
+
+void AMatchGameMode::NotifyGameStart(AMatchPlayerController* PC, bool bDisplay)
+{
+	PC->ClientRPC_SetLoadingUI(bDisplay);
 }
 
 
