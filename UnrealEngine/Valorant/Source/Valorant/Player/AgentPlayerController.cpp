@@ -485,6 +485,10 @@ void AAgentPlayerController::Client_HideFollowUpInputUI_Implementation()
 // 미니맵 초기화 함수
 void AAgentPlayerController::InitializeMinimap()
 {
+	if (true == GetWorld()->GetMapName().Contains("Training"))
+	{
+		return;
+	}
 	// 미니맵 위젯 클래스가 설정되어 있는지 확인
 	if (MinimapWidgetClass)
 	{

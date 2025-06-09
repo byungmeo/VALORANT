@@ -20,10 +20,16 @@ void UMiniMapWidget::NativeConstruct()
 	if (nullptr == MyPC)
 	{
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, MyPC is NULL"), __FUNCTION__);
+		RemoveFromParent();
 		return;
 	}
 	
 	auto* MyPS = MyPC->GetPlayerState<AAgentPlayerState>();
+	if (nullptr == MyPS)
+	{
+		RemoveFromParent();
+		return;
+	}
 	MyPlayerState = MyPS;
 
 	if (MinimapBackground)
