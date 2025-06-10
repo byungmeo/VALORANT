@@ -734,7 +734,6 @@ void ABaseWeapon::Multicast_SpawnTracer_Implementation(const FVector& Start, con
 		// 머즐 소켓 위치에서 End를 향해 발사
 		FVector MuzzleLoc = Mesh->GetSocketLocation(WeaponData->MuzzleSocketName);
 		FVector Dir = End - MuzzleLoc;
-		float Length = Dir.Size();
 		FRotator Rot = Dir.Rotation();
 
 		UNiagaraSystem* TracerEffect = WeaponData->TracerEffect;
