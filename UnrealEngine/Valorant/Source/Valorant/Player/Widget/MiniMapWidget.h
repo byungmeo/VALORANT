@@ -36,7 +36,7 @@ public:
     
     // 미니맵 업데이트 - 월드 좌표를 미니맵 좌표로 변환하는 함수 (월드 좌표 -> 미니맵 좌표 변환)
     UFUNCTION(BlueprintCallable, Category = "Minimap") 
-    FVector2D WorldToMinimapPosition(const FVector& TargetActorLocation); 
+    FVector2D WorldToMinimapPosition(const FVector& ActorLocation); 
 	// 주기적으로 모든 에이전트 검색하여 등록하는 함수 추가
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
 	void ScanPlayer();

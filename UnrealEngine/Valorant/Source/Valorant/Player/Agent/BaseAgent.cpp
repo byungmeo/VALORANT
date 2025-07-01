@@ -1687,29 +1687,19 @@ bool ABaseAgent::IsAttacker() const
 	return false;
 }
 
-bool ABaseAgent::IsInFrustum(const AActor* Actor) const
+bool ABaseAgent::ActorIsInView(const AActor* Actor) const
 {
-	// Ref: https://forums.unrealengine.com/t/perform-frustum-check/287524/10
-	ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (LocalPlayer != nullptr && LocalPlayer->ViewportClient != nullptr && LocalPlayer->ViewportClient->Viewport)
-	{
-		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
-			LocalPlayer->ViewportClient->Viewport,
-			GetWorld()->Scene,
-			LocalPlayer->ViewportClient->EngineShowFlags)
-			.SetRealtimeUpdate(true));
+	// 보이지 않는 객체는 컬링 과정을 통해 렌더링 되지 않으므로 최근에 렌더링 되지 않았으면 false 반환
+	const bool bRecentlyRendered = Actor->WasRecentlyRendered(0.01f);
+	return bRecentlyRendered;
 
-		FVector ViewLocation;
-		FRotator ViewRotation;
-		FSceneView* SceneView = LocalPlayer->CalcSceneView(&ViewFamily, ViewLocation, ViewRotation, LocalPlayer->ViewportClient->Viewport);
-		if (SceneView != nullptr)
-		{
-			bool bIsInFrustum = SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
-			// 절두체 안에 있으면서 최근에 렌더링 된 적 있는 경우에만 true 반환
-			return bIsInFrustum && Actor->WasRecentlyRendered(0.01f);
-		}
-	}
-	return false;
+	// 시야각 유효성 검사
+	// FOV 90도 → 타겟이 카메라 정면 기준에서 45도만큼 왼쪽 또는 오른쪽에 있다면 시야각 안에 없는 것
+	// const FVector ViewDir = Camera->GetForwardVector();
+	// const FVector ToTargetDir = (Actor->GetActorLocation() - Camera->GetComponentLocation()).GetSafeNormal();
+	// const float Dot = FVector::DotProduct(ViewDir, ToTargetDir);
+	// const bool bIsInViewAngle = Dot > FMath::Cos(FMath::DegreesToRadians(45.0f));
+	// return bIsInViewAngle;
 }
 
 EInteractorType ABaseAgent::GetPrevEquipmentType() const

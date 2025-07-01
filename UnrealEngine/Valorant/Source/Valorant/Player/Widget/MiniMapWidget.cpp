@@ -88,7 +88,7 @@ void UMiniMapWidget::AddPlayerToMinimap(const AAgentPlayerState* Player)
 			EVisibilityState VisState;
 			const UTexture2D* IconToUse = nullptr;
 			
-			if ((bIsMe || bSameTeam || MyAgent->IsInFrustum(OtherAgent)) && false == bIsDead)
+			if ((bIsMe || bSameTeam || MyAgent->ActorIsInView(OtherAgent)) && false == bIsDead)
 			{
 				VisState = EVisibilityState::Visible;
 				IconToUse = OtherAgent->GetMinimapIcon();
@@ -139,19 +139,17 @@ void UMiniMapWidget::SetMinimapScale(float NewScale)
 
 
 // 월드 좌표를 미니맵 좌표로 변환하는 함수
-FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& TargetActorLocation)
+FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& ActorLocation)
 {
 	const auto* MyAgent = MyPlayerState->GetPawn<ABaseAgent>();
 	if (!IsValid(MyAgent)) // 관찰자 에이전트가 유효하지 않은 경우
 		return MinimapCenter; // 기본값으로 미니맵 중앙 반환
-    
-	// 미니맵 스케일 적용하여 미니맵 좌표 계산
-	FVector2D MinimapPos; // 미니맵 좌표 변수
-	MinimapPos.X = (TargetActorLocation.Y + 8400.f) / 16800.f * 450.0f;
-	MinimapPos.Y = (1.f - (TargetActorLocation.X / 16800.f)) * 450.f;
-    MinimapPos += ConvertOffset;
 	
-	return MinimapPos; // 계산된 미니맵 좌표 반환
+	FVector2D MinimapPos;
+	MinimapPos.X = (ActorLocation.Y + 8400.f) / 16800.f * 450.0f;
+	MinimapPos.Y = (1.f - (ActorLocation.X / 16800.f)) * 450.f;
+    MinimapPos += ConvertOffset;
+	return MinimapPos;
 }
 
 
@@ -189,14 +187,14 @@ void UMiniMapWidget::UpdateAgentIcons()
 		const bool bIsDead = OtherAgent->IsDead();
 
 		// 1. 내가 직접 본 경우
-		bool bVisible = (OtherAgent->GetVisibilityStateForAgent(MyAgent) == EVisibilityState::Visible);
+		bool bVisible = MyAgent->ActorIsInView(OtherAgent);
 
 		// 2. 내 팀원이 본 경우(아군 시야 공유)
 		if (!bVisible && !bIsMe && !bSameTeam && !bIsDead) // 적만 체크
 		{
 			for (const auto* Teammate : TeamAgents)
 			{
-				if (OtherAgent->GetVisibilityStateForAgent(Teammate) == EVisibilityState::Visible)
+				if (Teammate->ActorIsInView(OtherAgent))
 				{
 					bVisible = true;
 					break;

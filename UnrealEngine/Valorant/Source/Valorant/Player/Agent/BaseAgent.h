@@ -674,7 +674,7 @@ public:
 	bool bInteractionCapsuleInit = false;
 	virtual void OnRep_Controller() override;
 
-	bool IsInFrustum(const AActor* Actor) const;
+	bool ActorIsInView(const AActor* Actor) const;
 
 	UPROPERTY(Replicated)
 	FRotator ReplicatedControlRotation = FRotator::ZeroRotator;
