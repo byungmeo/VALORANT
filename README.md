@@ -3,5 +3,5 @@
 
 ## Riot Games의 FPS 게임 Valornt 모작
 ### 역할 구성
-- **Unreal Engine** : 이충헌, 최연택, 김병무, 김희연
+- **Unreal Engine** : 이충헌, 최연택, 김병대, 김희연
 - **AI Engineer** : 김형섭, 이성복, 김형후
