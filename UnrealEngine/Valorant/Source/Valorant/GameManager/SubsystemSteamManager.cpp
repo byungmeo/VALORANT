@@ -134,7 +134,7 @@ void USubsystemSteamManager::FindSessions()
 
 	LastSessionSearch = MakeShareable(new FOnlineSessionSearch());
 	LastSessionSearch->MaxSearchResults = 10000;
-	LastSessionSearch->bIsLanQuery = IOnlineSubsystem::Get()->GetSubsystemName() == TEXT("NULL");
+	LastSessionSearch->bIsLanQuery = Online::GetSubsystem(GetWorld())->GetSubsystemName() == TEXT("NULL");
 	LastSessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
 	// Will DEPRECATE After UE5.5
 	// SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
@@ -291,21 +291,28 @@ void USubsystemSteamManager::OnDestroySessionComplete_Internal(FName SessionName
 	}
 }
 
+// 세션을 생성한 호스트가 매치 시작에 필요한 인원 수가 충족되었는지 여부를 판단한 뒤 매치를 시작하는 메서드
 void USubsystemSteamManager::CheckHostingSession()
 {
-	const auto* Session = GetNamedOnlineSession(NAME_GameSession);
+	const FNamedOnlineSession* Session = GetNamedOnlineSession(NAME_GameSession);
+
+	// 세션이 더이상 유효하지 않으면 체크를 멈춘다
 	if (nullptr == Session)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
 		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
 		return;
 	}
-	
+
+	// 남은(접속 가능한) 플레이어 슬롯
 	const int32 RemSlotCount = Session->NumOpenPublicConnections;
+	// 최대 플레이어 수
 	const int MaxPlayerCount = Session->SessionSettings.NumPublicConnections;
+	// 현재 세션에 접속 중인 플레이어 수
 	const int CurrentPlayerCount = MaxPlayerCount - RemSlotCount;
 	LOG_DARK_YELLOW(TEXT("%hs Called, Session Slot State : (%d / %d)"), __FUNCTION__, CurrentPlayerCount, MaxPlayerCount);
 
+	// 매치가 시작되기 위해 필요한 인원 수가 충족되면 매치 시작
 	if (ReqMatchAutoStartPlayerCount <= CurrentPlayerCount)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("매치 자동 시작을 위해 필요한 인원 수가 충족됨"));
@@ -314,32 +321,41 @@ void USubsystemSteamManager::CheckHostingSession()
 		{
 			MainMenuGameMode->OnMatchFound();
 		}
+		// ServerTravel 수행
 		GetWorld()->GetTimerManager().SetTimer(MatchStartHandle, this, &USubsystemSteamManager::StartMatch, 3.0f, false);
 	}
 }
+
+// 세션에 참가한 게스트가 현재 매치 접속이 가능한지 여부를 SessionSetting를 통해 확인하고 매치에 접속하는 메서드 
 void USubsystemSteamManager::CheckJoinSession()
 {
-	const auto* Session = GetNamedOnlineSession(NAME_GameSession);
+	const FNamedOnlineSession* Session = GetNamedOnlineSession(NAME_GameSession);
+
+	// 세션이 더이상 유효하지 않으면 체크를 멈춘다
 	if (nullptr == Session)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Session is nullptr"), __FUNCTION__);
 		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
 		return;
 	}
-	
+
+	// SessionSetting을 통해 현재 ClientTravel이 가능한지 여부를 판단 (서버 측에서 매치가 준비되면 true로 세팅된다)
 	bool bReady = false;
 	Session->SessionSettings.Get(FName(TEXT("bReadyToTravel")), bReady);
 	if (bReady)
 	{
 		UE_LOG(LogSubsystemSteam, Warning, TEXT("%hs Called, Ready to ClientTravel"), __FUNCTION__);
 		GetWorld()->GetTimerManager().ClearTimer(CheckSessionHandle);
-		bool bSuccess = GetSessionInterface()->GetResolvedConnectString(NAME_GameSession, ConnectString);
+
+		// ClientTravel을 위해 필요한 연결 문자열을 추출하고 저장한다
+		const bool bSuccess = GetSessionInterface()->GetResolvedConnectString(NAME_GameSession, ConnectString);
 		if (bSuccess)
 		{
 			if (auto* MainMenuGameMode = GetWorld()->GetAuthGameMode<AMainMenuGameMode>())
 			{
 				MainMenuGameMode->OnMatchFound();
 			}
+			// ClientTravel 수행
 			GetWorld()->GetTimerManager().SetTimer(MatchStartHandle, this, &USubsystemSteamManager::JoinMatch, 3.0f, false);
 		}	
 		else
