@@ -36,7 +36,7 @@ public:
     
     // 미니맵 업데이트 - 월드 좌표를 미니맵 좌표로 변환하는 함수 (월드 좌표 -> 미니맵 좌표 변환)
     UFUNCTION(BlueprintCallable, Category = "Minimap") 
-    FVector2D WorldToMinimapPosition(const FVector& ActorLocation); 
+    FVector2D WorldToMinimapPosition(const FVector& WorldLocation) const; 
 	// 주기적으로 모든 에이전트 검색하여 등록하는 함수 추가
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
 	void ScanPlayer();
@@ -59,8 +59,12 @@ protected:
     // 미니맵 스케일 - 월드 좌표를 미니맵 좌표로 변환하는 비율 (월드 단위 -> 미니맵 픽셀)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
     float MapScale = 0.1f; // 기본 맵 스케일 설정 (1 월드 단위 = 0.1 미니맵 픽셀)
-    
-    // 미니맵 사이즈 (픽셀)
+
+	// 월드맵 사이즈
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
+	float WorldmapSize = 16800.f; // 기본 월드맵 사이즈 설정 (16800x16800)
+	
+    // 미니맵 사이즈 (2D UI)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
     float MinimapSize = 450.0f; // 기본 미니맵 사이즈 설정 (450x450 픽셀)
 

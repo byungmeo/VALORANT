@@ -139,57 +139,83 @@ void UMiniMapWidget::SetMinimapScale(float NewScale)
 
 
 // 월드 좌표를 미니맵 좌표로 변환하는 함수
-FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& ActorLocation)
+FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& WorldLocation) const
 {
+	// 관찰자 액터
 	const auto* MyAgent = MyPlayerState->GetPawn<ABaseAgent>();
-	if (!IsValid(MyAgent)) // 관찰자 에이전트가 유효하지 않은 경우
-		return MinimapCenter; // 기본값으로 미니맵 중앙 반환
+	if (nullptr == MyAgent)
+	{
+		// 기본값으로 미니맵 중앙 반환
+		return MinimapCenter;
+	}
+
+	// World 좌표를 -> UI(2D) 좌표로 변환한다
+	// NormalizedWorldLocation = WorldLocation / WorldMapSize
+	// 참고사항 : 월드 좌표(Y-Up)와 UI 좌표(Y-Down)의 좌표계 표현 방식이 다르기 때문에 실제 적용 공식이 다릅니다.
+	// 또한, 실제 월드맵의 왼쪽 아래 좌표는 (-8400, -8400)이기 때문에 별도로 8400을 더하는 수식이 추가되었습니다.
+	const float NormalizedWorldLocationX = (WorldLocation.Y + (WorldmapSize / 2)) / WorldmapSize;
+	const float NormalizedWorldLocationY = 1.f - (WorldLocation.X / WorldmapSize);
 	
-	FVector2D MinimapPos;
-	MinimapPos.X = (ActorLocation.Y + 8400.f) / 16800.f * 450.0f;
-	MinimapPos.Y = (1.f - (ActorLocation.X / 16800.f)) * 450.f;
-    MinimapPos += ConvertOffset;
-	return MinimapPos;
+	// MinimapLocation = NormalizedWorldLocation * 2DMinimapSize
+	FVector2D MinimapLocation;
+	MinimapLocation.X = NormalizedWorldLocationX * MinimapSize;
+	MinimapLocation.Y = NormalizedWorldLocationY * MinimapSize;
+	
+	// 미니맵의 경계와 화면 경계 사이의 거리를 더한다
+    MinimapLocation += ConvertOffset;
+	
+	return MinimapLocation;
 }
 
 
 void UMiniMapWidget::UpdateAgentIcons()
 {
 	const auto* MyAgent = MyPlayerState->GetPawn<ABaseAgent>();
-	if (nullptr == MyAgent) // 관찰자 에이전트가 유효하지 않은 경우
-		return; // 함수 종료
+	if (nullptr == MyAgent)
+	{
+		return;
+	}
 
-	// 1. 내 팀원 목록 캐싱
+	// 내 팀원 목록 캐싱
 	TArray<const ABaseAgent*> TeamAgents;
 	for (const auto* PS : PlayerArray)
 	{
 		const auto* OtherAgent = PS->GetPawn<ABaseAgent>();
-		if (!IsValid(OtherAgent)) continue;
-		if (OtherAgent == MyAgent) continue;
-		if (OtherAgent->IsDead()) continue;
-		if (OtherAgent->IsBlueTeam() == MyAgent->IsBlueTeam()) // 같은 팀
+		const bool bIsSelf = OtherAgent == MyAgent;
+		if (nullptr == OtherAgent || bIsSelf || OtherAgent->IsDead())
+		{
+			continue;
+		}
+		
+		// 같은 팀일 경우 팀원 목록에 추가
+		if (OtherAgent->IsBlueTeam() == MyAgent->IsBlueTeam())
+		{
 			TeamAgents.Add(OtherAgent);
+		}
 	}
 
 	// 모든 에이전트 위치 및 아이콘 업데이트
 	for (const auto* PS : PlayerArray) // 미니맵에 표시될 모든 에이전트에 대해 반복
 	{
 		const auto* OtherAgent = PS->GetPawn<ABaseAgent>();
-		if (!IsValid(OtherAgent)) continue;
+		if (nullptr == OtherAgent)
+		{
+			continue;
+		}
 
-		FVector TargetActorLocation = OtherAgent->GetActorLocation(); // 에이전트의 월드 위치 가져오기
-		FVector2D ConvertedMinimapPosition = WorldToMinimapPosition(TargetActorLocation); // 월드 위치를 미니맵 좌표로 변환
-
-		EVisibilityState VisState = EVisibilityState::Hidden;
-		UTexture2D* IconToUse = nullptr;
+		// 에이전트의 월드 위치 가져오기
+		FVector TargetActorLocation = OtherAgent->GetActorLocation();
+		// 월드 좌표를 미니맵 좌표로 변환
+		FVector2D ConvertedMinimapPosition = WorldToMinimapPosition(TargetActorLocation);
+		
 		const bool bIsMe = MyAgent == OtherAgent;
 		const bool bSameTeam = MyAgent->IsBlueTeam() == OtherAgent->IsBlueTeam();
 		const bool bIsDead = OtherAgent->IsDead();
 
-		// 1. 내가 직접 본 경우
+		// 내가 직접 본 경우인지 확인한다 ( Actor->WasRecentlyRendered(0.01f) )
 		bool bVisible = MyAgent->ActorIsInView(OtherAgent);
 
-		// 2. 내 팀원이 본 경우(아군 시야 공유)
+		// 내 팀원이 본 경우라면 시야를 공유한다
 		if (!bVisible && !bIsMe && !bSameTeam && !bIsDead) // 적만 체크
 		{
 			for (const auto* Teammate : TeamAgents)
@@ -202,25 +228,21 @@ void UMiniMapWidget::UpdateAgentIcons()
 			}
 		}
 
-		if ((bIsMe || bSameTeam) && !bIsDead)
+		// 시야 상태
+		EVisibilityState VisState = EVisibilityState::Hidden;
+		// 표시할 아이콘 텍스쳐
+		UTexture2D* IconToUse = nullptr;
+		if (!bIsDead)
 		{
-			// 내 자신, 아군은 항상 보임
-			IconToUse = OtherAgent->GetMinimapIcon();
-			VisState = EVisibilityState::Visible;
-		}
-		else if (bVisible && !bIsDead)
-		{
-			// 적이지만 아군이 봤으므로 보임
-			IconToUse = OtherAgent->GetMinimapIcon();
-			VisState = EVisibilityState::Visible;
-		}
-		else
-		{
-			IconToUse = nullptr;
-			VisState = EVisibilityState::Hidden;
+			// 나 자신 또는 아군이거나 팀원 중 누군가의 시야 안에 들어있는 적이라면 미니맵에 표시한다
+			if (bIsMe || bSameTeam || bVisible)
+			{
+				IconToUse = OtherAgent->GetMinimapIcon();
+				VisState = EVisibilityState::Visible;
+			}
 		}
 
-		// 아이콘 업데이트 (블루프린트에서 구현)
+		// 미니맵 내 아이콘 업데이트 (블루프린트에서 구현)
 		UpdateAgentIcon(PS, ConvertedMinimapPosition, IconToUse, VisState, bIsMe ? 0 : bSameTeam ? 1 : 2); // 블루프린트에서 구현된 함수 호출하여 UI 업데이트
 	}
 }
