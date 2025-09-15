@@ -234,6 +234,28 @@ FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction) const
 	return SpreadRot.Vector();
 }
 
+void ABaseWeapon::EndFire()
+{
+	// 현재 사격 중이 아니라는 것을 저장
+	bIsFiring = false;
+
+	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
+	// 일정 간격마다 반동 레벨을 감소시키도록 타이머 실행 
+	GetWorld()->GetTimerManager().SetTimer(RecoverRecoilLevelHandle, this, &ABaseWeapon::RecoverRecoilLevel,
+										   FireInterval / 2, true);
+}
+
+void ABaseWeapon::RecoverRecoilLevel()
+{
+	// 반동 레벨 감소
+	RecoilLevel = FMath::Clamp(RecoilLevel - 1, 0, RecoilData.Num() - 1);
+	if (RecoilLevel == 0)
+	{
+		// 반동 레벨이 0이 되었다면 타이머 중단
+		GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
+	}
+}
+
 /// 클라이언트 측에서 총기 반동을 적용한 뒤 이 메서드를 호출합니다.
 /// @param Location 총기 반동이 적용된 총구 위치
 /// @param Direction 총기 반동이 적용된 발사 방향
@@ -372,28 +394,6 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		//Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End);
 	}
 	Multicast_SpawnTracer(Start, bHit ? OutHit.ImpactPoint : End, bAgentHit);
-}
-
-void ABaseWeapon::EndFire()
-{
-	// 현재 사격 중이 아니라는 것을 저장
-	bIsFiring = false;
-
-	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
-	// 일정 간격마다 반동 레벨을 감소시키도록 타이머 실행 
-	GetWorld()->GetTimerManager().SetTimer(RecoverRecoilLevelHandle, this, &ABaseWeapon::RecoverRecoilLevel,
-	                                       FireInterval / 2, true);
-}
-
-void ABaseWeapon::RecoverRecoilLevel()
-{
-	// 반동 레벨 감소
-	RecoilLevel = FMath::Clamp(RecoilLevel - 1, 0, RecoilData.Num() - 1);
-	if (RecoilLevel == 0)
-	{
-		// 반동 레벨이 0이 되었다면 타이머 중단
-		GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
-	}
 }
 
 void ABaseWeapon::ServerRPC_StartReload_Implementation()
