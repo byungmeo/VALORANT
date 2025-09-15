@@ -105,6 +105,7 @@ void ABaseWeapon::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// 현재 사격 중이지 않을 경우 반동을 서서히 회복시킨다
 	if (OwnerAgent && OwnerAgent->GetController() && (false == bIsFiring || MagazineAmmo <= 0))
 	{
 		const float SubPitchValue = -FMath::Lerp(TotalRecoilOffsetPitch, 0.0f, 0.88f);
@@ -114,57 +115,64 @@ void ABaseWeapon::Tick(float DeltaSeconds)
 		const float SubYawValue = -FMath::Lerp(TotalRecoilOffsetYaw, 0.0f, 0.88f);
 		TotalRecoilOffsetYaw += SubYawValue;
 		OwnerAgent->AddControllerYawInput(SubYawValue);
-
-		// UE_LOG(LogTemp, Warning, TEXT("Recoil Recovery TotalRecoilOffsetPitch : %f, TotalRecoilOffsetYaw : %f"), TotalRecoilOffsetPitch, TotalRecoilOffsetYaw);
 	}
 }
 
+// 플레이어로부터 총기 발사 입력이 들어오면 호출되는 메서드
 void ABaseWeapon::StartFire()
 {
+	// 재장전 중일 경우에는 로직을 수행하지 않는다
 	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController() || true == bIsReloading)
 	{
 		NET_LOG(LogTemp, Warning, TEXT("%hs Called, OwnerAgent or Controller is nullptr"), __FUNCTION__);
 		return;
 	}
 
+	// 현재 총을 발사 중이라는 것을 저장
 	bIsFiring = true;
+
+	// 일정 시간 동안 총을 발사하지 않아 누적 반동이 무의미한 수준으로 감소하면 반동 레벨과 반동값을 완전히 초기화 한다
 	if (FMath::IsNearlyZero(FMath::Abs(TotalRecoilOffsetPitch) + FMath::Abs(TotalRecoilOffsetYaw), 0.05f))
 	{
 		RecoilLevel = 0;
 		TotalRecoilOffsetPitch = 0.0f;
 		TotalRecoilOffsetYaw = 0.0f;
 	}
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, RecoilLevel: %d"), __FUNCTION__, RecoilLevel);
 
 	GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
 	// InRate가 0.01인 이유는 단순히 체크하는 용도이지 FireInterval에 따른 실제 사격은 Fire에서 체크하기 때문
 	GetWorld()->GetTimerManager().SetTimer(AutoFireHandle, this, &ABaseWeapon::Fire, 0.01f, true, 0);
 }
 
+// 현재 총을 발사 중일 경우 타이머에 의해 매우 짧은 간격으로 호출되는 메서드
 void ABaseWeapon::Fire()
 {
 	if (nullptr == OwnerAgent || nullptr == OwnerAgent->GetController() || false == bIsFiring || true == bIsReloading)
 	{
 		return;
 	}
-
+	
 	if (MagazineAmmo <= 0)
 	{
 		if (SpareAmmo > 0)
 		{
+			// 현재 탄창에 총알이 없는데 여분의 탄약이 있는 경우 재장전
 			ServerRPC_StartReload();
 		}
+		// 여분의 탄약도 없는 경우 발사 처리 X
 		return;
 	}
 
+	// 마지막으로 발사한 시간과 발사 간격을 토대로 현재 발사가 가능한 상태인지 확인한다.
 	const float CurrentTime = GetWorld()->GetTimeSeconds();
 	if (LastFireTime + FireInterval > CurrentTime)
 	{
 		return;
 	}
+	// 마지막 발사 시간을 갱신
 	LastFireTime = CurrentTime;
 
-	// KBD: 발사 시 캐릭터에 반동값 적용
+	// 발사 시 캐릭터에 반동값을 적용한다.
 	if (RecoilData.Num() > 0)
 	{
 		const float PitchValue = RecoilData[RecoilLevel].OffsetPitch;
@@ -175,26 +183,29 @@ void ABaseWeapon::Fire()
 		OwnerAgent->AddControllerYawInput(YawValue);
 		TotalRecoilOffsetYaw += YawValue;
 
+		// 반동 레벨 클램핑
 		RecoilLevel = FMath::Clamp(RecoilLevel + 1, 0, RecoilData.Num() - 1);
-		// NET_LOG(LogTemp, Warning, TEXT("Ammo : %d, Total : (%f, %f), Add : (%f, %f)"), MagazineAmmo, TotalRecoilOffsetPitch, TotalRecoilOffsetYaw, PitchValue, YawValue);
 	}
-
-	// 서버 쪽에서 처리해야 하는 발사 로직 호출
-	// 서버 입장에서는 클라이언트의 ViewportSize를 모르고, 반응성 등의 문제 때문에 발사 지점, 방향은 클라에서 계산 후 넘겨줌
+	
 	const auto* PlayerController = Cast<AAgentPlayerController>(OwnerAgent->GetController());
 	if (nullptr == PlayerController)
 	{
 		NET_LOG(LogTemp, Error, TEXT("%hs Called, Agent Controller is incorrect"), __FUNCTION__);
 		return;
 	}
+	
+	// 서버 입장에서는 클라이언트의 ViewportSize를 모르고, 반응성 등의 문제 때문에 발사 지점, 방향은 클라에서 계산
 	int32 ScreenWidth, ScreenHeight;
 	PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
 	FVector Start, Dir;
 	PlayerController->DeprojectScreenPositionToWorld(ScreenWidth * 0.5f, ScreenHeight * 0.5f, Start, Dir);
+
+	// 서버 쪽에서 처리해야 하는 발사 로직 호출
 	ServerRPC_Fire(Start, Dir);
 }
 
-FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction)
+// 현재 캐릭터가 이동 중일 경우 입력으로 주어진 발사 방향에 탄 퍼짐을 적용한 뒤 반환하는 메서드
+FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction) const
 {
 	float MaxAngleDeg = 0;
 	// 일정 속도 이상으로 이동 또는 점프 중일 때 MaxAngleRad = 5
@@ -214,6 +225,7 @@ FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction)
 
 	const float MaxAngleRad = FMath::DegreesToRadians(MaxAngleDeg);
 
+	// 탄 퍼짐 패턴마저 유저가 학습하지는 못하도록 범위 내에서 랜덤으로 탄 퍼짐 적용
 	const float Yaw = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
 	const float Pitch = FMath::RandRange(-MaxAngleRad, MaxAngleRad);
 	FRotator SpreadRot = Direction.Rotation();
@@ -222,32 +234,40 @@ FVector ABaseWeapon::GetSpreadDirection(const FVector& Direction)
 	return SpreadRot.Vector();
 }
 
+/// 클라이언트 측에서 총기 반동을 적용한 뒤 이 메서드를 호출합니다.
+/// @param Location 총기 반동이 적용된 총구 위치
+/// @param Direction 총기 반동이 적용된 발사 방향
 void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const FVector& Direction)
 {
-	const auto* WorldContext = GetWorld();
-	if (nullptr == WorldContext)
+	const UWorld* WorldContext = GetWorld();
+	checkf(WorldContext, TEXT("WorldContext is nullptr"));
+
+	// 총알이 없는데도 발사를 요청할 경우 무시한다
+	if (MagazineAmmo <= 0)
 	{
-		NET_LOG(LogTemp, Error, TEXT("%hs Called, World is nullptr"), __FUNCTION__);
 		return;
 	}
 
-	MagazineAmmo--;
-	OnRep_Ammo();
-	// NET_LOG(LogTemp, Warning, TEXT("%hs Called, MagazineAmmo: %d, SpareAmmo: %d"), __FUNCTION__, MagazineAmmo,
-	        // SpareAmmo);
-
-	// 무기를 사용한 것으로 표시
-	bWasUsed = true;
+	// TODO: 클라이언트 측에서 전달한 위치와 방향 정보를 검증하는 로직 추가
 	
+	MagazineAmmo--;
+	// 리슨서버이므로 서버 측에 총알 수가 변경되었음을 알린다
+	OnRep_Ammo();
+
+	// 무기를 사용한 것으로 표시 (전액 환불 X)
+	bWasUsed = true;
+
+	// 이펙트, 사운드, 애니메이션을 재생시킨다
 	Multicast_SpawnMuzzleFlash();
 	MulticastRPC_PlayFireSound();
 	MulticastRPC_PlayFireAnimation();
-	
+
+	// 이동/점프 등으로 인해 조준점이 벌어졌을 경우 탄 퍼짐을 적용한다
 	const FVector& Dir = GetSpreadDirection(Direction);
 	const FVector& Start = Location;
 	const FVector End = Start + Dir * 99999;
 
-	// 궤적, 탄착군 디버깅
+	// 히트스캔을 위한 라인트레이싱
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(GetOwner());
 	ActorsToIgnore.Add(OwnerAgent);
@@ -268,25 +288,24 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		2.5f
 	);
 
-	// 데이터 로그
+	// 데이터 로깅
 	OwnerAgent->LogShotResult(bHit);
-	
+
+	// 무언가 맞았을 경우
 	if (bHit)
 	{
-		// 팀킬 방지 로직 추가
 		if (ABaseAgent* HitAgent = Cast<ABaseAgent>(OutHit.GetActor()))
 		{
+			// 맞은게 플레이어일 경우
 			bAgentHit = true;
-			// 공격자와 피격자가 같은 팀인지 확인
-			if (OwnerAgent && HitAgent->IsBlueTeam() == OwnerAgent->IsBlueTeam())
-			{
-				// 같은 팀이면 데미지를 주지 않고 임팩트 효과만 재생
-				// Multicast_SpawnImpactEffect(OutHit.ImpactPoint, OutHit.ImpactNormal.Rotation());
-				// Multicast_SpawnTracer(Start, OutHit.ImpactPoint);
-			}
-			else
+
+			// 팀샷이 아닐 경우에만 데미지를 처리한다
+			const bool bIsTeamShot = OwnerAgent && HitAgent->IsBlueTeam() == OwnerAgent->IsBlueTeam();
+			if (!bIsTeamShot)
 			{
 				int FinalDamage = WeaponData->BaseDamage;
+
+				// 무기의 부위별 데미지 배율 데이터를 최종 데미지에 적용
 				const EAgentDamagedPart DamagedPart = ABaseAgent::GetHitDamagedPart(OutHit.BoneName);
 				switch (DamagedPart)
 				{
@@ -294,6 +313,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 					break;
 				case EAgentDamagedPart::Head:
 					FinalDamage *= WeaponData->HeadshotMultiplier;
+					// 헤드샷 비율 측정을 위해 로깅
 					OwnerAgent->LogHeadshot();
 					break;
 				case EAgentDamagedPart::Body:
@@ -303,6 +323,8 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 					break;
 				}
 
+				// 무기의 거리별 데미지 배율 데이터를 최종 데미지에 적용
+				// 데미지 배율 데이터는 거리의 오름차순으로 저장되므로 역순으로 참조한다
 				const auto& FalloffArray = WeaponData->GunDamageFalloffArray;
 				for (int i = FalloffArray.Num() - 1; i >= 0; i--)
 				{
@@ -313,10 +335,13 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 						break;
 					}
 				}
+
+				// 최소/최대 데미지 클램핑으로 최종 데미지 계산을 마무리
 				FinalDamage = FMath::Clamp(FinalDamage, 1, 9999);
+				// 매치 결과에 입힌 데미지 총합을 표시하기 위해 로깅
 				OwnerAgent->LogFinalDamage(FinalDamage);
 
-				// 피격 방향 판정
+				// 피격 방향별 애니메이션을 다르게 하기 위해 피격 방향을 내/외적을 활용하여 계산한다
 				EAgentDamagedDirection DamagedDirection = EAgentDamagedDirection::Front;
 				const FVector HitDir = (OutHit.TraceStart - OutHit.TraceEnd).GetSafeNormal();
 				FVector Forward = HitAgent->GetActorForwardVector();
@@ -336,7 +361,7 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 		}
 		else
 		{
-			// 세이지 벽, 케이오 나이프 등 데미지 처리
+			// 세이지 벽, 케이오 나이프 등 플레이어가 아닌 경우 데미지 처리
 			FPointDamageEvent DamageEvent;
 			DamageEvent.HitInfo = OutHit;
 			OutHit.GetActor()->TakeDamage(WeaponData->BaseDamage,DamageEvent, nullptr,this);
@@ -351,18 +376,22 @@ void ABaseWeapon::ServerRPC_Fire_Implementation(const FVector& Location, const F
 
 void ABaseWeapon::EndFire()
 {
+	// 현재 사격 중이 아니라는 것을 저장
 	bIsFiring = false;
 
 	GetWorld()->GetTimerManager().ClearTimer(AutoFireHandle);
+	// 일정 간격마다 반동 레벨을 감소시키도록 타이머 실행 
 	GetWorld()->GetTimerManager().SetTimer(RecoverRecoilLevelHandle, this, &ABaseWeapon::RecoverRecoilLevel,
 	                                       FireInterval / 2, true);
 }
 
 void ABaseWeapon::RecoverRecoilLevel()
 {
+	// 반동 레벨 감소
 	RecoilLevel = FMath::Clamp(RecoilLevel - 1, 0, RecoilData.Num() - 1);
 	if (RecoilLevel == 0)
 	{
+		// 반동 레벨이 0이 되었다면 타이머 중단
 		GetWorld()->GetTimerManager().ClearTimer(RecoverRecoilLevelHandle);
 	}
 }
