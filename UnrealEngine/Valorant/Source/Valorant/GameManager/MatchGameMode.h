@@ -168,7 +168,7 @@ protected:
 	void HandleRoundSubState_BuyPhase();
 	void HandleRoundSubState_InRound();
 	void HandleRoundSubState_EndPhase();
-	void SetRoundSubState(ERoundSubState NewRoundSubState);
+	void SetRoundSubState(const ERoundSubState NewRoundSubState);
 
 public:
 	int TotalRound = 3;

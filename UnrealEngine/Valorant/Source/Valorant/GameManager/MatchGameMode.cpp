@@ -408,6 +408,12 @@ void AMatchGameMode::StartEndPhaseBySpikeDefuse()
 
 void AMatchGameMode::HandleRoundSubState_SelectAgent()
 {
+	// 모든 클라이언트에게 상점 닫기 이벤트 전파
+	// TODO: 클라이언트측 GameState에서 스스로 호출하도록 수정 필요
+	auto* MatchGameState = GetGameState<AMatchGameState>();
+	checkf(MatchGameState, TEXT("MatchGameState is nullptr"));
+	MatchGameState->MulticastRPC_CloseAllShops();
+	
 	for (const FMatchPlayer& MatchPlayer : MatchPlayers)
 	{
 		NotifyGameStart(MatchPlayer.Controller, false);
@@ -477,12 +483,11 @@ void AMatchGameMode::HandleRoundSubState_InRound()
 	// 구매 페이즈가 끝나고 인 라운드로 전환될 때 모든 무기를 사용됨으로 표시
 	MarkAllWeaponsAsUsed();
 
-	// 열려있는 모든 상점 UI 강제로 닫기
-	AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
-	if (MatchGameState)
-	{
-		MatchGameState->MulticastRPC_CloseAllShops();
-	}
+	// 모든 클라이언트에게 상점 닫기 이벤트 전파
+	// TODO: 클라이언트측 GameState에서 스스로 호출하도록 수정 필요
+	auto* MatchGameState = GetGameState<AMatchGameState>();
+	checkf(MatchGameState, TEXT("MatchGameState is nullptr"));
+	MatchGameState->MulticastRPC_CloseAllShops();
 
 	// 배리어 해제 및 로깅 시작을 위한 브로드캐스트
 	OnStartInRound.Broadcast();
@@ -498,6 +503,12 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 {
 	// 로깅 종료를 위한 브로드캐스트
 	OnEndRound.Broadcast();
+
+	// 모든 클라이언트에게 상점 닫기 이벤트 전파
+	// TODO: 클라이언트측 GameState에서 스스로 호출하도록 수정 필요
+	auto* MatchGameState = GetGameState<AMatchGameState>();
+	checkf(MatchGameState, TEXT("MatchGameState is nullptr"));
+	MatchGameState->MulticastRPC_CloseAllShops();
 	
 	// TODO: 라운드 상황에 따라 BuyPhase로 전환할 것인지 InRound로 전환할 것인지 아예 매치가 끝난 상태로 전환할 것인지 판단
 	// 공수교대(->InRound) 조건: 3라운드가 끝나고 4라운드 시작되는 시점
@@ -510,11 +521,7 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 		
 		// 일정 시간 후에 매치 세션 종료
 		GetWorld()->GetTimerManager().SetTimer(RoundTimerHandle, this, &AMatchGameMode::LeavingMatch, LeavingMatchTime);
-		AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
-		if (MatchGameState)
-		{
-			MatchGameState->MulticastRPC_OnMatchEnd(bBlueWin);
-		}
+		MatchGameState->MulticastRPC_OnMatchEnd(bBlueWin);
 
 		UE_LOG(LogTemp,Error,TEXT("최종 결과"));
 		PrintAllPlayerLogs();
@@ -542,47 +549,49 @@ void AMatchGameMode::HandleRoundSubState_EndPhase()
 	AwardRoundEndCredits();
 }
 
-void AMatchGameMode::SetRoundSubState(ERoundSubState NewRoundSubState)
+// GameMode는 서버에만 존재하며, 서버에서만 처리되어야 하는 로직은 GameMode를 통해 실행한다.
+// SetRoundSubState 메서드를 통해 각 라운드 상태 별 로직을 수행하고 GameState에 현재 라운드 상태를 전파한다.
+// GameState는 모든 클라이언트에 존재하며, 각 클라이언트가 라운드 상태별로 수행해야 할 로직을 실행한다.
+void AMatchGameMode::SetRoundSubState(const ERoundSubState NewRoundSubState)
 {
+	// 이전과 다른 상태인 경우에만
 	if (RoundSubState != NewRoundSubState)
 	{
-		AMatchGameState* MatchGameState = GetGameState<AMatchGameState>();
-		if (nullptr == MatchGameState)
-		{
-			NET_LOG(LogTemp, Warning, TEXT("%hs Called, MatchGameState is nullptr"), __FUNCTION__);
-		}
+		auto* MatchGameState = GetGameState<AMatchGameState>();
+		checkf(MatchGameState, TEXT("MatchGameState is nullptr"));
+
+		// 상태 갱신
 		RoundSubState = NewRoundSubState;
 
-		// 구매 페이즈가 아닌 다른 상태로 변경될 때 열려있는 상점 UI 모두 닫기
-		if (MatchGameState && RoundSubState != ERoundSubState::RSS_BuyPhase || RoundSubState !=
-			ERoundSubState::RSS_PreRound)
+		// 현재 라운드 상태에 따라 핸들링 함수를 호출한다.
+		switch (RoundSubState)
 		{
-			// 모든 클라이언트에게 상점 닫기 이벤트 전파
-			MatchGameState->MulticastRPC_CloseAllShops();
+		case ERoundSubState::RSS_None:
+			checkf(false, TEXT("ERoundSubState is None"));
+			break;
+		case ERoundSubState::RSS_SelectAgent:
+			HandleRoundSubState_SelectAgent();
+			break;
+		case ERoundSubState::RSS_PreRound:
+			HandleRoundSubState_PreRound();
+			break;
+		case ERoundSubState::RSS_BuyPhase:
+			HandleRoundSubState_BuyPhase();
+			break;
+		case ERoundSubState::RSS_InRound:
+			HandleRoundSubState_InRound();
+			break;
+		case ERoundSubState::RSS_EndPhase:
+			HandleRoundSubState_EndPhase();
+			break;
 		}
 
-		if (RoundSubState == ERoundSubState::RSS_SelectAgent)
-		{
-			HandleRoundSubState_SelectAgent();
-		}
-		else if (RoundSubState == ERoundSubState::RSS_PreRound)
-		{
-			HandleRoundSubState_PreRound();
-		}
-		else if (RoundSubState == ERoundSubState::RSS_BuyPhase)
-		{
-			HandleRoundSubState_BuyPhase();
-		}
-		else if (RoundSubState == ERoundSubState::RSS_InRound)
-		{
-			HandleRoundSubState_InRound();
-		}
-		else if (RoundSubState == ERoundSubState::RSS_EndPhase)
-		{
-			HandleRoundSubState_EndPhase();
-		}
+		// GameState에 현재 매치 및 라운드 상태를 통보한다.
+		// MatchGameState에서는 새롭게 설정된 상태에 따라 핸들링 함수 실행 (모든 클라이언트에서 실행)
+		// MaxTime은 Handle~ 로직 내부에서 각 라운드 상태에 따라 설정된다
 		MatchGameState->SetRoundSubState(RoundSubState, MaxTime);
 
+		// 현재 라운드 시간을 MaxTime으로 설정하고 GameState에 현재 라운드 시간이 변경되었음을 통보한다
 		RemainRoundStateTime = MaxTime;
 		MatchGameState->SetRemainRoundStateTime(RemainRoundStateTime);
 	}
