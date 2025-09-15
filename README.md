@@ -1,5 +1,6 @@
 # 🎮VALORITHM
-[![ValorithmCinematicMovie](https://github.com/user-attachments/assets/0287dcf2-606c-404b-9c36-8f1a5d5eac8f)](https://youtu.be/p3j4HgjLvsg)
+[![ValorithmCinematicMovie](https://github.com/user-attachments/assets/6cca695e-5453-499e-881e-e9f3f788478b)](https://youtu.be/p3j4HgjLvsg)
+
 
 ## 📃프로젝트 개요
 Riot Games의 FPS 게임 Valorant를 레퍼런스로 재구현한 멀티플레이 게임
