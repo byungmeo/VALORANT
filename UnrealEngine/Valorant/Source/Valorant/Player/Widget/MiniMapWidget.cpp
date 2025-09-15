@@ -138,7 +138,7 @@ void UMiniMapWidget::SetMinimapScale(float NewScale)
 }
 
 
-// 월드 좌표를 미니맵 좌표로 변환하는 함수
+// 월드 좌표를 미니맵 좌표로 변환하는 메서드
 FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& WorldLocation) const
 {
 	// 관찰자 액터
@@ -167,7 +167,7 @@ FVector2D UMiniMapWidget::WorldToMinimapPosition(const FVector& WorldLocation) c
 	return MinimapLocation;
 }
 
-
+// 매치에 참가중인 플레이어들의 아이콘을 미니맵에 표시하는 메서드
 void UMiniMapWidget::UpdateAgentIcons()
 {
 	const auto* MyAgent = MyPlayerState->GetPawn<ABaseAgent>();
